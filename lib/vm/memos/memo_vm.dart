@@ -1,0 +1,181 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import 'package:ondolbom/model/memos/memo.dart';
+
+typedef MemoContext = ({String familyRoomId, String userId, String roomName});
+
+// 로그인·공간 선택 기능이 연결되면 이 provider를 공통 상태로 대체한다.
+final memoContextProvider = Provider<MemoContext>(
+  (ref) => (
+    familyRoomId: const String.fromEnvironment('FAMILY_ROOM_ID'),
+    userId: const String.fromEnvironment('USER_ID'),
+    roomName: const String.fromEnvironment(
+      'FAMILY_ROOM_NAME',
+      defaultValue: '가족 돌봄 공간',
+    ),
+  ),
+);
+
+final apiBaseUrlProvider = Provider<String>((ref) {
+  const configured = String.fromEnvironment('API_BASE_URL');
+  if (configured.isNotEmpty) return configured;
+  return !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+      ? 'http://10.0.2.2:8000'
+      : 'http://127.0.0.1:8000';
+});
+
+final memoHttpClientProvider = Provider.autoDispose<http.Client>((ref) {
+  final client = http.Client();
+  ref.onDispose(client.close);
+  return client;
+});
+
+class MemoFailure implements Exception {
+  const MemoFailure(this.message);
+  final String message;
+  @override
+  String toString() => message;
+}
+
+class MemoFeed {
+  const MemoFeed(
+    this.items, {
+    required this.hasMore,
+    this.loadingMore = false,
+    this.nextOffset = 0,
+  });
+  final List<Memo> items;
+  final bool hasMore;
+  final bool loadingMore;
+  final int nextOffset;
+}
+
+final memoVmProvider = AsyncNotifierProvider.autoDispose
+    .family<MemoVm, MemoFeed, MemoContext>(MemoVm.new, retry: (_, _) => null);
+
+class MemoVm extends AsyncNotifier<MemoFeed> {
+  MemoVm(this.context);
+  final MemoContext context;
+  static const pageSize = 20;
+  late http.Client _client;
+  late String _baseUrl;
+  int _generation = 0;
+
+  @override
+  Future<MemoFeed> build() async {
+    _generation++;
+    _client = ref.watch(memoHttpClientProvider);
+    _baseUrl = ref.watch(apiBaseUrlProvider);
+    if (context.familyRoomId.isEmpty) return const MemoFeed([], hasMore: false);
+    final items = await _fetch(0);
+    return MemoFeed(
+      items,
+      hasMore: items.length == pageSize,
+      nextOffset: items.length,
+    );
+  }
+
+  Uri _uri(String path, [Map<String, String>? query]) => Uri.parse(
+    '${_baseUrl.replaceFirst(RegExp(r'/+$'), '')}/memos/$path',
+  ).replace(queryParameters: query);
+
+  Future<Map<String, dynamic>> _request(
+    Future<http.Response> Function() send,
+    int expected,
+  ) async {
+    try {
+      final response = await send().timeout(const Duration(seconds: 15));
+      final body =
+          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+      if (response.statusCode != expected) {
+        final detail = body['detail'];
+        throw MemoFailure(
+          detail is String ? detail : '요청을 처리하지 못했어요. 입력 내용을 확인해 주세요.',
+        );
+      }
+      return body;
+    } on TimeoutException {
+      throw const MemoFailure('응답이 지연되고 있어요. 잠시 후 다시 시도해 주세요.');
+    } on http.ClientException {
+      throw const MemoFailure('서버에 연결할 수 없어요. 연결 상태를 확인해 주세요.');
+    } on FormatException {
+      throw const MemoFailure('서버 응답을 읽지 못했어요. 잠시 후 다시 시도해 주세요.');
+    }
+  }
+
+  Future<List<Memo>> _fetch(int offset) async {
+    final body = await _request(
+      () => _client.get(
+        _uri('select', {
+          'family_room_id': context.familyRoomId,
+          'limit': '$pageSize',
+          'offset': '$offset',
+        }),
+      ),
+      200,
+    );
+    return (body['results'] as List<dynamic>)
+        .map((item) => Memo.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> loadMore() async {
+    final previous = state.asData?.value;
+    if (previous == null || previous.loadingMore || !previous.hasMore) return;
+    final generation = _generation;
+    state = AsyncData(
+      MemoFeed(
+        previous.items,
+        hasMore: true,
+        loadingMore: true,
+        nextOffset: previous.nextOffset,
+      ),
+    );
+    try {
+      final next = await _fetch(previous.nextOffset);
+      if (!ref.mounted || generation != _generation) return;
+      // 새 메모가 추가되어 offset이 이동한 경우 중복 표시를 피한다.
+      final byId = {
+        for (final m in [...previous.items, ...next])
+          (m.memoId, m.familyRoomId, m.userId): m,
+      };
+      state = AsyncData(
+        MemoFeed(
+          byId.values.toList(),
+          hasMore: next.length == pageSize,
+          nextOffset: previous.nextOffset + next.length,
+        ),
+      );
+    } catch (_) {
+      if (ref.mounted && generation == _generation) state = AsyncData(previous);
+      rethrow;
+    }
+  }
+
+  Future<void> createMemo(String content) async {
+    final text = content.trim();
+    if (text.isEmpty || text.runes.length > 10000) {
+      throw const MemoFailure('메모는 1~10,000자로 작성해 주세요.');
+    }
+    if (context.userId.isEmpty || context.familyRoomId.isEmpty) {
+      throw const MemoFailure('사용자와 돌봄 공간을 먼저 선택해 주세요.');
+    }
+    await _request(
+      () => _client.post(
+        _uri('insert'),
+        headers: {'Content-Type': 'application/json; charset=utf-8'},
+        body: jsonEncode({
+          'family_room_id': context.familyRoomId,
+          'user_id': context.userId,
+          'memo_content': text,
+        }),
+      ),
+      201,
+    );
+    if (ref.mounted) ref.invalidateSelf();
+  }
+}
