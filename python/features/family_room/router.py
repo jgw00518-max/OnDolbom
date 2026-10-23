@@ -10,6 +10,9 @@ import os
 
 from fastapi import Depends, Header, HTTPException
 
+from pymysql import MySQLError
+from python.features.auth.firebase_auth import require_firebase_user
+
 
 router = APIRouter()
 
@@ -180,31 +183,63 @@ def create_family_room(
     finally:
         conn.close()
 
-# 개발 중에만 Swagger에서 테스트 사용자 ID를 받는다.
-def get_dev_user_id(
-    x_dev_user_id: str | None = Header(default=None),
+# A의 로그인 검증 결과로 MySQL 사용자 ID를 찾는다.
+def get_current_user_id(
+    claims: dict = Depends(require_firebase_user),
 ) -> str:
-    # 환경변수로 명시적으로 켜지 않으면 사용하지 못한다.
-    if os.getenv("ENABLE_DEV_AUTH") != "true":
-        raise HTTPException(
-            status_code=403,
-            detail="개발용 사용자 확인 기능이 꺼져 있습니다.",
-        )
+    conn = None
 
-    if x_dev_user_id is None or not x_dev_user_id.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="테스트 사용자 ID를 입력해 주세요.",
-        )
+    try:
+        conn = connect()
 
-    return x_dev_user_id.strip()
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT user_id, withdrawn_at
+                FROM `user`
+                WHERE user_firebase_uid = %s
+                  AND BINARY user_firebase_uid = BINARY %s
+                LIMIT 1
+                """,
+                (claims["uid"], claims["uid"]),
+            )
+
+            user = cursor.fetchone()
+
+        if user is None:
+            raise HTTPException(
+                status_code=403,
+                detail="사용자 정보 등록을 먼저 완료해 주세요.",
+            )
+
+        if user["withdrawn_at"] is not None:
+            raise HTTPException(
+                status_code=403,
+                detail="탈퇴 처리된 계정입니다.",
+            )
+
+        return user["user_id"]
+
+    except HTTPException:
+        raise
+
+    except (MySQLError, ValueError):
+        raise HTTPException(
+            status_code=503,
+            detail="사용자 정보를 확인하지 못했습니다.",
+        ) from None
+
+    finally:
+        if conn is not None:
+            conn.close()
 
 # Depends(get_dev_user_id) 부분을 
 # 공간 생성 API
 @router.post("", status_code=201)
 def create_family_room_api(
     data: FamilyRoomCreate,
-    current_user_id: str = Depends(get_dev_user_id),
+    # 변경 후
+current_user_id: str = Depends(get_current_user_id),
 ) -> dict:
     # 기존 함수에서 사용자 존재 여부를 확인하고,
     # 공간과 주보호자 참여 정보를 함께 저장한다.
@@ -216,7 +251,8 @@ def create_family_room_api(
 # 현재 사용자가 참여 중인 가족 공간 목록
 @router.get("")
 def get_family_rooms(
-    current_user_id: str = Depends(get_dev_user_id),
+    # 변경 후
+current_user_id: str = Depends(get_current_user_id),
 ) -> dict:
     conn = connect()
 

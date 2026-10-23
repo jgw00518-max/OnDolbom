@@ -1,10 +1,12 @@
 """프로젝트 루트에서 python -m uvicorn python.main:app --reload 로 실행."""
 
 from fastapi import FastAPI
+from python.features.auth.router import router as auth_router
 
 from python.features.family_room.router import router as family_room_router
 
 app = FastAPI(title="온돌봄 사용자 API")
+app.include_router(auth_router, prefix="/auth", tags=["auth"])
 
 app.include_router(
     family_room_router,

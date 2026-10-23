@@ -4,4 +4,6 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- 로컬 FastAPI HTTP 접속은 debug 빌드에서만 허용한다. -->
+    <application android:usesCleartextTraffic="true" />
 </manifest>

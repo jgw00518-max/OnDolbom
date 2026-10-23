@@ -305,26 +305,8 @@ class _FamilyRoomListState
               ),
             ),
           ),
-
-    // 선택한 공간의 상세 정보를 표시한다.
-    if (selectedRoom != null && participation != null) ...[
-      const SizedBox(height: 16),
-      const Text(
-        '현재 선택한 공간',
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      const SizedBox(height: 8),
-      Text('대상자: ${selectedRoom.careRecipientName}'),
-      const SizedBox(height: 8),
-      Text(
-        '특이사항: ${selectedRoom.specialNotes ?? '미등록'}',
-      ),
-    ],
-  ],
-);
+          ],
+        );
         },
       ),
     );
