@@ -151,7 +151,7 @@ final userProfileProvider = FutureProvider.autoDispose<UserProfile?>(
           throw ProfileLoadException(switch (response.statusCode) {
             401 => '로그인이 만료되었습니다. 다시 로그인해 주세요.',
             403 => '이 계정은 서비스를 이용할 수 없습니다.',
-            503 => '서버의 인증 설정 또는 DB 연결을 확인해 주세요.',
+            503 => getServerError(response),
             _ => '사용자 정보를 확인하지 못했습니다. 다시 시도해 주세요.',
           });
         }
@@ -175,3 +175,16 @@ final userProfileProvider = FutureProvider.autoDispose<UserProfile?>(
     }
   },
 );
+// 서버가 반환한 오류 안내를 확인한다.
+String getServerError(http.Response response) {
+  try {
+    final body =
+        jsonDecode(utf8.decode(response.bodyBytes))
+            as Map<String, dynamic>;
+
+    return body['detail'] as String? ??
+        '서버 설정을 확인해 주세요.';
+  } catch (_) {
+    return '서버 응답을 확인하지 못했습니다.';
+  }
+}

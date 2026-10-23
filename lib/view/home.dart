@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ondolbom/view/medications/medication_list_view.dart';
+import 'package:ondolbom/view/memos/memo_list_view.dart';
+import 'package:ondolbom/vm/family_context.dart';
 import 'package:ondolbom/vm/auth/auth_vm.dart';
 import 'package:ondolbom/vm/auth/user_profile_vm.dart';
 import 'package:ondolbom/view/auth/profile_form_view.dart';
 import 'package:ondolbom/view/notifications/notifications_view.dart';
+import 'package:ondolbom/view/family_room_list.dart';
 
 class Home extends ConsumerWidget {
   const Home({super.key});
@@ -15,6 +19,10 @@ class Home extends ConsumerWidget {
     // Firebase 로그인과 MySQL 사용자 등록은 별개이므로 서버 프로필을 추가 조회한다.
     final profile = ref.watch(userProfileProvider);
     final registration = ref.watch(profileRegistrationProvider);
+    // MySQL 사용자 정보 등록까지 완료하면 공간 목록을 보여준다.
+    if (profile.asData?.value != null) {
+      return const FamilyRoomList();
+    }
     return Scaffold(
       appBar: AppBar(
         title: const Text('온돌봄'),
