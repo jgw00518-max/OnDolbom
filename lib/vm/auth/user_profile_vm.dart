@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http;
 import 'package:ondolbom/model/auth/user_profile.dart';
 import 'package:ondolbom/vm/auth/auth_vm.dart';
 
+// 기본값은 Android 에뮬레이터에서 호스트 PC에 접근하는 주소다.
+// 실제 기기·배포 환경에서는 --dart-define=API_BASE_URL=...로 지정한다.
 final apiBaseUrlProvider = Provider<String>(
   (ref) => const String.fromEnvironment(
     'API_BASE_URL',
@@ -13,6 +15,7 @@ final apiBaseUrlProvider = Provider<String>(
   ),
 );
 final authHttpClientProvider = Provider.autoDispose<http.Client>((ref) {
+  // 사용이 끝난 HTTP 클라이언트는 닫아 연결 리소스를 정리한다.
   final client = http.Client();
   ref.onDispose(client.close);
   return client;
@@ -25,6 +28,7 @@ class ProfileLoadException implements Exception {
   String toString() => message;
 }
 
+// 최초 등록 요청 상태를 폼과 홈의 버튼 활성화 여부에 공유한다.
 final profileRegistrationProvider =
     NotifierProvider.autoDispose<ProfileRegistrationVm, AsyncValue<void>>(
       ProfileRegistrationVm.new,
@@ -35,6 +39,7 @@ class ProfileRegistrationVm extends Notifier<AsyncValue<void>> {
   AsyncValue<void> build() => const AsyncData(null);
 
   Future<void> register(String name, String phone) async {
+    // 같은 화면에서 저장 버튼을 연속으로 눌러도 요청은 한 번씩만 실행한다.
     if (state.isLoading) return;
     state = const AsyncLoading();
     final result = await AsyncValue.guard(() async {
@@ -47,9 +52,11 @@ class ProfileRegistrationVm extends Notifier<AsyncValue<void>> {
       final client = ref.read(authHttpClientProvider);
       try {
         for (var attempt = 0; attempt < 2; attempt++) {
+          // 요청 중 계정이 바뀌면 이전 계정의 입력으로 새 계정을 등록하지 않는다.
           if (auth.currentUser?.uid != user.uid) {
             throw const ProfileLoadException('로그인 계정이 변경되었습니다.');
           }
+          // 최초 401일 때만 토큰을 강제 갱신하고 한 번 더 시도한다.
           final token = await user.getIdToken(attempt == 1);
           if (token == null || token.isEmpty) {
             throw const ProfileLoadException('다시 로그인해 주세요.');
@@ -61,6 +68,8 @@ class ProfileRegistrationVm extends Notifier<AsyncValue<void>> {
                   'Authorization': 'Bearer $token',
                   'Content-Type': 'application/json; charset=utf-8',
                 },
+                // UID·이메일·내부 ID는 보내지 않는다. 서버가 검증 토큰에서 결정한다.
+                // 전화번호의 최종 형식 검증과 하이픈 정규화도 서버가 담당한다.
                 body: jsonEncode({'name': name.trim(), 'phone': phone.trim()}),
               )
               .timeout(const Duration(seconds: 15));
@@ -81,6 +90,7 @@ class ProfileRegistrationVm extends Notifier<AsyncValue<void>> {
               body['user'] is! Map<String, dynamic>) {
             throw const FormatException();
           }
+          // 응답 필드가 유효한지 확인한 뒤 서버에서 최신 프로필을 다시 조회한다.
           UserProfile.fromJson(body['user'] as Map<String, dynamic>);
           if (ref.mounted && auth.currentUser?.uid == user.uid) {
             ref.invalidate(userProfileProvider);
@@ -99,12 +109,14 @@ class ProfileRegistrationVm extends Notifier<AsyncValue<void>> {
         );
       }
     });
+    // 화면 이동 등으로 provider가 폐기된 경우에는 완료 상태를 쓰지 않는다.
     if (ref.mounted) state = result;
   }
 }
 
 // 로그인 사용자가 바뀌면 재조회하고, 화면에서 사라지면 이전 요청 상태를 폐기한다.
 final userProfileProvider = FutureProvider.autoDispose<UserProfile?>(
+  // 인증·설정 오류를 자동 반복하지 않는다. 화면의 재시도 버튼으로 다시 실행한다.
   retry: (_, _) => null,
   (ref) async {
     final session = await ref.watch(authUserProvider.future);
@@ -120,6 +132,7 @@ final userProfileProvider = FutureProvider.autoDispose<UserProfile?>(
         if (user == null || user.uid != session.uid) {
           throw const ProfileLoadException('로그인 상태가 변경되었습니다. 다시 로그인해 주세요.');
         }
+        // 서버에서 서명 검증할 ID 토큰을 사용한다. Firebase UID 자체는 인증 수단이 아니다.
         final token = await user.getIdToken(attempt == 1);
         if (token == null || token.isEmpty) {
           throw const ProfileLoadException('로그인 토큰을 가져오지 못했습니다. 다시 로그인해 주세요.');
@@ -144,6 +157,7 @@ final userProfileProvider = FutureProvider.autoDispose<UserProfile?>(
         }
         final body =
             jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+        // 정상 응답에서 명시한 미등록만 null이다. 통신·서버 오류와 혼동하지 않는다.
         if (body['registered'] == false && body['user'] == null) return null;
         if (body['registered'] != true ||
             body['user'] is! Map<String, dynamic>) {

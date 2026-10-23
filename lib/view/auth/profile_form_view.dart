@@ -38,6 +38,7 @@ class _ProfileFormViewState extends ConsumerState<ProfileFormView> {
               enabled: !state.isLoading,
               decoration: const InputDecoration(labelText: '이름 (필수)'),
               autofillHints: const [AutofillHints.name],
+              // 필수 여부와 실제 DB name 컬럼의 20자 제한을 먼저 안내한다.
               validator: (value) => value == null || value.trim().isEmpty
                   ? '이름을 입력해 주세요.'
                   : value.trim().runes.length > 20
@@ -54,6 +55,7 @@ class _ProfileFormViewState extends ConsumerState<ProfileFormView> {
               ),
               keyboardType: TextInputType.phone,
               autofillHints: const [AutofillHints.telephoneNumber],
+              // 두 입력 형식만 허용한다. 저장 형식 통일은 서버에서 다시 수행한다.
               validator: (value) =>
                   !RegExp(
                     r'^010(?:[0-9]{8}|-[0-9]{4}-[0-9]{4})$',
@@ -74,6 +76,7 @@ class _ProfileFormViewState extends ConsumerState<ProfileFormView> {
               onPressed: state.isLoading
                   ? null
                   : () {
+                      // 실패 시 입력을 유지하고, 성공 시 VM이 프로필 재조회를 요청한다.
                       if (_form.currentState!.validate()) {
                         ref
                             .read(profileRegistrationProvider.notifier)

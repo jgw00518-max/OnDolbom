@@ -1,0 +1,1 @@
+﻿{"indexes":[{"collectionGroup":"schedule_notifications","queryScope":"COLLECTION","fields":[{"fieldPath":"recipient_ids","arrayConfig":"CONTAINS"},{"fieldPath":"status","order":"ASCENDING"},{"fieldPath":"schedule_seq","order":"DESCENDING"}]}],"fieldOverrides":[]}

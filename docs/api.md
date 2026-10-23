@@ -1,5 +1,8 @@
 # 구현된 사용자 인증 API
 
+일정 앱 내 알림 API는 [일정 알림 안내](schedule-notifications.md)를 참고한다.
+알림은 Firestore에 저장한다. Firestore 생성·색인 적용·일정 등록 API 연결 후 실제 연동 검증이 필요하다.
+
 ## GET /auth/me
 
 `Authorization: Bearer <Firebase ID token>`이 필요하다. 커스텀 토큰이나

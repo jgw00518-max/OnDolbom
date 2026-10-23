@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ondolbom/view/auth/profile_form_view.dart';
 import 'package:ondolbom/vm/auth/user_profile_vm.dart';
 
+// DB 저장 대신 제출값만 기록해 필수 입력과 두 전화번호 형식의 허용 여부를 확인한다.
 class RecordingRegistration extends ProfileRegistrationVm {
   final calls = <List<String>>[];
   @override

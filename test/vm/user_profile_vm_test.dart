@@ -9,6 +9,7 @@ import 'package:ondolbom/model/auth/app_user.dart';
 import 'package:ondolbom/vm/auth/auth_vm.dart';
 import 'package:ondolbom/vm/auth/user_profile_vm.dart';
 
+// 토큰 발급·HTTP 응답을 대체하여 401 갱신과 등록 요청 내용을 검증한다.
 class TestUser extends Fake implements User {
   final refreshes = <bool>[];
   @override

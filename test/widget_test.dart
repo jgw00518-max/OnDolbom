@@ -10,6 +10,7 @@ import 'package:ondolbom/model/auth/app_user.dart';
 import 'package:ondolbom/vm/auth/auth_vm.dart';
 import 'package:ondolbom/vm/auth/user_profile_vm.dart';
 
+// 실제 계정을 생성하지 않고 Firebase 호출 결과와 화면 전환을 검증한다.
 class FakeCredential extends Fake implements UserCredential {}
 
 class FakeAuth extends Fake implements FirebaseAuth {

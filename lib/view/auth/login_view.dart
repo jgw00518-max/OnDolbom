@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/vm/auth/auth_vm.dart';
 
-/// 이메일 인증 단계. 가족 프로필의 MySQL 등록은 이후에 연결한다.
+/// 이메일 인증 화면. 로그인 후 Home의 별도 폼에서 MySQL 가족 프로필을 등록한다.
 class LoginView extends ConsumerStatefulWidget {
   const LoginView({super.key});
   @override
@@ -18,6 +18,7 @@ class _LoginViewState extends ConsumerState<LoginView> {
 
   @override
   void dispose() {
+    // 화면 종료 시 비밀번호를 포함한 입력 컨트롤러를 정리한다.
     _email.dispose();
     _password.dispose();
     _confirmation.dispose();
@@ -25,6 +26,7 @@ class _LoginViewState extends ConsumerState<LoginView> {
   }
 
   void _submit() {
+    // 화면 입력 검증 후 VM에 위임한다. 서버 호출이나 인증 SDK는 화면에서 직접 쓰지 않는다.
     if (!_form.currentState!.validate()) return;
     final vm = ref.read(authVmProvider.notifier);
     if (_signUp) {
@@ -90,6 +92,7 @@ class _LoginViewState extends ConsumerState<LoginView> {
                           if (!busy && !_signUp) _submit();
                         },
                       ),
+                      // 가입 모드에서만 비밀번호 확인을 추가한다.
                       if (_signUp) ...[
                         const SizedBox(height: 16),
                         TextFormField(
@@ -131,6 +134,7 @@ class _LoginViewState extends ConsumerState<LoginView> {
                             ? null
                             : () {
                                 ref.read(authVmProvider.notifier).clearError();
+                                // 모드 전환 시 이전 비밀번호·오류를 남기지 않는다.
                                 _password.clear();
                                 _confirmation.clear();
                                 _form.currentState?.reset();
