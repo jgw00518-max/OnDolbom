@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "924021507177",
+    "project_id": "ondolbom-3125e",
+    "storage_bucket": "ondolbom-3125e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:924021507177:android:d3a931841a375f84ca0ef8",
+        "android_client_info": {
+          "package_name": "com.example.ondolbom"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDvpY_JClJAeLCknmzJJS6UFuEeJV8w6Q4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
