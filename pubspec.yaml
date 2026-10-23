@@ -36,6 +36,15 @@ dependencies:
   cupertino_icons: ^1.0.8
   firebase_core: ^5.0.0
 
+  # flutter_riverpod
+  flutter_riverpod: ^3.4.3
+  # http
+  http: ^1.6.0
+  # image_picker
+  image_picker: ^1.2.4
+  # web_socket_channel
+  web_socket_channel: ^3.0.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
