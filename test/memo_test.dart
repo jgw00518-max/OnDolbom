@@ -1,11 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -35,22 +31,6 @@ http.Response listResponse(List<Map<String, dynamic>> memos) => http.Response(
   headers: {'content-type': 'application/json; charset=utf-8'},
 );
 
-Future<void> preview(WidgetTester tester, String name) async {
-  if (!const bool.fromEnvironment('GENERATE_PREVIEWS')) return;
-  final boundary = tester.renderObject<RenderRepaintBoundary>(
-    find.byKey(const ValueKey('preview')),
-  );
-  await tester.runAsync(() async {
-    final image = await boundary.toImage(pixelRatio: 2);
-    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-    await Directory('docs/previews').create(recursive: true);
-    await File(
-      'docs/previews/$name.png',
-    ).writeAsBytes(bytes!.buffer.asUint8List());
-    image.dispose();
-  });
-}
-
 Future<void> mount(WidgetTester tester, http.Client client) async {
   tester.view.physicalSize = const Size(390, 844);
   tester.view.devicePixelRatio = 1;
@@ -65,10 +45,7 @@ Future<void> mount(WidgetTester tester, http.Client client) async {
       child: Builder(
         builder: (context) {
           final app = const MyApp().build(context) as MaterialApp;
-          return RepaintBoundary(
-            key: const ValueKey('preview'),
-            child: MaterialApp(theme: app.theme, home: const MemoListView()),
-          );
+          return MaterialApp(theme: app.theme, home: const MemoListView());
         },
       ),
     ),
@@ -77,19 +54,6 @@ Future<void> mount(WidgetTester tester, http.Client client) async {
 }
 
 void main() {
-  setUpAll(() async {
-    // 스크린샷 생성 시에만 로컬 한글 폰트를 사용한다. 앱 의존성은 추가하지 않는다.
-    const fontPath = String.fromEnvironment('PREVIEW_FONT');
-    if (fontPath.isNotEmpty) {
-      final loader = FontLoader('Roboto')
-        ..addFont(File(fontPath).readAsBytes().then(ByteData.sublistView));
-      await loader.load();
-      final icons = FontLoader('MaterialIcons')
-        ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));
-      await icons.load();
-    }
-  });
-
   testWidgets('목록에서 상세를 열고 메모를 작성하면 목록을 다시 조회한다', (tester) async {
     var saved = false;
     var posts = 0;
@@ -112,11 +76,11 @@ void main() {
     });
     await mount(tester, client);
     expect(find.textContaining('따뜻한 보리차'), findsOneWidget);
-    await preview(tester, 'memo-list');
+
     await tester.tap(find.textContaining('따뜻한 보리차'));
     await tester.pumpAndSettle();
     expect(find.text('메모 상세'), findsOneWidget);
-    await preview(tester, 'memo-detail');
+
     await tester.tap(find.byTooltip('이전 화면'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('메모 쓰기'));
@@ -128,7 +92,7 @@ void main() {
     await tester.enterText(find.byType(TextFormField), '오늘도 함께 돌봐요.');
     FocusManager.instance.primaryFocus?.unfocus();
     await tester.pumpAndSettle();
-    await preview(tester, 'memo-form');
+
     await tester.tap(find.text('메모 등록'));
     await tester.pumpAndSettle();
     expect(posts, 1);

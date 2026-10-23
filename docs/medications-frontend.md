@@ -96,11 +96,3 @@ flutter test --no-pub
 인증 오류·재시도, 날짜·공간 상태 분리와 페이지 처리를 모의 API로 검증합니다.
 테스트는 실제 투약 기록을 작성하지 않습니다.
 테스트는 앱의 테마를 사용하되 투약일지 화면을 직접 실행하므로 제외된 홈 파일에 의존하지 않습니다.
-
-테스트 데이터를 사용한 화면 이미지를 만들 수 있습니다.
-
-```powershell
-flutter test --no-pub test/medication_test.dart --dart-define=GENERATE_PREVIEWS=true --dart-define=PREVIEW_FONT=C:/Windows/Fonts/malgun.ttf
-```
-
-생성 위치는 `docs/previews/medication-list.png`, `docs/previews/medication-form.png`입니다.

@@ -1,11 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -62,12 +58,9 @@ Future<void> mount(
       child: Builder(
         builder: (context) {
           final app = const MyApp().build(context) as MaterialApp;
-          return RepaintBoundary(
-            key: const ValueKey('medication-preview'),
-            child: MaterialApp(
-              theme: app.theme,
-              home: MedicationListView(initialDate: DateTime(2026, 10, 23)),
-            ),
+          return MaterialApp(
+            theme: app.theme,
+            home: MedicationListView(initialDate: DateTime(2026, 10, 23)),
           );
         },
       ),
@@ -83,38 +76,7 @@ Future<void> fill(WidgetTester tester, String name, String value) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> preview(WidgetTester tester, String name) async {
-  if (!const bool.fromEnvironment('GENERATE_PREVIEWS')) return;
-  final boundary = tester.renderObject<RenderRepaintBoundary>(
-    find.byKey(const ValueKey('medication-preview')),
-  );
-  await tester.runAsync(() async {
-    final image = await boundary.toImage(pixelRatio: 2);
-    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-    await Directory('docs/previews').create(recursive: true);
-    await File(
-      'docs/previews/$name.png',
-    ).writeAsBytes(bytes!.buffer.asUint8List());
-    image.dispose();
-  });
-}
-
 void main() {
-  setUpAll(() async {
-    const path = String.fromEnvironment('PREVIEW_FONT');
-    if (path.isNotEmpty) {
-      final text = FontLoader('Roboto')
-        ..addFont(File(path).readAsBytes().then(ByteData.sublistView));
-      await text.load();
-      final fallback = FontLoader('Ahem')
-        ..addFont(File(path).readAsBytes().then(ByteData.sublistView));
-      await fallback.load();
-      final icons = FontLoader('MaterialIcons')
-        ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));
-      await icons.load();
-    }
-  });
-
   test('모델은 숫자·문자열 용량과 null을 처리한다', () {
     final numeric = Medication.fromJson(medicationJson(1, '테스트 약'));
     expect(numeric.doseLabel, '0.5정');
@@ -156,7 +118,7 @@ void main() {
     final card = tester.element(find.byType(Card).last);
     expect(Theme.of(card).cardTheme.color, const Color(0xFFFFF3E9));
     expect(Theme.of(card).colorScheme.primary, const Color(0xFFAD5B32));
-    await preview(tester, 'medication-list');
+
     await tester.tap(find.text('테스트 약 A 0.5정'));
     await tester.pumpAndSettle();
     expect(find.text('투약 정보'), findsOneWidget);
@@ -202,7 +164,7 @@ void main() {
     expect(find.text('약 정보를 입력해 주세요.'), findsNothing);
     FocusManager.instance.primaryFocus?.unfocus();
     await tester.pumpAndSettle();
-    await preview(tester, 'medication-form');
+
     await tester.tap(find.text('추가'));
     await tester.pumpAndSettle();
     expect(posts, 1);
