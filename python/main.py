@@ -2,9 +2,12 @@
 
 from fastapi import FastAPI
 from python.features.auth.router import router as auth_router
+from python.features.notifications.router import router as notifications_router
 
 app = FastAPI(title="온돌봄 사용자 API")
+# 기능 파일에서는 APIRouter만 만들고, 공통 URL prefix는 여기에서 한 번 등록한다.
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
+app.include_router(notifications_router, prefix="/notifications", tags=["notifications"])
 
 # 기능 담당자가 구현한 router만 여기에서 include_router로 등록한다.
 

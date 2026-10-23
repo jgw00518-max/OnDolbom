@@ -1,3 +1,4 @@
+# Firebase·DB를 대체한 API 테스트다. 실제 인증이나 DB 동시성 검증과는 구분한다.
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -85,6 +86,7 @@ class AuthTests(unittest.TestCase):
         self.assertNotIn('private', response.text)
 
     def registration(self, results, phone='01012345678', insert_error=None):
+        # SELECT 결과와 INSERT 충돌을 조절해 최초 등록·재요청·실패 분기를 재현한다.
         app.dependency_overrides[require_firebase_user] = lambda: {'uid': 'verified-uid', 'email': 'verified@example.com'}
         connection = MagicMock()
         cursor = connection.cursor.return_value.__enter__.return_value

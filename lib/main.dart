@@ -7,13 +7,16 @@ import 'package:ondolbom/vm/auth/auth_vm.dart';
 import 'package:ondolbom/view/home.dart';
 
 Future<void> main() async {
+  // 네이티브 Firebase 호출 전에 Flutter 바인딩을 준비한다.
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    // 앱 전체에서 같은 Riverpod 인증 상태를 읽도록 최상위에 둔다.
     runApp(const ProviderScope(child: MyApp()));
   } catch (_) {
+    // 초기화 실패 상태에서 인증 화면을 실행하지 않고 재실행 안내를 표시한다.
     runApp(
       const MaterialApp(
         home: Scaffold(
@@ -34,6 +37,7 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 앱 재실행 시 복원된 세션과 이후 로그인·로그아웃 변화를 함께 감시한다.
     final session = ref.watch(authUserProvider);
     return MaterialApp(
       title: '온돌봄',
@@ -79,6 +83,8 @@ class MyApp extends ConsumerWidget {
           ),
         ),
       ),
+      // 세션 복원 중에는 로그인 화면을 먼저 띄우지 않는다.
+      // Firebase 로그인 성공 이후의 MySQL 등록 여부는 Home에서 별도로 확인한다.
       home: session.when(
         loading: () =>
             const Scaffold(body: Center(child: CircularProgressIndicator())),
