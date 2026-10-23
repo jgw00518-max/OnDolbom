@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ondolbom/view/home.dart';
+import 'package:ondolbom/view/family_room_list.dart';
 
 void main() {
   runApp(const ProviderScope(
@@ -15,6 +15,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
       theme: ThemeData(
   useMaterial3: true,
@@ -59,7 +60,7 @@ class MyApp extends StatelessWidget {
     ),
   ),
 ),
-      home: const Home(),
+      home: const FamilyRoomList(),
     );
   }
 }
