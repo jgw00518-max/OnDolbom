@@ -24,6 +24,96 @@ class MedicationTests(unittest.TestCase):
         app.dependency_overrides.pop(get_current_user_id, None)
         self.client.close()
 
+    def create_payload(self, **changes):
+        return {
+            "family_room_id": "room-a", "medication_info": "테스트 투약 정보",
+            "medication_date": "2026-10-23", "medication_time": "아침",
+            "dosage_unit": "정", "dosage": "0.500", **changes,
+        }
+
+    def test_insert_commits_authenticated_author_and_decimal_dosage(self):
+        self.cursor.lastrowid = 42
+        with patch("python.features.medications.router.connect", return_value=self.db):
+            response = self.client.post("/medications/insert", json=self.create_payload(
+                medication_info="  테스트 투약 정보  ",
+            ))
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json(), {"result": "OK", "medication_log_seq": 42})
+        membership, insert = self.cursor.execute.call_args_list
+        self.assertEqual(membership.args[1], ("room-a", "verified-user"))
+        for condition in ("p.is_active = 1", "p.left_at IS NULL",
+                          "f.family_room_deleted_at IS NULL", "u.withdrawn_at IS NULL",
+                          "FOR UPDATE"):
+            self.assertIn(condition, membership.args[0])
+        self.assertEqual(insert.args[1], (
+            "room-a", "verified-user", "테스트 투약 정보", date(2026, 10, 23),
+            "아침", "정", Decimal("0.500"),
+        ))
+        self.assertNotIn("medication_confirmed_at", insert.args[0])
+        self.db.commit.assert_called_once()
+        self.db.rollback.assert_not_called()
+        self.db.close.assert_called_once()
+
+    def test_unauthenticated_insert_does_not_connect(self):
+        app.dependency_overrides.pop(get_current_user_id)
+        with patch("python.features.medications.router.connect") as connect:
+            response = self.client.post("/medications/insert", json=self.create_payload())
+        self.assertEqual(response.status_code, 401)
+        connect.assert_not_called()
+
+    def test_nonmember_cannot_insert(self):
+        self.cursor.fetchone.return_value = None
+        with patch("python.features.medications.router.connect", return_value=self.db):
+            response = self.client.post("/medications/insert", json=self.create_payload())
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(self.cursor.execute.call_count, 1)
+        self.db.commit.assert_not_called()
+        self.db.rollback.assert_called_once()
+        self.db.close.assert_called_once()
+
+    def test_insert_rejects_invalid_fields_and_server_managed_values(self):
+        invalid = [
+            self.create_payload(family_room_id="  "),
+            self.create_payload(medication_info="  "),
+            self.create_payload(medication_info="가" * 101),
+            self.create_payload(medication_date="2026-02-30"),
+            self.create_payload(medication_time=""),
+            self.create_payload(dosage_unit="정" * 21),
+            self.create_payload(dosage="0"), self.create_payload(dosage="-1"),
+            self.create_payload(dosage="10000000"),
+            self.create_payload(dosage="0.0001"),
+            self.create_payload(dosage="NaN"),
+            self.create_payload(user_id="forged-author"),
+            self.create_payload(medication_confirmed_at="2026-10-23T09:00:00"),
+            {key: value for key, value in self.create_payload().items() if key != "medication_date"},
+        ]
+        for payload in invalid:
+            with self.subTest(payload=payload), patch(
+                "python.features.medications.router.connect"
+            ) as connect:
+                response = self.client.post("/medications/insert", json=payload)
+                self.assertEqual(response.status_code, 422)
+                connect.assert_not_called()
+
+    def test_insert_or_commit_failure_rolls_back(self):
+        for stage in ("insert", "commit"):
+            with self.subTest(stage=stage):
+                self.db.reset_mock()
+                self.cursor.execute.side_effect = None
+                self.db.commit.side_effect = None
+                failure = pymysql.OperationalError(2006, "private database details")
+                if stage == "insert":
+                    self.cursor.execute.side_effect = [None, failure]
+                else:
+                    self.db.commit.side_effect = failure
+                with patch("python.features.medications.router.connect", return_value=self.db), \
+                        self.assertLogs("python.features.medications.router", level="ERROR"):
+                    response = self.client.post("/medications/insert", json=self.create_payload())
+                self.assertEqual(response.status_code, 500)
+                self.assertNotIn("private database details", response.text)
+                self.db.rollback.assert_called_once()
+                self.db.close.assert_called_once()
+
     def test_unauthenticated_request_cannot_supply_another_user_id(self):
         app.dependency_overrides.pop(get_current_user_id)
         with patch("python.features.medications.router.connect") as connect:

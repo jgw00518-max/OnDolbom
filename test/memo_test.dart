@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:ondolbom/main.dart';
 import 'package:ondolbom/view/memos/memo_list_view.dart';
 import 'package:ondolbom/view/memos/memo_form_view.dart';
 import 'package:ondolbom/vm/memos/memo_vm.dart';
@@ -61,9 +62,14 @@ Future<void> mount(WidgetTester tester, http.Client client) async {
         memoContextProvider.overrideWithValue(selected),
         memoHttpClientProvider.overrideWithValue(client),
       ],
-      child: const RepaintBoundary(
-        key: ValueKey('preview'),
-        child: MaterialApp(home: MemoListView()),
+      child: Builder(
+        builder: (context) {
+          final app = const MyApp().build(context) as MaterialApp;
+          return RepaintBoundary(
+            key: const ValueKey('preview'),
+            child: MaterialApp(theme: app.theme, home: const MemoListView()),
+          );
+        },
       ),
     ),
   );

@@ -65,7 +65,7 @@ class MemoListView extends ConsumerWidget {
                     Text(
                       '가족과 나누는 돌봄 이야기',
                       style: TextStyle(
-                        color: memoBrown.withValues(alpha: 0.8),
+                        color: Theme.of(context).colorScheme.primary,
                         fontSize: 13,
                       ),
                     ),
@@ -80,12 +80,7 @@ class MemoListView extends ConsumerWidget {
                         ),
                       )
                     else
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(22),
-                          border: Border.all(color: const Color(0xFFEDE9E3)),
-                        ),
+                      Card(
                         clipBehavior: Clip.antiAlias,
                         child: Column(
                           children: [
@@ -175,11 +170,14 @@ class _MemoCard extends StatelessWidget {
               likes: memo.likes ?? 0,
             ),
             const SizedBox(height: 8),
-            const Align(
+            Align(
               alignment: Alignment.centerRight,
               child: Text(
                 '눌러서 자세히 보기',
-                style: TextStyle(color: memoMuted, fontSize: 11),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 11,
+                ),
               ),
             ),
           ],
@@ -201,28 +199,24 @@ class MemoDetailView extends StatelessWidget {
     onBack: () => Navigator.of(context).pop(),
     child: SingleChildScrollView(
       padding: const EdgeInsets.all(20),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: const Color(0xFFEDE9E3)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            MemoMetadata(
-              author: memo.userId == selected.userId ? '나' : memo.userId,
-              date: memo.writtenAt,
-              likes: memo.likes ?? 0,
-            ),
-            const Divider(height: 36),
-            SelectableText(
-              memo.memoContent ?? '',
-              style: const TextStyle(fontSize: 16, height: 1.8),
-            ),
-          ],
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              MemoMetadata(
+                author: memo.userId == selected.userId ? '나' : memo.userId,
+                date: memo.writtenAt,
+                likes: memo.likes ?? 0,
+              ),
+              const Divider(height: 36),
+              SelectableText(
+                memo.memoContent ?? '',
+                style: const TextStyle(fontSize: 16, height: 1.8),
+              ),
+            ],
+          ),
         ),
       ),
     ),
@@ -247,7 +241,7 @@ class _Message extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 42, color: memoBrown),
+          Icon(icon, size: 42, color: Theme.of(context).colorScheme.primary),
           const SizedBox(height: 18),
           Text(
             title,
@@ -258,7 +252,10 @@ class _Message extends StatelessWidget {
           Text(
             description,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: memoMuted, height: 1.6),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              height: 1.6,
+            ),
           ),
           if (action != null)
             Padding(padding: const EdgeInsets.only(top: 16), child: action),

@@ -1,10 +1,5 @@
 import 'package:flutter/material.dart';
 
-const memoBackground = Color(0xFFFFFBF5);
-const memoBrown = Color(0xFF936345);
-const memoPeach = Color(0xFFE5AF8B);
-const memoMuted = Color(0xFF807B73);
-
 String memoDate(DateTime? value) {
   if (value == null) return '작성 시간 없음';
   final time = value.toLocal();
@@ -30,7 +25,6 @@ class MemoLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: memoBackground,
     body: SafeArea(
       child: Center(
         child: ConstrainedBox(
@@ -41,13 +35,14 @@ class MemoLayout extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
                 child: Row(
                   children: [
-                    const Text(
+                    Text(
                       '온돌봄',
-                      style: TextStyle(
-                        fontSize: 27,
-                        fontWeight: FontWeight.w900,
-                        color: memoBrown,
-                      ),
+                      style:
+                          Theme.of(context).appBarTheme.titleTextStyle ??
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                     const SizedBox(width: 12),
                     Flexible(
@@ -57,16 +52,22 @@ class MemoLayout extends StatelessWidget {
                           vertical: 10,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.secondaryContainer,
                           borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: const Color(0xFFECE6DE)),
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
                         ),
                         child: Text(
                           roomName,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: memoMuted,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSecondaryContainer,
                           ),
                         ),
                       ),
@@ -92,10 +93,11 @@ class MemoLayout extends StatelessWidget {
                     Expanded(
                       child: Text(
                         title,
-                        style: const TextStyle(
-                          fontSize: 23,
-                          fontWeight: FontWeight.w800,
-                        ),
+                        style:
+                            Theme.of(context).appBarTheme.titleTextStyle ??
+                            Theme.of(context).textTheme.titleLarge?.copyWith(
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                       ),
                     ),
                     ?action,
@@ -131,17 +133,27 @@ class MemoMetadata extends StatelessWidget {
     children: [
       Text(
         '$author · ${memoDate(date)}',
-        style: const TextStyle(color: memoMuted, fontSize: 12),
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          fontSize: 12,
+        ),
       ),
       const SizedBox(height: 12),
       Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.favorite_border, size: 16, color: memoMuted),
+          Icon(
+            Icons.favorite_border,
+            size: 16,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
           const SizedBox(width: 5),
           Text(
             '좋아요 $likes',
-            style: const TextStyle(color: memoMuted, fontSize: 12),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 12,
+            ),
           ),
         ],
       ),

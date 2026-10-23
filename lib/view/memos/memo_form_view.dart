@@ -127,9 +127,12 @@ class _MemoFormViewState extends ConsumerState<MemoFormView> {
                       (value ?? '').trim().isEmpty ? '메모 내용을 입력해 주세요.' : null,
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   '작은 돌봄 기록도 가족에게 큰 도움이 돼요.',
-                  style: TextStyle(color: memoMuted, fontSize: 12),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
                 ),
                 if (!sameSpace)
                   const Padding(

@@ -1,32 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:ondolbom/model/memos/memo.dart';
+import 'package:ondolbom/vm/family_context.dart';
 
-typedef MemoContext = ({String familyRoomId, String userId, String roomName});
+export 'package:ondolbom/vm/family_context.dart' show apiBaseUrlProvider;
+
+typedef MemoContext = FamilyContext;
 
 // 로그인·공간 선택 기능이 연결되면 이 provider를 공통 상태로 대체한다.
-final memoContextProvider = Provider<MemoContext>(
-  (ref) => (
-    familyRoomId: const String.fromEnvironment('FAMILY_ROOM_ID'),
-    userId: const String.fromEnvironment('USER_ID'),
-    roomName: const String.fromEnvironment(
-      'FAMILY_ROOM_NAME',
-      defaultValue: '가족 돌봄 공간',
-    ),
-  ),
-);
-
-final apiBaseUrlProvider = Provider<String>((ref) {
-  const configured = String.fromEnvironment('API_BASE_URL');
-  if (configured.isNotEmpty) return configured;
-  return !kIsWeb && defaultTargetPlatform == TargetPlatform.android
-      ? 'http://10.0.2.2:8000'
-      : 'http://127.0.0.1:8000';
-});
+final memoContextProvider = familyContextProvider;
 
 final memoHttpClientProvider = Provider.autoDispose<http.Client>((ref) {
   final client = http.Client();
