@@ -31,14 +31,15 @@ python -m uvicorn python.main:app --reload
 성공하면 HTTP 201과 `{"result": "OK", "memo_id": "생성된 UUID"}`를 반환합니다.
 공간 참여 조건을 만족하지 못하면 403, 입력 오류는 422, DB 오류는 500입니다.
 
-메모 조회·작성은 `python/auth.py`의 `get_current_user_id`를 공통 의존성으로 사용합니다.
-인증 담당 코드가 토큰을 검증하고 DB의 사용자 ID를 `request.state.user_id`에 설정해야 합니다.
-로그인·토큰 검증 자체는 아직 미구현이므로 연결 전 실제 요청은 401입니다.
+메모 조회·작성은 메모 라우터 내부의 `get_current_user_id`를 사용합니다.
+요청의 `Authorization: Bearer <Firebase ID 토큰>`을 기존 Firebase 인증 코드로 검증합니다.
+검증된 UID로 MySQL `user.user_firebase_uid`를 정확히 비교하여 내부 `user_id`를 조회합니다.
+토큰 누락·만료·폐기는 401, 미등록·탈퇴 계정은 403, 인증 설정·연결 및 사용자 조회 DB 오류는 503입니다.
 클라이언트가 사용자 ID나 임의의 Bearer 값을 전달하는 것으로는 인증되지 않습니다.
 작성자는 인증된 사용자로 결정하며, 이전 클라이언트가 본문에 보내는 `user_id`는 무시합니다.
 `GET /memos/select?family_room_id=공간ID`도 현재 공간 참여 여부를 검사합니다.
 참여 종료·사용자 탈퇴·공간 삭제 시에는 조회와 작성 모두 403을 반환합니다.
-공통 인증 의존성은 투약일지 조회에서도 사용합니다.
+투약일지 조회·작성도 투약일지 라우터 내부에 별도로 구현한 인증 의존성을 사용합니다.
 
 ## 투약일지 작성·조회 API
 
@@ -77,8 +78,8 @@ python -m uvicorn python.main:app --reload
 응답은 `{"results": [...]}`이고, 기록이 없으면 빈 배열입니다.
 `dosage`는 JSON 숫자, 날짜는 `YYYY-MM-DD`, 일시는 ISO 형식으로 반환합니다.
 
-인증 담당 코드가 토큰 검증 후 `request.state.user_id`를 설정해야 합니다.
-작성·조회 모두 인증 미연결 상태에서는 401, 현재 공간 참여자가 아니거나 공간이 삭제된 경우에는
+작성·조회 모두 Firebase ID 토큰이 필요하며 각 라우터의 인증 의존성에서 사용자 ID를 조회합니다.
+유효한 토큰이 없으면 401, 현재 공간 참여자가 아니거나 공간이 삭제된 경우에는
 403을 반환합니다. 참여는 `is_active = 1`, `left_at IS NULL`을 기준으로 하며
 탈퇴한 사용자도 접근할 수 없습니다. 요청의 사용자 ID를 인증 정보로 사용하지 않습니다.
 구현 파일은 `features/medications/router.py`입니다.

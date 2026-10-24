@@ -70,12 +70,19 @@ class MedicationVm extends AsyncNotifier<MedicationFeed> {
     Map<String, String>? params,
     Map<String, dynamic>? body,
   }) async {
+    final generation = _generation;
     try {
       final token = await _tokenLoader().timeout(const Duration(seconds: 15));
+      if (token == null || token.isEmpty) {
+        throw const MedicationFailure('로그인이 필요해요. 로그인 상태를 확인해 주세요.');
+      }
+      if (!ref.mounted || generation != _generation) {
+        throw const MedicationFailure('로그인 상태가 변경되었습니다.');
+      }
       final headers = <String, String>{
         'Accept': 'application/json',
         if (body != null) 'Content-Type': 'application/json; charset=utf-8',
-        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        'Authorization': 'Bearer $token',
       };
       final uri = Uri.parse(
         '${_base.replaceFirst(RegExp(r'/+$'), '')}/medications/$path',
@@ -85,6 +92,9 @@ class MedicationVm extends AsyncNotifier<MedicationFeed> {
                   ? _client.get(uri, headers: headers)
                   : _client.post(uri, headers: headers, body: jsonEncode(body)))
               .timeout(const Duration(seconds: 15));
+      if (!ref.mounted || generation != _generation) {
+        throw const MedicationFailure('로그인 상태가 변경되었습니다.');
+      }
       if (response.statusCode == 401) {
         throw const MedicationFailure('로그인이 필요해요. 로그인 상태를 확인해 주세요.');
       }

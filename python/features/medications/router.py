@@ -6,15 +6,38 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 import pymysql
 
-if __package__.startswith("python."):
-    from ...auth import get_current_user_id
-    from ...database import connect
-else:
-    from auth import get_current_user_id
-    from database import connect
+from python.features.auth.firebase_auth import require_firebase_user
+from python.database import connect
 
 router = APIRouter(prefix="/medications", tags=["투약일지"])
 logger = logging.getLogger(__name__)
+
+
+def get_current_user_id(claims: dict = Depends(require_firebase_user)) -> str:
+    """검증된 UID에 연결된 등록·미탈퇴 사용자의 내부 ID를 반환한다."""
+    conn = None
+    try:
+        conn = connect()
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """SELECT user_id, withdrawn_at
+                   FROM `user`
+                   WHERE user_firebase_uid = %s
+                     AND BINARY user_firebase_uid = BINARY %s
+                   LIMIT 1""",
+                (claims["uid"], claims["uid"]),
+            )
+            user = cursor.fetchone()
+        if user is None:
+            raise HTTPException(403, "사용자 정보 등록을 먼저 완료해 주세요.")
+        if user["withdrawn_at"] is not None:
+            raise HTTPException(403, "탈퇴 처리된 계정입니다.")
+        return user["user_id"]
+    except (pymysql.MySQLError, ValueError):
+        raise HTTPException(503, "사용자 정보를 확인하지 못했습니다.") from None
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 class MedicationCreate(BaseModel):

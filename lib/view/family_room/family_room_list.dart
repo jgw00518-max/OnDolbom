@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/vm/family_room_notifier.dart';
 import 'package:ondolbom/view/family_room/family_room_home.dart';
 import 'package:ondolbom/view/family_room/family_room_create.dart';
+import 'package:ondolbom/view/notifications/notifications_view.dart';
 
 class FamilyRoomList extends ConsumerStatefulWidget {
   const FamilyRoomList({super.key});
@@ -36,6 +37,16 @@ class _FamilyRoomListState
       appBar: AppBar(
         title: const Text('가족 공간'),
         actions: [
+          // 프로필 등록 후 실제로 표시되는 공간 목록에서 전체 공간의 알림을 연다.
+          IconButton(
+            tooltip: '알림',
+            icon: const Icon(Icons.notifications_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const NotificationsView(),
+              ),
+            ),
+          ),
           IconButton(
             onPressed: state.isLoading
                 ? null

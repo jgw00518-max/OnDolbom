@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:ondolbom/main.dart';
+import 'package:ondolbom/vm/auth/auth_vm.dart';
+import 'package:ondolbom/vm/family_context.dart';
 import 'package:ondolbom/view/memos/memo_list_view.dart';
 import 'package:ondolbom/view/memos/memo_form_view.dart';
 import 'package:ondolbom/vm/memos/memo_vm.dart';
@@ -39,12 +41,14 @@ Future<void> mount(WidgetTester tester, http.Client client) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        apiTokenLoaderProvider.overrideWithValue(() async => 'test-token'),
+        authUserProvider.overrideWith((ref) => Stream.value(null)),
         memoContextProvider.overrideWithValue(selected),
         memoHttpClientProvider.overrideWithValue(client),
       ],
-      child: Builder(
-        builder: (context) {
-          final app = const MyApp().build(context) as MaterialApp;
+      child: Consumer(
+        builder: (context, ref, _) {
+          final app = const MyApp().build(context, ref) as MaterialApp;
           return MaterialApp(theme: app.theme, home: const MemoListView());
         },
       ),
@@ -58,11 +62,11 @@ void main() {
     var saved = false;
     var posts = 0;
     final client = MockClient((request) async {
+      expect(request.headers['Authorization'], 'Bearer test-token');
       if (request.method == 'POST') {
         posts++;
         expect(jsonDecode(request.body), {
           'family_room_id': 'room-a',
-          'user_id': 'user-a',
           'memo_content': '오늘도 함께 돌봐요.',
         });
         saved = true;
@@ -127,7 +131,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('작성 권한이 없습니다.'), findsOneWidget);
+    expect(find.text('이 공간의 메모에 접근할 수 없어요.'), findsOneWidget);
     expect(find.text('저장할 내용'), findsOneWidget);
     expect(find.text('메모 등록'), findsOneWidget);
   });
@@ -171,6 +175,8 @@ void main() {
     const other = (familyRoomId: 'room-b', userId: 'user-a', roomName: '다른 공간');
     final container = ProviderContainer(
       overrides: [
+        apiTokenLoaderProvider.overrideWithValue(() async => 'test-token'),
+        authUserProvider.overrideWith((ref) => Stream.value(null)),
         memoHttpClientProvider.overrideWithValue(
           MockClient((request) async {
             final room = request.url.queryParameters['family_room_id']!;
@@ -196,6 +202,8 @@ void main() {
     final offsets = <String?>[];
     final container = ProviderContainer(
       overrides: [
+        apiTokenLoaderProvider.overrideWithValue(() async => 'test-token'),
+        authUserProvider.overrideWith((ref) => Stream.value(null)),
         memoHttpClientProvider.overrideWithValue(
           MockClient((request) async {
             offsets.add(request.url.queryParameters['offset']);

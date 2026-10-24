@@ -19,6 +19,9 @@ class MemoListView extends ConsumerWidget {
     return MemoLayout(
       roomName: selected.roomName,
       title: '메모',
+      onBack: Navigator.of(context).canPop()
+          ? () => Navigator.of(context).pop()
+          : null,
       action: FilledButton.tonal(
         onPressed: canWrite
             ? () => Navigator.of(context).push(

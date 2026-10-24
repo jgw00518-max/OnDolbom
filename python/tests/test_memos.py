@@ -8,7 +8,7 @@ from uuid import UUID
 import pymysql
 from fastapi.testclient import TestClient
 
-from python.auth import get_current_user_id
+from python.features.memos.router import get_current_user_id
 from python.main import app
 
 
@@ -29,7 +29,7 @@ class MemoTests(unittest.TestCase):
         with patch("python.features.memos.router.connect") as connect:
             response = self.client.get(
                 "/memos/select?family_room_id=room-a&user_id=user-a",
-                headers={"Authorization": "Bearer user-a", "X-User-Id": "user-a"},
+                headers={"X-User-Id": "user-a"},
             )
             self.assertEqual(response.status_code, 401)
             response = self.client.post("/memos/insert", json={

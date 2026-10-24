@@ -3,6 +3,7 @@
 from fastapi import FastAPI
 
 from python.features.auth.router import router as auth_router
+from python.features.notifications.router import router as notifications_router
 from python.features.family_room.router import router as family_room_router
 from python.features.memos.router import router as memos_router
 from python.features.medications.router import router as medications_router
@@ -14,6 +15,13 @@ app.include_router(
     auth_router,
     prefix="/auth",
     tags=["auth"],
+)
+
+# 알림 목록·읽음·일정 조회 API를 /notifications 경로에 등록한다.
+app.include_router(
+    notifications_router,
+    prefix="/notifications",
+    tags=["notifications"],
 )
 
 app.include_router(
