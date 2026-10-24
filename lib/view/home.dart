@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ondolbom/view/medications/medication_list_view.dart';
-import 'package:ondolbom/view/memos/memo_list_view.dart';
-import 'package:ondolbom/vm/family_context.dart';
 import 'package:ondolbom/vm/auth/auth_vm.dart';
 import 'package:ondolbom/vm/auth/user_profile_vm.dart';
 import 'package:ondolbom/view/auth/profile_form_view.dart';
-import 'package:ondolbom/view/notifications/notifications_view.dart';
 import 'package:ondolbom/view/family_room_list.dart';
 
 class Home extends ConsumerWidget {
@@ -24,22 +20,7 @@ class Home extends ConsumerWidget {
       return const FamilyRoomList();
     }
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('온돌봄'),
-        actions: [
-          // 프로필 등록이 확인된 가족만 앱 내 알림 화면에 진입한다.
-          if (profile.asData?.value != null)
-            IconButton(
-              tooltip: '알림',
-              icon: const Icon(Icons.notifications_outlined),
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const NotificationsView(),
-                ),
-              ),
-            ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('온돌봄')),
       body: SingleChildScrollView(
         child: Center(
           child: Padding(
