@@ -10,7 +10,7 @@ export 'package:ondolbom/vm/family_context.dart' show apiBaseUrlProvider;
 
 typedef MemoContext = FamilyContext;
 
-// 로그인·공간 선택 기능이 연결되면 이 provider를 공통 상태로 대체한다.
+// 로그인 프로필과 선택 공간을 목록·작성 화면에서 함께 사용한다.
 final memoContextProvider = familyContextProvider;
 
 final memoHttpClientProvider = Provider.autoDispose<http.Client>((ref) {
@@ -48,6 +48,7 @@ class MemoVm extends AsyncNotifier<MemoFeed> {
   static const pageSize = 20;
   late http.Client _client;
   late String _baseUrl;
+  late Future<String?> Function() _tokenLoader;
   int _generation = 0;
 
   @override
@@ -55,6 +56,7 @@ class MemoVm extends AsyncNotifier<MemoFeed> {
     _generation++;
     _client = ref.watch(memoHttpClientProvider);
     _baseUrl = ref.watch(apiBaseUrlProvider);
+    _tokenLoader = ref.watch(apiTokenLoaderProvider);
     if (context.familyRoomId.isEmpty) return const MemoFeed([], hasMore: false);
     final items = await _fetch(0);
     return MemoFeed(
@@ -69,11 +71,32 @@ class MemoVm extends AsyncNotifier<MemoFeed> {
   ).replace(queryParameters: query);
 
   Future<Map<String, dynamic>> _request(
-    Future<http.Response> Function() send,
+    Future<http.Response> Function(Map<String, String> headers) send,
     int expected,
   ) async {
+    final generation = _generation;
     try {
-      final response = await send().timeout(const Duration(seconds: 15));
+      final token = await _tokenLoader().timeout(const Duration(seconds: 15));
+      if (token == null || token.isEmpty) {
+        throw const MemoFailure('로그인이 필요해요. 로그인 상태를 확인해 주세요.');
+      }
+      if (!ref.mounted || generation != _generation) {
+        throw const MemoFailure('로그인 상태가 변경되었습니다.');
+      }
+      final response = await send({
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+        'Content-Type': 'application/json; charset=utf-8',
+      }).timeout(const Duration(seconds: 15));
+      if (!ref.mounted || generation != _generation) {
+        throw const MemoFailure('로그인 상태가 변경되었습니다.');
+      }
+      if (response.statusCode == 401) {
+        throw const MemoFailure('로그인이 필요해요. 로그인 상태를 확인해 주세요.');
+      }
+      if (response.statusCode == 403) {
+        throw const MemoFailure('이 공간의 메모에 접근할 수 없어요.');
+      }
       final body =
           jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
       if (response.statusCode != expected) {
@@ -94,12 +117,13 @@ class MemoVm extends AsyncNotifier<MemoFeed> {
 
   Future<List<Memo>> _fetch(int offset) async {
     final body = await _request(
-      () => _client.get(
+      (headers) => _client.get(
         _uri('select', {
           'family_room_id': context.familyRoomId,
           'limit': '$pageSize',
           'offset': '$offset',
         }),
+        headers: headers,
       ),
       200,
     );
@@ -150,12 +174,11 @@ class MemoVm extends AsyncNotifier<MemoFeed> {
       throw const MemoFailure('사용자와 돌봄 공간을 먼저 선택해 주세요.');
     }
     await _request(
-      () => _client.post(
+      (headers) => _client.post(
         _uri('insert'),
-        headers: {'Content-Type': 'application/json; charset=utf-8'},
+        headers: headers,
         body: jsonEncode({
           'family_room_id': context.familyRoomId,
-          'user_id': context.userId,
           'memo_content': text,
         }),
       ),
