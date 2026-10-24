@@ -4,6 +4,10 @@ import 'package:ondolbom/vm/family_room_notifier.dart';
 import 'package:ondolbom/view/family_room/family_room_home.dart';
 import 'package:ondolbom/view/family_room/family_room_create.dart';
 import 'package:ondolbom/view/notifications/notifications_view.dart';
+import 'package:ondolbom/vm/auth/auth_vm.dart';
+
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:ondolbom/view/invites/received_invites.dart';
 
 class FamilyRoomList extends ConsumerStatefulWidget {
   const FamilyRoomList({super.key});
@@ -19,6 +23,11 @@ class _FamilyRoomListState
   void initState() {
     super.initState();
 
+    // Swagger 테스트 후 삭제한다.
+FirebaseAuth.instance.currentUser?.getIdToken().then((token) {
+  debugPrint('SWAGGER_TOKEN: $token');
+});
+
     // 첫 화면이 만들어진 다음 한 번 조회한다.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
@@ -33,11 +42,16 @@ class _FamilyRoomListState
   Widget build(BuildContext context) {
     final state = ref.watch(familyRoomProvider);
 
-    return Scaffold(
+        return Scaffold(
       appBar: AppBar(
         title: const Text('가족 공간'),
         actions: [
-          // 프로필 등록 후 실제로 표시되는 공간 목록에서 전체 공간의 알림을 연다.
+            IconButton(
+            tooltip: '받은 가족 초대',
+            icon: const Icon(Icons.mail_outline),
+            onPressed: () => inviteAction(context),
+          ),
+          // 전체 공간의 알림을 연다.
           IconButton(
             tooltip: '알림',
             icon: const Icon(Icons.notifications_outlined),
@@ -47,7 +61,10 @@ class _FamilyRoomListState
               ),
             ),
           ),
+
+          // 가족 공간 목록을 새로 조회한다.
           IconButton(
+            tooltip: '새로고침',
             onPressed: state.isLoading
                 ? null
                 : () {
@@ -56,6 +73,15 @@ class _FamilyRoomListState
                         .fetchRooms();
                   },
             icon: const Icon(Icons.refresh),
+          ),
+
+          // A가 구현한 로그아웃 함수를 사용한다.
+          IconButton(
+            tooltip: '로그아웃',
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await ref.read(authVmProvider.notifier).signOut();
+            },
           ),
         ],
       ),
@@ -339,10 +365,34 @@ Future<void> createRoomAction(BuildContext context) async {
   }
 }
 
-void inviteAction(BuildContext context) {
+// 받은 초대 화면으로 이동하고 수락 후 공간 목록을 갱신한다.
+Future<void> inviteAction(BuildContext context) async {
+  final accepted = await Navigator.push<bool>(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const ReceivedInvites(),
+    ),
+  );
+
+  if (!mounted || !context.mounted || accepted != true) {
+    return;
+  }
+
+  await ref.read(familyRoomProvider.notifier).fetchRooms();
+
+  if (!mounted || !context.mounted) {
+    return;
+  }
+
+  final state = ref.read(familyRoomProvider);
+
   ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('받은 초대 화면을 연결할 예정입니다.'),
+    SnackBar(
+      content: Text(
+        state.errorMessage == null
+            ? '초대를 수락했습니다. 참여한 공간을 선택해 주세요.'
+            : '초대를 수락했습니다. 공간 목록은 다시 새로고침해 주세요.',
+      ),
     ),
   );
 }

@@ -7,6 +7,8 @@ from python.features.notifications.router import router as notifications_router
 from python.features.family_room.router import router as family_room_router
 from python.features.memos.router import router as memos_router
 from python.features.medications.router import router as medications_router
+from python.features.schedules.router import router as schedules_router
+from python.features.invites.router import router as invites_router
 
 
 app = FastAPI(title="온돌봄 사용자 API")
@@ -16,6 +18,12 @@ app.include_router(
     prefix="/auth",
     tags=["auth"],
 )
+
+# 가족 초대 API
+app.include_router(invites_router)
+
+# 일정 라우터에 지정된 /schedules 경로를 사용한다.
+app.include_router(schedules_router)
 
 # 알림 목록·읽음·일정 조회 API를 /notifications 경로에 등록한다.
 app.include_router(

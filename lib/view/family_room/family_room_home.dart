@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ondolbom/vm/family_room_notifier.dart';
-import 'package:ondolbom/view/recipient_detail.dart';
-import 'package:ondolbom/view/memos/memo_list_view.dart';
+
 import 'package:ondolbom/view/medications/medication_list_view.dart';
+import 'package:ondolbom/view/memos/memo_list_view.dart';
+import 'package:ondolbom/view/recipient_detail.dart';
+import 'package:ondolbom/view/schedules/schedule_list.dart';
+import 'package:ondolbom/vm/family_room_notifier.dart';
+import 'package:ondolbom/view/invites/invite_create.dart';
 
 class FamilyRoomHome extends ConsumerWidget {
   const FamilyRoomHome({super.key});
@@ -103,7 +106,7 @@ class FamilyRoomHome extends ConsumerWidget {
               menuButton(
                 '일정',
                 Icons.calendar_month_outlined,
-                () => preparingAction(context),
+                () => scheduleAction(context, room.familyRoomId),
               ),
               const SizedBox(width: 10),
               menuButton(
@@ -111,8 +114,22 @@ class FamilyRoomHome extends ConsumerWidget {
                 Icons.people_outline,
                 () => recipientAction(context),
               ),
-              const SizedBox(width: 10),
-              const Expanded(child: SizedBox()),
+                            const SizedBox(width: 10),
+
+              if (state.selectedParticipation
+                      ?.isRepresentative ==
+                  true)
+                menuButton(
+                  '가족 초대',
+                  Icons.person_add_alt_1,
+                  () => inviteCreateAction(
+                    context,
+                    room.familyRoomId,
+                    room.careRecipientName,
+                  ),
+                )
+              else
+                const Expanded(child: SizedBox()),
             ],
           ),
           const SizedBox(height: 28),
@@ -136,7 +153,8 @@ class FamilyRoomHome extends ConsumerWidget {
                         ),
                       ),
                       TextButton(
-                        onPressed: () => preparingAction(context),
+                        onPressed: () =>
+                            scheduleAction(context, room.familyRoomId),
                         child: const Text('전체 일정'),
                       ),
                     ],
@@ -154,7 +172,7 @@ class FamilyRoomHome extends ConsumerWidget {
 
   // ----- function -----
 
-  // 반복되는 메뉴 모양을 함수로 만든다.
+  // 반복되는 메뉴 모양을 만든다.
   Widget menuButton(String title, IconData icon, VoidCallback action) {
     return Expanded(
       child: SizedBox(
@@ -184,14 +202,53 @@ class FamilyRoomHome extends ConsumerWidget {
   void recipientAction(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const RecipientDetail()),
+      MaterialPageRoute(builder: (_) => const RecipientDetail()),
     );
   }
 
-  // 아직 연결하지 않은 기능 안내
+  // 모든 참여 가족이 일정 달력·목록으로 이동한다.
+  void scheduleAction(BuildContext context, String familyRoomId) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ScheduleList(familyRoomId: familyRoomId),
+      ),
+    );
+  }
+
+  // 아직 연결하지 않은 기능을 안내한다.
   void preparingAction(BuildContext context) {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('아직 연결하지 않은 기능입니다.')));
   }
-} // class
+
+    // 주보호자가 가족 초대 화면으로 이동한다.
+  Future<void> inviteCreateAction(
+    BuildContext context,
+    String familyRoomId,
+    String recipientName,
+  ) async {
+    final created = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => InviteCreate(
+          familyRoomId: familyRoomId,
+          recipientName: recipientName,
+        ),
+      ),
+    );
+
+    if (!context.mounted || created != true) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          '초대를 등록했습니다. 초대받은 계정에서 받은 초대를 확인해 주세요.',
+        ),
+      ),
+    );
+  }
+}
