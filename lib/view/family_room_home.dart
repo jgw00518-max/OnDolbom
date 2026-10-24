@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/vm/family_room_notifier.dart';
 import 'package:ondolbom/view/recipient_detail.dart';
+import 'package:ondolbom/view/memos/memo_list_view.dart';
+import 'package:ondolbom/view/medications/medication_list_view.dart';
 
 class FamilyRoomHome extends ConsumerWidget {
   const FamilyRoomHome({super.key});
@@ -14,12 +16,8 @@ class FamilyRoomHome extends ConsumerWidget {
 
     if (room == null) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('돌봄 공간'),
-        ),
-        body: const Center(
-          child: Text('공간을 선택해 주세요.'),
-        ),
+        appBar: AppBar(title: const Text('돌봄 공간')),
+        body: const Center(child: Text('공간을 선택해 주세요.')),
       );
     }
 
@@ -46,10 +44,7 @@ class FamilyRoomHome extends ConsumerWidget {
           // 소개 문구
           const Text(
             '나의 일상에,',
-            style: TextStyle(
-              fontSize: 30,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
           ),
           Text(
             '안심을 더하다',
@@ -62,19 +57,13 @@ class FamilyRoomHome extends ConsumerWidget {
           const SizedBox(height: 20),
           const Text(
             '소중한 사람의 오늘도,\n온돌봄이 함께합니다.',
-            style: TextStyle(
-              fontSize: 17,
-              height: 1.6,
-            ),
+            style: TextStyle(fontSize: 17, height: 1.6),
           ),
           const SizedBox(height: 32),
 
           const Text(
             '돌봄 메뉴',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
 
@@ -84,7 +73,11 @@ class FamilyRoomHome extends ConsumerWidget {
               menuButton(
                 '투약일지',
                 Icons.medication_outlined,
-                () => preparingAction(context),
+                () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const MedicationListView(),
+                  ),
+                ),
               ),
               const SizedBox(width: 10),
               menuButton(
@@ -96,7 +89,9 @@ class FamilyRoomHome extends ConsumerWidget {
               menuButton(
                 '메모',
                 Icons.edit_outlined,
-                () => preparingAction(context),
+                () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const MemoListView()),
+                ),
               ),
             ],
           ),
@@ -112,10 +107,10 @@ class FamilyRoomHome extends ConsumerWidget {
               ),
               const SizedBox(width: 10),
               menuButton(
-              '대상자 정보',
-              Icons.people_outline,
-              () => recipientAction(context),
-            ),
+                '대상자 정보',
+                Icons.people_outline,
+                () => recipientAction(context),
+              ),
               const SizedBox(width: 10),
               const Expanded(child: SizedBox()),
             ],
@@ -160,11 +155,7 @@ class FamilyRoomHome extends ConsumerWidget {
   // ----- function -----
 
   // 반복되는 메뉴 모양을 함수로 만든다.
-  Widget menuButton(
-    String title,
-    IconData icon,
-    VoidCallback action,
-  ) {
+  Widget menuButton(String title, IconData icon, VoidCallback action) {
     return Expanded(
       child: SizedBox(
         height: 115,
@@ -181,10 +172,7 @@ class FamilyRoomHome extends ConsumerWidget {
             children: [
               Icon(icon, size: 30),
               const SizedBox(height: 12),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-              ),
+              Text(title, textAlign: TextAlign.center),
             ],
           ),
         ),
@@ -196,18 +184,14 @@ class FamilyRoomHome extends ConsumerWidget {
   void recipientAction(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const RecipientDetail(),
-      ),
+      MaterialPageRoute(builder: (context) => const RecipientDetail()),
     );
   }
 
   // 아직 연결하지 않은 기능 안내
   void preparingAction(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('아직 연결하지 않은 기능입니다.'),
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('아직 연결하지 않은 기능입니다.')));
   }
 } // class

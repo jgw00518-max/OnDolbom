@@ -26,7 +26,7 @@
 | `lib/view/memos/memo_style.dart` | 공통 화면 구조, 작성자·시간·좋아요 표시 |
 | `lib/vm/family_context.dart` | 메모·투약일지의 공통 선택 공간·사용자·서버 주소 |
 | `python/features/memos/router.py` | 공간별 메모 조회·작성과 참여 권한 검사 |
-| `python/auth.py` | 검증된 사용자 ID를 공급하는 공통 인증 연결 지점 |
+| 각 기능의 `router.py` | 기능별 `get_current_user_id`에서 인증된 사용자 ID 조회 |
 | `test/memo_test.dart` | 모의 API 기반 UI·VM 검증 |
 | `python/tests/test_memos.py` | API 검증·작성자 사칭 방지·트랜잭션 테스트 |
 
@@ -80,10 +80,10 @@ POST /memos/insert
 
 ## 5. 인증·권한과 남은 연결
 
-조회·작성 모두 `get_current_user_id`로 서버의 `request.state.user_id`를 확인합니다.
-이는 토큰 검증을 수행하는 코드가 아니라 인증 담당 코드와의 연결 지점입니다.
-현재 브랜치에는 실제 로그인 토큰 검증과 state 설정 코드가 없어 요청은 401로 거절됩니다.
-Flutter 메모 VM의 인증 헤더 전달도 아직 연결하지 않았습니다.
+조회·작성 모두 `get_current_user_id`에서 Bearer Firebase ID 토큰을 검증하고,
+검증된 UID로 MySQL 내부 사용자 ID를 조회합니다. 별도의 request.state 설정은 필요하지 않습니다.
+토큰 누락·만료·폐기는 401, 미등록·탈퇴 계정은 403으로 거절합니다.
+Flutter 메모 VM은 호출 시점의 Firebase ID 토큰을 조회·작성 요청의 Bearer 헤더로 전달합니다.
 실행 옵션의 `USER_ID`는 인증 수단이 아닙니다.
 
 인증 이후에도 공간별로 다음 조건을 검사합니다.
@@ -96,26 +96,26 @@ Flutter 메모 VM의 인증 헤더 전달도 아직 연결하지 않았습니다
 저장은 참여 확인 행을 잠근 뒤 같은 연결로 수행하고 전체 성공 시 commit합니다.
 오류가 나면 rollback하며, 연결은 `finally`에서 종료합니다.
 
-로컬 `lib/view/home.dart`에는 메모 진입 메뉴가 연결되어 있지만 해당 파일은
-사용자 요청에 따라 이번 커밋에서 제외합니다. 커밋만 체크아웃한 환경에서는 홈 또는
-라우트에 `MemoListView` 진입을 별도로 연결해야 합니다. 테스트는 화면을 직접 실행합니다.
+`lib/view/family_room_home.dart`의 메모 메뉴에서 목록으로 이동합니다.
+공간은 `familyRoomProvider`의 선택 공간, 사용자 ID는 서버에서 조회한 로그인 프로필을 사용합니다.
+작성 요청에는 사용자 ID를 보내지 않으며, 작성자는 서버가 인증 토큰으로 결정합니다.
 
 ## 6. 실행
 
 프로젝트 루트에서 가상환경 없이 서버를 실행합니다.
 
 ```powershell
-python python/main.py
+python -m python.main
 ```
 
-홈 진입·인증을 연결한 뒤 별도 터미널에서 실행합니다.
+로그인 후 가족 공간을 선택하면 메모 메뉴를 사용할 수 있습니다. 별도 터미널에서 실행합니다.
 
 ```powershell
-flutter run --dart-define=FAMILY_ROOM_ID=공간ID --dart-define=USER_ID=사용자ID --dart-define=FAMILY_ROOM_NAME="가족 돌봄 공간"
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
 ```
 
-Android 에뮬레이터 기본 서버 주소는 `http://10.0.2.2:8000`, 기타 플랫폼은
-`http://127.0.0.1:8000`입니다. 다른 서버는 `API_BASE_URL` 실행 옵션으로 지정합니다.
+기본 서버 주소는 로그인·가족 공간 기능과 동일한 `http://10.0.2.2:8000`입니다.
+데스크톱·웹에서는 `API_BASE_URL=http://127.0.0.1:8000`을 지정합니다. 다른 서버는 `API_BASE_URL` 실행 옵션으로 지정합니다.
 실제 기기에는 접근 가능한 서버 주소·바인딩 설정이 필요합니다.
 
 ## 7. 검증과 다음 작업
@@ -128,8 +128,7 @@ python -m unittest discover -s python/tests -p "test_*.py" -v
 
 테스트는 실제 DB를 변경하지 않습니다. 조회→상세→작성→목록 갱신, 빈 내용,
 저장 실패·중복 제출·재시도·취소 확인·페이지·공간 상태 분리와 서버 인증·권한 검사를 확인합니다.
-공통 테마를 사용하되 제외된 홈 진입 파일에 의존하지 않도록 테스트합니다.
-실제 로그인에서 MySQL 저장까지의 통합 테스트는 인증 연결 후 필요합니다.
+공통 테마를 사용하며 공간 홈에서의 메뉴 진입과 토큰 헤더 전달도 모의 API로 검증합니다.
+실제 Firebase 계정에서 MySQL 저장까지의 통합 검증은 별도로 필요합니다.
 
-다음 작업은 실제 토큰 검증·메모 VM의 인증 헤더 전달·공통 로그인 및 공간 상태 연결,
-홈 라우팅 통합과 실제 기기에서 작성·조회 확인입니다.
+다음 작업은 실제 기기에서 로그인·공간 선택 후 작성·조회를 확인하는 것입니다.

@@ -66,22 +66,22 @@
 프로젝트 루트에서 서버를 실행하고 별도 터미널에서 Flutter를 실행합니다.
 
 ```powershell
-python python/main.py
+python -m python.main
 ```
 
 ```powershell
-flutter run --dart-define=FAMILY_ROOM_ID=공간ID --dart-define=USER_ID=사용자ID --dart-define=FAMILY_ROOM_NAME="가족 돌봄 공간"
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
 ```
 
-서버 주소 기본값은 Android 에뮬레이터 `http://10.0.2.2:8000`, 기타 플랫폼
-`http://127.0.0.1:8000`입니다. `API_BASE_URL` 실행 옵션으로 바꿀 수 있습니다.
+서버 주소는 로그인·가족 공간 기능과 같은 설정을 사용하며 기본값은 `http://10.0.2.2:8000`입니다.
+데스크톱·웹은 `API_BASE_URL=http://127.0.0.1:8000`을 지정합니다. `API_BASE_URL` 실행 옵션으로 바꿀 수 있습니다.
 실제 기기에서는 기기가 접근할 수 있는 서버 주소와 서버 바인딩 설정이 필요합니다.
 
-**현재 실제 로그인 검증은 미연결이므로 서버는 요청에 401을 반환합니다.**
-`USER_ID` 실행 옵션은 화면 상태이며 인증 수단이 아닙니다.
-로그인 담당자는 `apiTokenLoaderProvider`에 호출 시점의 유효한 토큰을 반환하는 함수를 연결해야 합니다.
-투약일지 VM은 반환된 토큰을 `Authorization: Bearer ...` 헤더로 보냅니다.
-서버도 해당 토큰을 검증해 MySQL 사용자 ID를 `request.state.user_id`에 설정하도록 연결해야 합니다.
+가족 공간 홈의 투약일지 메뉴에서 목록으로 이동합니다.
+현재 선택한 공간과 서버에서 조회한 MySQL 사용자 프로필을 사용하며, 실행 옵션의 공간·사용자 ID는 사용하지 않습니다.
+`apiTokenLoaderProvider`는 현재 로그인한 사용자의 Firebase ID 토큰을 가져옵니다.
+투약일지 VM은 조회·작성 요청에 `Authorization: Bearer ...` 헤더를 전달합니다.
+토큰이 없으면 서버 요청을 보내지 않으며, 서버는 각 라우터에서 토큰과 공간 권한을 확인합니다.
 미인증·권한 거절은 화면에 표시하며 테스트용 기록으로 대체하지 않습니다.
 
 ## 검증

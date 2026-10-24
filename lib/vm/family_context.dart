@@ -1,31 +1,37 @@
-import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ondolbom/vm/auth/auth_vm.dart';
+import 'package:ondolbom/vm/auth/user_profile_vm.dart' as profile;
+import 'package:ondolbom/vm/family_room_notifier.dart';
+
+export 'package:ondolbom/vm/auth/user_profile_vm.dart' show apiBaseUrlProvider;
 
 typedef FamilyContext = ({String familyRoomId, String userId, String roomName});
 
-// 로그인·공간 선택 기능이 준비되면 두 기능이 함께 사용하는 이 상태에 연결한다.
-final familyContextProvider = Provider<FamilyContext>(
-  (ref) => (
-    familyRoomId: const String.fromEnvironment('FAMILY_ROOM_ID'),
-    userId: const String.fromEnvironment('USER_ID'),
-    roomName: const String.fromEnvironment(
-      'FAMILY_ROOM_NAME',
-      defaultValue: '가족 돌봄 공간',
-    ),
-  ),
-);
-
-final apiBaseUrlProvider = Provider<String>((ref) {
-  const configured = String.fromEnvironment('API_BASE_URL');
-  if (configured.isNotEmpty) return configured;
-  return !kIsWeb && defaultTargetPlatform == TargetPlatform.android
-      ? 'http://10.0.2.2:8000'
-      : 'http://127.0.0.1:8000';
+// 실행 옵션 대신 실제 로그인 프로필과 선택된 가족 공간을 사용한다.
+final familyContextProvider = Provider<FamilyContext>((ref) {
+  final room = ref.watch(familyRoomProvider).selectedRoom;
+  final user = ref.watch(profile.userProfileProvider).asData?.value;
+  return (
+    familyRoomId: room?.familyRoomId ?? '',
+    userId: user?.userId ?? '',
+    roomName: room == null ? '가족 돌봄 공간' : '${room.careRecipientName} 님의 돌봄 공간',
+  );
 });
 
-// 로그인 담당 코드에서 호출 시점의 유효한 토큰을 반환하도록 연결한다.
-// 실행 옵션의 USER_ID를 인증 토큰으로 사용하지 않는다.
-final apiTokenLoaderProvider = Provider<Future<String?> Function()>(
-  (ref) =>
-      () async => null,
-);
+// 계정 전환 전의 화면에서 새 계정의 토큰을 사용하지 않도록 UID를 고정한다.
+final apiTokenLoaderProvider = Provider<Future<String?> Function()>((ref) {
+  final uid = ref.watch(authUserProvider).asData?.value?.uid;
+  final auth = ref.watch(firebaseAuthProvider);
+  return () async {
+    final user = auth.currentUser;
+    if (uid == null || user == null || user.uid != uid) return null;
+    try {
+      final token = await user.getIdToken();
+      if (auth.currentUser?.uid != uid) return null;
+      return token;
+    } on FirebaseAuthException {
+      return null;
+    }
+  };
+});

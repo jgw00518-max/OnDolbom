@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:ondolbom/main.dart';
+import 'package:ondolbom/vm/auth/auth_vm.dart';
 import 'package:ondolbom/model/medications/medication.dart';
 import 'package:ondolbom/view/medications/medication_form_view.dart';
 import 'package:ondolbom/view/medications/medication_list_view.dart';
@@ -51,13 +52,14 @@ Future<void> mount(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        authUserProvider.overrideWith((ref) => Stream.value(null)),
         familyContextProvider.overrideWithValue(family),
         medicationHttpClientProvider.overrideWithValue(client),
         apiTokenLoaderProvider.overrideWithValue(() async => 'test-token'),
       ],
-      child: Builder(
-        builder: (context) {
-          final app = const MyApp().build(context) as MaterialApp;
+      child: Consumer(
+        builder: (context, ref, _) {
+          final app = const MyApp().build(context, ref) as MaterialApp;
           return MaterialApp(
             theme: app.theme,
             home: MedicationListView(initialDate: DateTime(2026, 10, 23)),
@@ -231,6 +233,8 @@ void main() {
     final requests = <Uri>[];
     final container = ProviderContainer(
       overrides: [
+        authUserProvider.overrideWith((ref) => Stream.value(null)),
+        apiTokenLoaderProvider.overrideWithValue(() async => 'test-token'),
         medicationHttpClientProvider.overrideWithValue(
           MockClient((request) async {
             requests.add(request.url);
