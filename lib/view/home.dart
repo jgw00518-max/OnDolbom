@@ -7,7 +7,7 @@ import 'package:ondolbom/vm/auth/auth_vm.dart';
 import 'package:ondolbom/vm/auth/user_profile_vm.dart';
 import 'package:ondolbom/view/auth/profile_form_view.dart';
 import 'package:ondolbom/view/notifications/notifications_view.dart';
-import 'package:ondolbom/view/family_room_list.dart';
+import 'package:ondolbom/view/family_room/family_room_list.dart';
 
 class Home extends ConsumerWidget {
   const Home({super.key});

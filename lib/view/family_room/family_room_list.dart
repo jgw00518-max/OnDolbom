@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/vm/family_room_notifier.dart';
-import 'package:ondolbom/view/family_room_home.dart';
-import 'package:ondolbom/view/family_room_create.dart';
+import 'package:ondolbom/view/family_room/family_room_home.dart';
+import 'package:ondolbom/view/family_room/family_room_create.dart';
 
 class FamilyRoomList extends ConsumerStatefulWidget {
   const FamilyRoomList({super.key});
@@ -31,8 +31,6 @@ class _FamilyRoomListState
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(familyRoomProvider);
-    final selectedRoom = state.selectedRoom;
-    final participation = state.selectedParticipation;
 
     return Scaffold(
       appBar: AppBar(

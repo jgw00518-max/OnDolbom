@@ -1,9 +1,7 @@
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ondolbom/main.dart';
 import 'package:ondolbom/model/auth/app_user.dart';
@@ -47,10 +45,6 @@ class FakeAuth extends Fake implements FirebaseAuth {
 }
 
 void main() {
-  testWidgets('App opens the current home screen', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const ProviderScope(child: MyApp()));
-
   testWidgets('Session changes switch screens and logout calls Firebase', (
     tester,
   ) async {
