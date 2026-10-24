@@ -9,7 +9,7 @@ import 'package:http/testing.dart';
 import 'package:ondolbom/model/auth/app_user.dart';
 import 'package:ondolbom/model/auth/user_profile.dart';
 import 'package:ondolbom/model/family/family_room.dart';
-import 'package:ondolbom/view/family_room_home.dart';
+import 'package:ondolbom/view/family_room/family_room_home.dart';
 import 'package:ondolbom/vm/auth/auth_vm.dart';
 import 'package:ondolbom/vm/auth/user_profile_vm.dart' as profile;
 import 'package:ondolbom/vm/family_context.dart';
