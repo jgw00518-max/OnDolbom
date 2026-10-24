@@ -81,7 +81,8 @@ flutter run --dart-define=FAMILY_ROOM_ID=공간ID --dart-define=USER_ID=사용�
 `USER_ID` 실행 옵션은 화면 상태이며 인증 수단이 아닙니다.
 로그인 담당자는 `apiTokenLoaderProvider`에 호출 시점의 유효한 토큰을 반환하는 함수를 연결해야 합니다.
 투약일지 VM은 반환된 토큰을 `Authorization: Bearer ...` 헤더로 보냅니다.
-서버도 해당 토큰을 검증해 MySQL 사용자 ID를 `request.state.user_id`에 설정하도록 연결해야 합니다.
+서버는 각 라우터의 인증 의존성에서 Firebase ID 토큰을 검증하고 MySQL 사용자 ID를 조회합니다.
+프론트엔드의 토큰 로더는 실제 Firebase ID 토큰을 반환하도록 연결해야 합니다.
 미인증·권한 거절은 화면에 표시하며 테스트용 기록으로 대체하지 않습니다.
 
 ## 검증

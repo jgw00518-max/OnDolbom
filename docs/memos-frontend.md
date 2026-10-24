@@ -26,7 +26,7 @@
 | `lib/view/memos/memo_style.dart` | 공통 화면 구조, 작성자·시간·좋아요 표시 |
 | `lib/vm/family_context.dart` | 메모·투약일지의 공통 선택 공간·사용자·서버 주소 |
 | `python/features/memos/router.py` | 공간별 메모 조회·작성과 참여 권한 검사 |
-| `python/auth.py` | 검증된 사용자 ID를 공급하는 공통 인증 연결 지점 |
+| 각 기능의 `router.py` | 기능별 `get_current_user_id`에서 인증된 사용자 ID 조회 |
 | `test/memo_test.dart` | 모의 API 기반 UI·VM 검증 |
 | `python/tests/test_memos.py` | API 검증·작성자 사칭 방지·트랜잭션 테스트 |
 
@@ -80,9 +80,9 @@ POST /memos/insert
 
 ## 5. 인증·권한과 남은 연결
 
-조회·작성 모두 `get_current_user_id`로 서버의 `request.state.user_id`를 확인합니다.
-이는 토큰 검증을 수행하는 코드가 아니라 인증 담당 코드와의 연결 지점입니다.
-현재 브랜치에는 실제 로그인 토큰 검증과 state 설정 코드가 없어 요청은 401로 거절됩니다.
+조회·작성 모두 `get_current_user_id`에서 Bearer Firebase ID 토큰을 검증하고,
+검증된 UID로 MySQL 내부 사용자 ID를 조회합니다. 별도의 request.state 설정은 필요하지 않습니다.
+토큰 누락·만료·폐기는 401, 미등록·탈퇴 계정은 403으로 거절합니다.
 Flutter 메모 VM의 인증 헤더 전달도 아직 연결하지 않았습니다.
 실행 옵션의 `USER_ID`는 인증 수단이 아닙니다.
 
@@ -131,5 +131,5 @@ python -m unittest discover -s python/tests -p "test_*.py" -v
 공통 테마를 사용하되 제외된 홈 진입 파일에 의존하지 않도록 테스트합니다.
 실제 로그인에서 MySQL 저장까지의 통합 테스트는 인증 연결 후 필요합니다.
 
-다음 작업은 실제 토큰 검증·메모 VM의 인증 헤더 전달·공통 로그인 및 공간 상태 연결,
+다음 작업은 메모 VM의 인증 헤더 전달·공통 로그인 및 공간 상태 연결,
 홈 라우팅 통합과 실제 기기에서 작성·조회 확인입니다.

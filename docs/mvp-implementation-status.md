@@ -39,7 +39,7 @@
 | `lib/vm/family_context.dart` | 두 기능의 공통 선택 공간·사용자·서버 주소와 토큰 공급 연결 지점 |
 | `python/features/memos/router.py` | 메모 조회·작성 |
 | `python/features/medications/router.py` | 투약일지 조회·작성 |
-| `python/auth.py` | 인증된 사용자 ID를 공급받는 공통 의존성 |
+| 각 기능의 `router.py` | 라우터별 인증 의존성에서 사용자 ID 조회 |
 | `python/database.py` | 환경 설정과 MySQL 연결 |
 | `python/main.py` | 라우터 등록·서버 직접 실행 |
 | `test/memo_test.dart`, `test/medication_test.dart` | 모의 API 기반 화면·VM 테스트 |
@@ -73,9 +73,10 @@
 
 ## 5. 인증·권한과 실제 연동 상태
 
-메모 조회·작성과 투약일지 조회·작성은 공통 `get_current_user_id`를 사용합니다.
-이 의존성은 서버의 `request.state.user_id`를 읽는 연결 지점이며 토큰 검증 코드가 아닙니다.
-현재 브랜치에는 로그인 토큰 검증과 state 설정 코드가 없어 실제 요청은 401입니다.
+메모와 투약일지는 각각의 라우터에 구현한 `get_current_user_id`를 조회·작성에 사용합니다.
+이 의존성은 기존 Firebase 인증 코드로 Bearer ID 토큰을 검증하고,
+검증된 UID로 MySQL 내부 사용자 ID를 조회합니다. 별도의 state 설정은 필요하지 않습니다.
+토큰 누락·만료·폐기는 401, 미등록·탈퇴 계정은 403, 인증·사용자 조회 연결 오류는 503입니다.
 실행 옵션이나 요청 본문의 사용자 ID를 전달해도 인증을 대신하지 못합니다.
 
 인증 이후에도 `participate`에서 사용자·공간 일치, `is_active = 1`, `left_at IS NULL`,
@@ -84,9 +85,8 @@
 
 투약일지 VM에는 `apiTokenLoaderProvider`를 연결하면 유효한 토큰을 Bearer 헤더에 넣는 처리가 있습니다.
 메모 VM의 토큰 전달은 아직 연결하지 않았습니다. 기존 본문의 `user_id`는 메모 서버에서 무시합니다.
-별도 [로그인·회원가입 PR #1](https://github.com/jgw00518-max/OnDolbom/pull/1)의 설명에는
-Firebase 인증·FastAPI 토큰 검증·프로필 API가 있으나 이 브랜치에는 아직 통합하지 않았습니다.
-연동 시 실제 인증 함수의 계약과 Firebase UID→MySQL 사용자 ID 매핑을 확인해야 합니다.
+로그인·회원가입 기능의 Firebase 토큰 검증을 메모·투약일지 서버 인증에 연결했습니다.
+Flutter의 토큰 전달 연결 및 실제 로그인 계정으로 저장·조회하는 통합 검증은 남아 있습니다.
 
 ## 6. 홈 연결과 커밋 제외 범위
 
