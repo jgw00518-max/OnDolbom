@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ondolbom/view/medications/medication_list_view.dart';
+import 'package:ondolbom/view/chats/chat_view.dart';
 import 'package:ondolbom/view/memos/memo_list_view.dart';
 import 'package:ondolbom/view/recipient_detail.dart';
 import 'package:ondolbom/view/schedules/schedule_list.dart';
@@ -86,7 +87,9 @@ class FamilyRoomHome extends ConsumerWidget {
               menuButton(
                 '실시간 채팅',
                 Icons.chat_bubble_outline,
-                () => preparingAction(context),
+                () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const ChatView()),
+                ),
               ),
               const SizedBox(width: 10),
               menuButton(
@@ -114,11 +117,9 @@ class FamilyRoomHome extends ConsumerWidget {
                 Icons.people_outline,
                 () => recipientAction(context),
               ),
-                            const SizedBox(width: 10),
+              const SizedBox(width: 10),
 
-              if (state.selectedParticipation
-                      ?.isRepresentative ==
-                  true)
+              if (state.selectedParticipation?.isRepresentative == true)
                 menuButton(
                   '가족 초대',
                   Icons.person_add_alt_1,
@@ -223,7 +224,7 @@ class FamilyRoomHome extends ConsumerWidget {
     ).showSnackBar(const SnackBar(content: Text('아직 연결하지 않은 기능입니다.')));
   }
 
-    // 주보호자가 가족 초대 화면으로 이동한다.
+  // 주보호자가 가족 초대 화면으로 이동한다.
   Future<void> inviteCreateAction(
     BuildContext context,
     String familyRoomId,
@@ -244,11 +245,7 @@ class FamilyRoomHome extends ConsumerWidget {
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          '초대를 등록했습니다. 초대받은 계정에서 받은 초대를 확인해 주세요.',
-        ),
-      ),
+      const SnackBar(content: Text('초대를 등록했습니다. 초대받은 계정에서 받은 초대를 확인해 주세요.')),
     );
   }
 }
