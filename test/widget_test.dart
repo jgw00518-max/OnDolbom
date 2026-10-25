@@ -1,14 +1,13 @@
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ondolbom/main.dart';
 import 'package:ondolbom/model/auth/app_user.dart';
 import 'package:ondolbom/vm/auth/auth_vm.dart';
 import 'package:ondolbom/vm/auth/user_profile_vm.dart';
+
 
 // 실제 계정을 생성하지 않고 Firebase 호출 결과와 화면 전환을 검증한다.
 class FakeCredential extends Fake implements UserCredential {}
@@ -47,10 +46,6 @@ class FakeAuth extends Fake implements FirebaseAuth {
 }
 
 void main() {
-  testWidgets('App opens the current home screen', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const ProviderScope(child: MyApp()));
-
   testWidgets('Session changes switch screens and logout calls Firebase', (
     tester,
   ) async {
