@@ -2,6 +2,10 @@
 
 비밀번호 재설정은 `/auth/password-reset/request` → `/verify` → `/confirm`의 이메일 인증번호 방식이다. [API·SMTP 설정·검증 안내](account-recovery.md)
 
+이메일 회원가입도 `/auth/signup/request` → `/verify` → `/confirm` 인증번호 확인 후 진행한다. [가입 API·설정 안내](email-signup.md)
+
+사용자 문의는 `/inquiries`에서 본인 문의 작성·목록·상세 및 관리자 답변을 조회한다. [문의 API·DB 계약·검증 안내](inquiries.md)
+
 소셜 로그인·로컬 서버 설정은 [팀원 로컬 설정 안내](team-local-setup.md)를 참고한다.
 
 | 소셜 인증 API | 동작 |

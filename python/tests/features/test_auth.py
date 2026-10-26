@@ -25,6 +25,21 @@ class AuthTests(unittest.TestCase):
                 self.assertEqual(self.client.get('/auth/me', headers=headers).status_code, 401)
             connect.assert_not_called()
 
+    def test_unverified_password_signup_cannot_create_profile(self):
+        app.dependency_overrides[require_firebase_user] = lambda: {
+            'uid': 'new-uid', 'email': 'new@example.com', 'email_verified': False,
+            'firebase': {'sign_in_provider': 'password'},
+        }
+        connection = MagicMock()
+        cursor = connection.cursor.return_value.__enter__.return_value
+        cursor.fetchone.return_value = None
+        with patch('python.features.auth.router.connect', return_value=connection):
+            response = self.client.post('/auth/profile', json={'name': 'Family', 'phone': '01012345678'})
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(cursor.execute.call_count, 1)
+        connection.commit.assert_not_called()
+        connection.close.assert_called_once()
+
     def test_invalid_token_rejected_before_db(self):
         with patch('python.features.auth.firebase_auth.get_firebase_app', return_value=object()), patch(
             'python.features.auth.firebase_auth.auth.verify_id_token', side_effect=auth.InvalidIdTokenError('private')

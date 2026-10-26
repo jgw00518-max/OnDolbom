@@ -82,6 +82,11 @@ def register_profile(payload: ProfileRegistration, claims: dict = Depends(requir
             existing = _find_profile(cursor, claims["uid"])
             if existing is not None:
                 return _registered_response(existing)
+            # 앱을 우회해 Firebase에서 직접 가입해도 미인증 이메일로 새 가족 프로필을 만들 수 없다.
+            # 기존 등록 사용자의 로그인과 소셜 로그인 흐름은 유지한다.
+            if (claims.get("firebase", {}).get("sign_in_provider") == "password"
+                    and claims.get("email_verified") is not True):
+                raise HTTPException(403, "회원가입 이메일 인증을 먼저 완료해 주세요.")
             # 이메일과 UID는 검증된 토큰에서만 얻고, 내부 ID는 서버 UUID로 생성한다.
             email = claims.get("email")
             if not isinstance(email, str) or not email or len(email) > 200:

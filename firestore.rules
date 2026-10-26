@@ -13,5 +13,11 @@ service cloud.firestore {
     match /password_reset_limits/{document=**} {
       allow read, write: if false;
     }
+    match /signup_challenges/{document=**} {
+      allow read, write: if false;
+    }
+    match /signup_limits/{document=**} {
+      allow read, write: if false;
+    }
   }
 }

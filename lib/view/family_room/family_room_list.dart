@@ -3,11 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
 import 'package:ondolbom/view/family_room/family_room_home.dart';
 import 'package:ondolbom/view/family_room/family_room_create.dart';
-import 'package:ondolbom/view/notifications/notifications_view.dart';
-import 'package:ondolbom/vm/auth/auth_vm.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:ondolbom/view/invites/received_invites.dart';
+import 'package:ondolbom/view/widgets/account_drawer.dart';
 
 class FamilyRoomList extends ConsumerStatefulWidget {
   const FamilyRoomList({super.key});
@@ -43,24 +42,12 @@ FirebaseAuth.instance.currentUser?.getIdToken().then((token) {
     final state = ref.watch(familyRoomProvider);
 
         return Scaffold(
+      drawer: const AccountDrawer(),
       appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const AccountMenuButton(),
         title: const Text('가족 공간'),
         actions: [
-            IconButton(
-            tooltip: '받은 가족 초대',
-            icon: const Icon(Icons.mail_outline),
-            onPressed: () => inviteAction(context),
-          ),
-          // 전체 공간의 알림을 연다.
-          IconButton(
-            tooltip: '알림',
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const NotificationsView(),
-              ),
-            ),
-          ),
 
           // 가족 공간 목록을 새로 조회한다.
           IconButton(
@@ -75,14 +62,6 @@ FirebaseAuth.instance.currentUser?.getIdToken().then((token) {
             icon: const Icon(Icons.refresh),
           ),
 
-          // A가 구현한 로그아웃 함수를 사용한다.
-          IconButton(
-            tooltip: '로그아웃',
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await ref.read(authVmProvider.notifier).signOut();
-            },
-          ),
         ],
       ),
       body: Builder(
