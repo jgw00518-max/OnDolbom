@@ -72,7 +72,8 @@ def _membership(cursor, room_id, user_id, *, lock=False):
 
 # 이미지 BLOB는 텍스트 채팅 조회·전송에 포함하지 않는다.
 _COLUMNS = '''chat_seq, family_room_id, user_id, chat_content, sent_at,
-    client_message_id, live_chat_updated_at'''
+    client_message_id, live_chat_updated_at,
+    (SELECT u.name FROM `user` AS u WHERE u.user_id = live_chat.user_id) AS author_name'''
 
 
 @router.get('/messages')

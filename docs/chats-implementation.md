@@ -49,6 +49,9 @@ HTTP 헤더는 `Authorization: Bearer <Firebase ID 토큰>`이다.
 검증된 UID의 내부 MySQL 사용자 ID로 현재 공간 참여를 확인한다.
 기본 결과는 `chat_seq` 내림차순이며 최대 100개까지 요청할 수 있다.
 이미지 BLOB·삭제된 메시지는 반환하지 않는다.
+이력과 실시간 메시지, 재전송 응답은 `user.name`을 `author_name`으로 반환한다.
+Flutter는 저장된 본인·다른 가족 메시지 모두 이 이름을 표시하며 이름이 비어 있으면 `이름 없는 가족`을 표시한다.
+`user_id`는 본인 메시지 구분·인증·중복 처리용 식별자로 유지한다.
 
 ```json
 {
@@ -56,6 +59,7 @@ HTTP 헤더는 `Authorization: Bearer <Firebase ID 토큰>`이다.
     "chat_seq": 7,
     "family_room_id": "room-a",
     "user_id": "서버가 결정한 내부 사용자 ID",
+    "author_name": "김가족",
     "chat_content": "안녕하세요 😀",
     "sent_at": "2026-10-25T18:00:00",
     "client_message_id": "b87782b2-2e2f-43af-a617-cff3735083bb",

@@ -184,9 +184,7 @@ class _ChatViewState extends ConsumerState<ChatView>
                               key: ValueKey('chat-${message.seq}'),
                               content: message.content,
                               mine: message.userId == selected.userId,
-                              author: message.userId == selected.userId
-                                  ? '나'
-                                  : message.userId,
+                              author: message.authorLabel,
                               footer: _time(message),
                             );
                           },

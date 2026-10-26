@@ -5,8 +5,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:ondolbom/model/medications/medication.dart';
 import 'package:ondolbom/vm/family_context.dart';
+import 'package:ondolbom/vm/family_room_notifier.dart';
 
 typedef MedicationQuery = ({FamilyContext context, String date});
+final medicationEditAllowedProvider = Provider.family<bool, FamilyContext>((
+  ref,
+  context,
+) {
+  final state = ref.watch(familyRoomProvider);
+  final member = state.selectedParticipation;
+  return state.selectedRoomId == context.familyRoomId &&
+      member != null &&
+      member.userId == context.userId &&
+      member.isActive &&
+      member.isRepresentative;
+});
+// 작성과 수정은 동일한 주보호자·활성 참여 조건을 사용한다.
+final medicationCreateAllowedProvider = medicationEditAllowedProvider;
 final medicationHttpClientProvider = Provider.autoDispose<http.Client>((ref) {
   final client = http.Client();
   ref.onDispose(client.close);
@@ -26,11 +41,25 @@ class MedicationFeed {
     required this.hasMore,
     required this.offset,
     this.loadingMore = false,
+    this.confirming = const {},
   });
   final List<Medication> items;
   final bool hasMore;
   final int offset;
   final bool loadingMore;
+  final Set<int> confirming;
+
+  MedicationFeed copyWith({
+    List<Medication>? items,
+    bool? loadingMore,
+    Set<int>? confirming,
+  }) => MedicationFeed(
+    items ?? this.items,
+    hasMore: hasMore,
+    offset: offset,
+    loadingMore: loadingMore ?? this.loadingMore,
+    confirming: confirming ?? this.confirming,
+  );
 }
 
 final medicationVmProvider = AsyncNotifierProvider.autoDispose
@@ -47,6 +76,7 @@ class MedicationVm extends AsyncNotifier<MedicationFeed> {
   late String _base;
   late Future<String?> Function() _tokenLoader;
   int _generation = 0;
+  final _confirming = <int>{};
 
   @override
   Future<MedicationFeed> build() async {
@@ -62,6 +92,7 @@ class MedicationVm extends AsyncNotifier<MedicationFeed> {
       items,
       hasMore: items.length == pageSize,
       offset: items.length,
+      confirming: Set.unmodifiable(_confirming),
     );
   }
 
@@ -69,6 +100,8 @@ class MedicationVm extends AsyncNotifier<MedicationFeed> {
     String path, {
     Map<String, String>? params,
     Map<String, dynamic>? body,
+    bool patch = false,
+    int? expectedStatus,
   }) async {
     final generation = _generation;
     try {
@@ -79,6 +112,8 @@ class MedicationVm extends AsyncNotifier<MedicationFeed> {
       if (!ref.mounted || generation != _generation) {
         throw const MedicationFailure('로그인 상태가 변경되었습니다.');
       }
+      if (path == 'insert') _ensureCanCreate();
+      if (path.startsWith('confirm/')) _ensureConfirmationContext();
       final headers = <String, String>{
         'Accept': 'application/json',
         if (body != null) 'Content-Type': 'application/json; charset=utf-8',
@@ -88,22 +123,32 @@ class MedicationVm extends AsyncNotifier<MedicationFeed> {
         '${_base.replaceFirst(RegExp(r'/+$'), '')}/medications/$path',
       ).replace(queryParameters: params);
       final response =
-          await (body == null
+          await (patch
+                  ? _client.patch(uri, headers: headers, body: jsonEncode(body))
+                  : body == null
                   ? _client.get(uri, headers: headers)
                   : _client.post(uri, headers: headers, body: jsonEncode(body)))
               .timeout(const Duration(seconds: 15));
       if (!ref.mounted || generation != _generation) {
         throw const MedicationFailure('로그인 상태가 변경되었습니다.');
       }
+      if (path.startsWith('confirm/')) _ensureConfirmationContext();
       if (response.statusCode == 401) {
         throw const MedicationFailure('로그인이 필요해요. 로그인 상태를 확인해 주세요.');
       }
       if (response.statusCode == 403) {
-        throw const MedicationFailure('이 공간의 투약일지에 접근할 수 없어요.');
+        throw MedicationFailure(
+          patch
+              ? '현재 공간의 주보호자만 투약 정보를 수정할 수 있어요.'
+              : path == 'insert'
+              ? '현재 공간의 주보호자만 투약일지를 작성할 수 있어요.'
+              : '이 공간의 투약일지에 접근할 수 없어요.',
+        );
       }
       final decoded = jsonDecode(utf8.decode(response.bodyBytes));
       if (decoded is! Map<String, dynamic>) throw const FormatException();
-      if (response.statusCode != (body == null ? 200 : 201)) {
+      if (response.statusCode !=
+          (expectedStatus ?? (patch || body == null ? 200 : 201))) {
         throw MedicationFailure(
           decoded['detail'] is String
               ? decoded['detail'] as String
@@ -145,24 +190,99 @@ class MedicationVm extends AsyncNotifier<MedicationFeed> {
         hasMore: true,
         offset: before.offset,
         loadingMore: true,
+        confirming: Set.unmodifiable(_confirming),
       ),
     );
     try {
       final next = await _fetch(before.offset);
       if (!ref.mounted || generation != _generation) return;
-      final unique = {
-        for (final item in [...before.items, ...next]) item.seq: item,
-      };
+      final current = state.asData?.value ?? before;
+      final unique = {for (final item in current.items) item.seq: item};
+      for (final item in next) {
+        if (unique[item.seq]?.isConfirmed == true && !item.isConfirmed) {
+          continue;
+        }
+        unique[item.seq] = item;
+      }
       state = AsyncData(
         MedicationFeed(
           unique.values.toList(),
           hasMore: next.length == pageSize,
           offset: before.offset + next.length,
+          confirming: Set.unmodifiable(_confirming),
         ),
       );
     } catch (_) {
-      if (ref.mounted && generation == _generation) state = AsyncData(before);
+      if (ref.mounted && generation == _generation) {
+        state = AsyncData(
+          (state.asData?.value ?? before).copyWith(loadingMore: false),
+        );
+      }
       rethrow;
+    }
+  }
+
+  void _ensureConfirmationContext() {
+    if (ref.read(familyContextProvider) != query.context ||
+        query.context.userId.isEmpty ||
+        query.context.familyRoomId.isEmpty) {
+      throw const MedicationFailure('선택한 공간과 로그인 상태를 확인해 주세요.');
+    }
+  }
+
+  Future<void> confirmMedication(Medication item) async {
+    _ensureConfirmationContext();
+    if (item.familyRoomId != query.context.familyRoomId) {
+      throw const MedicationFailure('다른 공간의 투약일지는 체크할 수 없어요.');
+    }
+    final feed = state.asData?.value;
+    if (feed == null) throw const MedicationFailure('목록을 불러온 후 다시 시도해 주세요.');
+    final target = feed.items
+        .where((record) => record.seq == item.seq)
+        .firstOrNull;
+    if (target == null) throw const MedicationFailure('투약일지를 다시 조회해 주세요.');
+    if (target.isConfirmed || !_confirming.add(item.seq)) return;
+    state = AsyncData(feed.copyWith(confirming: Set.unmodifiable(_confirming)));
+    try {
+      final result = await _request(
+        'confirm/${item.seq}',
+        body: {'family_room_id': query.context.familyRoomId},
+        expectedStatus: 200,
+      );
+      final at = DateTime.tryParse(
+        result['medication_confirmed_at'] as String? ?? '',
+      );
+      if (at == null || result['medication_log_seq'] != item.seq) {
+        throw const MedicationFailure('체크 결과를 확인하지 못했어요. 다시 시도해 주세요.');
+      }
+      final current = state.asData?.value;
+      if (ref.mounted && current != null) {
+        state = AsyncData(
+          current.copyWith(
+            items: [
+              for (final record in current.items)
+                if (record.seq == item.seq)
+                  record.withConfirmation(
+                    at,
+                    result['confirmed_by_user_id'] as String?,
+                    result['confirmed_by_name'] as String?,
+                  )
+                else
+                  record,
+            ],
+          ),
+        );
+      }
+    } finally {
+      _confirming.remove(item.seq);
+      if (ref.mounted) {
+        final current = state.asData?.value;
+        if (current != null) {
+          state = AsyncData(
+            current.copyWith(confirming: Set.unmodifiable(_confirming)),
+          );
+        }
+      }
     }
   }
 
@@ -172,6 +292,7 @@ class MedicationVm extends AsyncNotifier<MedicationFeed> {
     required String dosage,
     required String unit,
   }) async {
+    _ensureCanCreate();
     if (query.context.familyRoomId.isEmpty || query.context.userId.isEmpty) {
       throw const MedicationFailure('사용자와 돌봄 공간을 먼저 선택해 주세요.');
     }
@@ -196,5 +317,61 @@ class MedicationVm extends AsyncNotifier<MedicationFeed> {
       },
     );
     if (ref.mounted) ref.invalidateSelf();
+  }
+
+  void _ensureCanCreate() {
+    if (ref.read(familyContextProvider) != query.context) {
+      throw const MedicationFailure('선택한 공간이 변경됐어요. 닫은 후 다시 작성해 주세요.');
+    }
+    if (!ref.read(medicationCreateAllowedProvider(query.context))) {
+      throw const MedicationFailure('현재 공간의 주보호자만 투약일지를 작성할 수 있어요.');
+    }
+  }
+
+  Future<void> updateMedication({
+    required Medication item,
+    required DateTime date,
+    required String info,
+    required String time,
+    required String dosage,
+    required String unit,
+  }) async {
+    if (ref.read(familyContextProvider) != query.context ||
+        item.familyRoomId != query.context.familyRoomId) {
+      throw const MedicationFailure('선택한 공간이 변경됐어요. 닫은 후 다시 조회해 주세요.');
+    }
+    if (!ref.read(medicationEditAllowedProvider(query.context))) {
+      throw const MedicationFailure('현재 공간의 주보호자만 투약 정보를 수정할 수 있어요.');
+    }
+    if (info.trim().isEmpty ||
+        info.trim().runes.length > 100 ||
+        time.trim().isEmpty ||
+        time.trim().runes.length > 20 ||
+        unit.trim().isEmpty ||
+        unit.trim().runes.length > 20 ||
+        !isValidMedicationDosage(dosage)) {
+      throw const MedicationFailure('약 정보와 용량을 확인해 주세요.');
+    }
+    final generation = _generation;
+    await _request(
+      'update/${item.seq}',
+      patch: true,
+      body: {
+        'family_room_id': query.context.familyRoomId,
+        'medication_info': info.trim(),
+        'medication_date': medicationDateKey(date),
+        'medication_time': time.trim(),
+        'dosage': dosage.trim(),
+        'dosage_unit': unit.trim(),
+      },
+    );
+    if (!ref.mounted ||
+        generation != _generation ||
+        ref.read(familyContextProvider) != query.context) {
+      throw const MedicationFailure('선택한 공간이 변경됐어요. 다시 조회해 주세요.');
+    }
+    final target = (context: query.context, date: medicationDateKey(date));
+    if (target != query) ref.invalidate(medicationVmProvider(target));
+    ref.invalidateSelf();
   }
 }
