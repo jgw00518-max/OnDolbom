@@ -57,9 +57,20 @@ Bearer 토큰의 사용자로 한 번만 등록하며 취소 API는 없습니다
 처음 배포하는 DB에서는 서버 실행 전 `python -m python.features.memos.migrate_likes`로
 좋아요 기록 테이블을 생성해야 합니다. 기존 메모 테이블과 데이터는 유지합니다.
 
+## 투약일지 체크 해제 API
+
+`DELETE /medications/confirm/{medication_log_seq}`로 체크를 해제합니다.
+JSON 본문에는 `family_room_id`, `expected_confirmed_at`, `expected_confirmed_by_user_id`가 필요합니다.
+두 expected 값에는 목록/체크 응답의 체크 시간·사용자 ID 원본을 전달합니다.
+현재 공간의 활성 참여자 중 체크한 본인 또는 현재 주보호자만 허용합니다.
+기록이 변경되었으면 409, 이미 미완료면 200과 `already_unconfirmed:true`를 반환합니다.
+해제 시 기존 체크 시간과 확인자 ID를 NULL로 비우며 테이블 구조는 변경하지 않습니다.
+본문·응답 예와 상세 권한은 [투약일지 안내](../docs/medications-frontend.md)를 참고하세요.
+
 ## 투약일지 작성·조회 API
 
-`POST /medications/insert`로 현재 참여 중인 공간에 투약일지를 작성합니다.
+`POST /medications/insert`로 현재 참여 중인 공간의 주보호자만 투약일지를 작성합니다.
+일반 참여자의 작성은 403으로 거절하며 조회는 기존처럼 허용합니다.
 아래 항목은 모두 필수이며 문자열의 앞뒤 공백은 제거합니다.
 
 ```json
@@ -83,7 +94,13 @@ Bearer 토큰의 사용자로 한 번만 등록하며 취소 API는 없습니다
 
 성공 응답은 HTTP 201과 `{"result": "OK", "medication_log_seq": 42}` 형식입니다.
 일지 번호는 DB 자동 증가 값이며 기록 시각은 DB 기본값을 사용합니다.
-투약 확인 시각은 null로 시작합니다. 투약 완료 체크 API는 이번 작성 기능에 포함하지 않습니다.
+투약 확인 시각은 null로 시작합니다.
+복약 완료 체크는 `POST /medications/confirm/{medication_log_seq}`에
+`{"family_room_id":"공간ID"}`를 전송합니다. 해당 공간의 활성 참여자가 체크할 수 있습니다.
+인증된 사용자 ID와 DB 시간을 저장하고 `confirmed_by_user_id`, `confirmed_by_name`,
+`medication_confirmed_at`을 응답합니다. 체크 이름은 `user.name`에서 조회합니다.
+목록에도 이 필드를 반환하며 재요청은 `already_confirmed:true`로 최초 체크를 유지합니다.
+최초 배포 시 `python -m python.features.medications.migrate_confirmation`으로 체크 사용자 컬럼을 추가합니다.
 저장 중 참여 종료·공간 삭제·사용자 탈퇴와의 충돌을 막도록 참여 확인 행을 잠그고,
 전체 성공 시 한 번 commit, 실패 시 rollback하며 연결을 종료합니다.
 

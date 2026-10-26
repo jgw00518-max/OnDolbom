@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/model/medications/medication.dart';
 import 'package:ondolbom/view/medications/medication_form_view.dart';
+import 'package:ondolbom/view/medications/medication_edit_view.dart';
 import 'package:ondolbom/vm/family_room/family_context.dart';
 import 'package:ondolbom/vm/medications/medication_vm.dart';
 
@@ -13,6 +14,7 @@ class MedicationListView extends ConsumerStatefulWidget {
 }
 
 class _MedicationListViewState extends ConsumerState<MedicationListView> {
+  final _unconfirmDialogs = <int>{};
   late DateTime _date = DateUtils.dateOnly(
     widget.initialDate ?? DateTime.now(),
   );
@@ -28,6 +30,10 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
   }
 
   Future<void> _add(MedicationQuery query) async {
+    if (ref.read(familyContextProvider) != query.context ||
+        !ref.read(medicationCreateAllowedProvider(query.context))) {
+      return;
+    }
     final saved = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -40,6 +46,65 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
     }
   }
 
+  Future<void> _confirm(MedicationQuery query, Medication item) async {
+    try {
+      await ref
+          .read(medicationVmProvider(query).notifier)
+          .confirmMedication(item);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is MedicationFailure
+                ? error.message
+                : '체크하지 못했어요. 다시 시도해 주세요.',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _unconfirm(MedicationQuery query, Medication item) async {
+    if (!_unconfirmDialogs.add(item.seq)) return;
+    try {
+      final approved = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('복약 완료 체크 해제'),
+          content: const Text('체크를 해제하면 미완료로 표시됩니다.\n체크를 해제하시겠습니까?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('취소'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('해제'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || approved != true) return;
+      await ref
+          .read(medicationVmProvider(query).notifier)
+          .unconfirmMedication(item);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is MedicationFailure
+                ? error.message
+                : '체크를 해제하지 못했어요. 다시 시도해 주세요.',
+          ),
+        ),
+      );
+    } finally {
+      _unconfirmDialogs.remove(item.seq);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final selected = ref.watch(familyContextProvider);
@@ -47,6 +112,7 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
     final provider = medicationVmProvider(query);
     final feed = ref.watch(provider);
     final colors = Theme.of(context).colorScheme;
+    final canCreate = ref.watch(medicationCreateAllowedProvider(selected));
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -56,16 +122,17 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
           ),
         ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: FilledButton.tonal(
-              onPressed:
-                  selected.familyRoomId.isEmpty || selected.userId.isEmpty
-                  ? null
-                  : () => _add(query),
-              child: const Text('약 추가'),
+          if (canCreate)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: FilledButton.tonal(
+                onPressed:
+                    selected.familyRoomId.isEmpty || selected.userId.isEmpty
+                    ? null
+                    : () => _add(query),
+                child: const Text('약 추가'),
+              ),
             ),
-          ),
         ],
       ),
       body: Center(
@@ -237,23 +304,78 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
                                           ),
                                           for (final item in group.value)
                                             ListTile(
-                                              leading: Icon(
-                                                item.isConfirmed
-                                                    ? Icons.check_circle_outline
-                                                    : Icons
-                                                          .radio_button_unchecked,
-                                                color: item.isConfirmed
-                                                    ? colors.primary
-                                                    : colors.onSurfaceVariant,
+                                              leading: IconButton(
+                                                tooltip: item.isConfirmed
+                                                    ? (canCreate ||
+                                                              item.confirmedByUserId ==
+                                                                  selected
+                                                                      .userId
+                                                          ? '복약 완료 체크 해제'
+                                                          : '복약 완료')
+                                                    : '복약 완료 체크',
+                                                onPressed:
+                                                    (item.isConfirmed &&
+                                                            !canCreate &&
+                                                            item.confirmedByUserId !=
+                                                                selected
+                                                                    .userId) ||
+                                                        data.confirming
+                                                            .contains(
+                                                              item.seq,
+                                                            ) ||
+                                                        selected.userId.isEmpty
+                                                    ? null
+                                                    : () => item.isConfirmed
+                                                          ? _unconfirm(
+                                                              query,
+                                                              item,
+                                                            )
+                                                          : _confirm(
+                                                              query,
+                                                              item,
+                                                            ),
+                                                icon:
+                                                    data.confirming.contains(
+                                                      item.seq,
+                                                    )
+                                                    ? const SizedBox(
+                                                        width: 20,
+                                                        height: 20,
+                                                        child:
+                                                            CircularProgressIndicator(
+                                                              strokeWidth: 2,
+                                                            ),
+                                                      )
+                                                    : Icon(
+                                                        item.isConfirmed
+                                                            ? Icons
+                                                                  .check_circle_outline
+                                                            : Icons
+                                                                  .radio_button_unchecked,
+                                                        color: item.isConfirmed
+                                                            ? colors.primary
+                                                            : colors
+                                                                  .onSurfaceVariant,
+                                                      ),
                                               ),
                                               title: Text(
                                                 '${item.info ?? '약 정보 없음'} ${item.doseLabel}',
                                               ),
-                                              subtitle: Text(
-                                                item.isConfirmed
-                                                    ? '복약 완료'
-                                                    : '복약 전',
-                                              ),
+                                              subtitle: item.isConfirmed
+                                                  ? Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        const Text('복약 완료'),
+                                                        Text(
+                                                          medicationConfirmationLabel(
+                                                            item,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    )
+                                                  : const Text('복약 전'),
                                               trailing: const Icon(
                                                 Icons.chevron_right,
                                               ),
@@ -310,23 +432,64 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
     );
   }
 
-  void _showDetail(Medication item) {
+  Future<void> _showDetail(Medication item) async {
     final room = ref.read(familyContextProvider);
-    showDialog<void>(
+    final query = (context: room, date: medicationDateKey(_date));
+    final edit = await showDialog<bool>(
       context: context,
       builder: (context) => Consumer(
         builder: (context, ref, _) {
           final current = ref.watch(familyContextProvider);
+          final canEdit =
+              current == room && ref.watch(medicationEditAllowedProvider(room));
+          final feed = ref.watch(medicationVmProvider(query)).asData?.value;
+          final record =
+              feed?.items
+                  .where((record) => record.seq == item.seq)
+                  .firstOrNull ??
+              item;
+          final confirming = feed?.confirming.contains(item.seq) ?? false;
+          final canConfirm =
+              current == room &&
+              room.userId.isNotEmpty &&
+              feed != null &&
+              !record.isConfirmed &&
+              !confirming;
+          final canUnconfirm =
+              current == room &&
+              room.userId.isNotEmpty &&
+              feed != null &&
+              record.isConfirmed &&
+              (canEdit || record.confirmedByUserId == room.userId);
           return AlertDialog(
             title: const Text('투약 정보'),
             content: SingleChildScrollView(
               child: Text(
                 current != room
                     ? '선택한 공간이 변경됐어요. 다시 조회해 주세요.'
-                    : '${item.info ?? '약 정보 없음'}\n\n투약 날짜: ${medicationDateKey(item.date)}\n복약 시간: ${item.time ?? '미지정'}\n용량: ${item.doseLabel}\n상태: ${item.isConfirmed ? '복약 완료' : '복약 전'}\n작성자: ${item.userId == room.userId ? '나' : item.userId}',
+                    : '${record.info ?? '약 정보 없음'}\n\n투약 날짜: ${medicationDateKey(record.date)}\n복약 시간: ${record.time ?? '미지정'}\n용량: ${record.doseLabel}\n상태: ${record.isConfirmed ? '복약 완료' : '복약 전'}\n작성자: ${record.authorLabel}${record.isConfirmed ? '\n${medicationConfirmationLabel(record)}' : ''}',
               ),
             ),
             actions: [
+              if (canUnconfirm)
+                TextButton(
+                  onPressed: confirming
+                      ? null
+                      : () => _unconfirm(query, record),
+                  child: Text(confirming ? '해제 중…' : '체크 해제'),
+                ),
+              if (!record.isConfirmed)
+                TextButton(
+                  onPressed: canConfirm ? () => _confirm(query, record) : null,
+                  child: Text(confirming ? '체크 중…' : '복약 완료 체크'),
+                ),
+              if (canEdit)
+                TextButton(
+                  onPressed: confirming
+                      ? null
+                      : () => Navigator.pop(context, true),
+                  child: const Text('수정'),
+                ),
               TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: const Text('닫기'),
@@ -336,6 +499,23 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
         },
       ),
     );
+    if (!mounted || edit != true || ref.read(familyContextProvider) != room) {
+      return;
+    }
+    final savedDate = await showDialog<DateTime>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => MedicationEditDialog(query: query, item: item),
+    );
+    if (!mounted ||
+        savedDate == null ||
+        ref.read(familyContextProvider) != room) {
+      return;
+    }
+    setState(() => _date = DateUtils.dateOnly(savedDate));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('투약 정보를 수정했어요.')));
   }
 }
 

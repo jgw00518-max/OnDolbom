@@ -19,6 +19,7 @@ MESSAGE = {'type': 'message', 'client_message_id': REQUEST_ID, 'content': '안�
 
 def row():
     return {'chat_seq': 7, 'family_room_id': 'room-a', 'user_id': 'db-user',
+            'author_name': '김가족',
             'chat_content': MESSAGE['content'], 'client_message_id': REQUEST_ID,
             'sent_at': datetime(2026, 10, 25, 18), 'live_chat_updated_at': None}
 
@@ -68,11 +69,13 @@ class ChatTests(unittest.TestCase):
         response = self.client.get('/chats/messages?family_room_id=room-a&before_id=9&limit=1')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['next_before_id'], 7)
+        self.assertEqual(response.json()['results'][0]['author_name'], '김가족')
         membership, query = self.cursor.execute.call_args_list
         for condition in ('is_active = 1', 'left_at IS NULL', 'withdrawn_at IS NULL', 'family_room_deleted_at IS NULL'):
             self.assertIn(condition, membership.args[0])
         self.assertEqual(query.args[1], ('room-a', 9, 2))
         self.assertNotIn('chat_image', query.args[0])
+        self.assertIn('u.name FROM `user` AS u WHERE u.user_id = live_chat.user_id', query.args[0])
         self.db.close.assert_called_once()
 
     def test_history_reconnect_queries_ascending_and_scopes_room(self):
@@ -104,9 +107,12 @@ class ChatTests(unittest.TestCase):
         result, duplicate = chat._save('room-a', 'db-user', chat.MessageCreate.model_validate(MESSAGE))
         self.assertFalse(duplicate)
         self.assertEqual(result['chat_seq'], 7)
+        self.assertEqual(result['author_name'], '김가족')
         calls = self.cursor.execute.call_args_list
         self.assertIn('FOR UPDATE', calls[0].args[0])
         self.assertEqual(calls[2].args[1], ('room-a', 'db-user', MESSAGE['content'], REQUEST_ID))
+        self.assertIn('AS author_name', calls[1].args[0])
+        self.assertIn('AS author_name', calls[3].args[0])
         self.db.commit.assert_called_once()
         self.db.rollback.assert_not_called()
         self.db.close.assert_called_once()

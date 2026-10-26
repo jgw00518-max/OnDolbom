@@ -2,8 +2,8 @@ import logging
 from datetime import date
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, ConfigDict, Field
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from pydantic import BaseModel, ConfigDict, Field, NaiveDatetime, model_validator
 import pymysql
 
 from python.features.auth.firebase_auth import require_firebase_user
@@ -51,12 +51,179 @@ class MedicationCreate(BaseModel):
     dosage: Decimal = Field(gt=0, max_digits=10, decimal_places=3)
 
 
+class MedicationUpdate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    family_room_id: str = Field(min_length=1, max_length=50)
+    medication_info: str | None = Field(default=None, min_length=1, max_length=100)
+    medication_date: date | None = None
+    medication_time: str | None = Field(default=None, min_length=1, max_length=20)
+    dosage_unit: str | None = Field(default=None, min_length=1, max_length=20)
+    dosage: Decimal | None = Field(default=None, gt=0, max_digits=10, decimal_places=3)
+
+    @model_validator(mode="after")
+    def validate_changes(self):
+        changed = self.model_fields_set - {"family_room_id"}
+        if not changed:
+            raise ValueError("수정할 투약 정보를 하나 이상 입력해 주세요.")
+        if any(getattr(self, name) is None for name in changed):
+            raise ValueError("투약 정보는 null로 변경할 수 없습니다.")
+        return self
+
+
+class MedicationConfirm(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    family_room_id: str = Field(min_length=1, max_length=50)
+
+
+class MedicationUnconfirm(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    family_room_id: str = Field(min_length=1, max_length=50)
+    # 목록 응답의 원본 값을 전달한다. 표시용으로 변환한 시간이 아니다.
+    expected_confirmed_at: NaiveDatetime
+    expected_confirmed_by_user_id: str | None = Field(min_length=1, max_length=50)
+
+
+@router.delete("/confirm/{medication_log_seq}")
+def unconfirm_medication(
+    data: MedicationUnconfirm,
+    medication_log_seq: int = Path(gt=0),
+    current_user_id: str = Depends(get_current_user_id),
+):
+    """활성 참여자인 체크 본인 또는 현재 주보호자가 완료 체크를 해제한다."""
+    conn = None
+    try:
+        conn = connect()
+        with conn.cursor() as cursor:
+            # 체크와 같은 잠금 순서로 참여 종료·역할 변경·동시 체크와 직렬화한다.
+            cursor.execute(
+                """SELECT p.participate_seq, p.is_representative FROM participate AS p
+                   JOIN family_room AS f ON f.family_room_id = p.family_room_id
+                   JOIN `user` AS u ON u.user_id = p.user_id
+                   WHERE p.family_room_id = %s AND p.user_id = %s
+                     AND p.is_active = 1 AND p.left_at IS NULL
+                     AND f.family_room_deleted_at IS NULL AND u.withdrawn_at IS NULL
+                   LIMIT 1 FOR UPDATE""",
+                (data.family_room_id, current_user_id),
+            )
+            member = cursor.fetchone()
+            if member is None:
+                raise HTTPException(403, "해당 가족 공간의 투약일지 체크를 해제할 수 없습니다.")
+            key = (medication_log_seq, data.family_room_id)
+            cursor.execute(
+                """SELECT medication_confirmed_at, confirmed_by_user_id FROM medication_log
+                   WHERE medication_log_seq = %s AND family_room_id = %s
+                     AND record_deleted_at IS NULL FOR UPDATE""", key,
+            )
+            record = cursor.fetchone()
+            if record is None:
+                raise HTTPException(404, "투약일지가 없거나 삭제되었습니다.")
+            already_unconfirmed = record["medication_confirmed_at"] is None
+            if not already_unconfirmed:
+                if (not member["is_representative"]
+                        and record["confirmed_by_user_id"] != current_user_id):
+                    raise HTTPException(403, "체크한 본인 또는 현재 주보호자만 체크를 해제할 수 있습니다.")
+                if (record["medication_confirmed_at"] != data.expected_confirmed_at
+                        or record["confirmed_by_user_id"] != data.expected_confirmed_by_user_id):
+                    raise HTTPException(409, "체크 기록이 변경되었습니다. 목록을 새로고침해 주세요.")
+                cursor.execute(
+                    """UPDATE medication_log
+                       SET medication_confirmed_at = NULL, confirmed_by_user_id = NULL
+                       WHERE medication_log_seq = %s AND family_room_id = %s
+                         AND record_deleted_at IS NULL""", key,
+                )
+        conn.commit()
+        return {"result": "OK", "medication_log_seq": medication_log_seq,
+                "already_unconfirmed": already_unconfirmed,
+                "medication_confirmed_at": None, "confirmed_by_user_id": None,
+                "confirmed_by_name": None}
+    except HTTPException:
+        if conn is not None:
+            conn.rollback()
+        raise
+    except (pymysql.MySQLError, ValueError):
+        if conn is not None:
+            conn.rollback()
+        logger.exception("투약일지 체크 해제 실패")
+        raise HTTPException(500, "투약일지 체크를 해제하지 못했습니다.") from None
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+@router.post("/confirm/{medication_log_seq}")
+def confirm_medication(
+    data: MedicationConfirm,
+    medication_log_seq: int = Path(gt=0),
+    current_user_id: str = Depends(get_current_user_id),
+):
+    """활성 공간 참여자가 복약 완료를 체크한다. 재요청은 최초 사용자·시간을 유지한다."""
+    conn = None
+    try:
+        conn = connect()
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """SELECT p.participate_seq FROM participate AS p
+                   JOIN family_room AS f ON f.family_room_id = p.family_room_id
+                   JOIN `user` AS u ON u.user_id = p.user_id
+                   WHERE p.family_room_id = %s AND p.user_id = %s
+                     AND p.is_active = 1 AND p.left_at IS NULL
+                     AND f.family_room_deleted_at IS NULL AND u.withdrawn_at IS NULL
+                   LIMIT 1 FOR UPDATE""",
+                (data.family_room_id, current_user_id),
+            )
+            if cursor.fetchone() is None:
+                raise HTTPException(403, "해당 가족 공간의 투약일지를 체크할 수 없습니다.")
+            target_sql = """SELECT m.medication_confirmed_at, m.confirmed_by_user_id,
+                            checker.name AS confirmed_by_name
+                         FROM medication_log AS m
+                         LEFT JOIN `user` AS checker ON checker.user_id = m.confirmed_by_user_id
+                         WHERE m.medication_log_seq = %s AND m.family_room_id = %s
+                           AND m.record_deleted_at IS NULL"""
+            key = (medication_log_seq, data.family_room_id)
+            cursor.execute(target_sql + " FOR UPDATE", key)
+            record = cursor.fetchone()
+            if record is None:
+                raise HTTPException(404, "투약일지가 없거나 삭제되었습니다.")
+            already_confirmed = record["medication_confirmed_at"] is not None
+            if not already_confirmed:
+                cursor.execute(
+                    """UPDATE medication_log
+                       SET medication_confirmed_at = CURRENT_TIMESTAMP, confirmed_by_user_id = %s
+                       WHERE medication_log_seq = %s AND family_room_id = %s
+                         AND record_deleted_at IS NULL AND medication_confirmed_at IS NULL""",
+                    (current_user_id, *key),
+                )
+                # 클라이언트 시간이 아닌 DB에 실제 저장된 시간과 사용자 이름을 반환한다.
+                cursor.execute(target_sql, key)
+                record = cursor.fetchone()
+                if record is None:
+                    raise HTTPException(500, "체크 결과를 확인하지 못했습니다.")
+        conn.commit()
+        return {"result": "OK", "medication_log_seq": medication_log_seq,
+                "already_confirmed": already_confirmed, **record}
+    except HTTPException:
+        if conn is not None:
+            conn.rollback()
+        raise
+    except (pymysql.MySQLError, ValueError):
+        if conn is not None:
+            conn.rollback()
+        logger.exception("투약일지 체크 실패")
+        raise HTTPException(500, "투약일지를 체크하지 못했습니다.") from None
+    finally:
+        if conn is not None:
+            conn.close()
+
+
 @router.post("/insert", status_code=201)
 def insert_medication(
     medication: MedicationCreate,
     current_user_id: str = Depends(get_current_user_id),
 ):
-    """현재 공간 참여자가 미확인 상태의 투약일지를 작성한다."""
+    """현재 공간의 주보호자만 미확인 상태의 투약일지를 작성한다."""
     conn = None
     try:
         conn = connect()
@@ -69,6 +236,7 @@ def insert_medication(
                     JOIN family_room AS f ON f.family_room_id = p.family_room_id
                     JOIN `user` AS u ON u.user_id = p.user_id
                 WHERE p.family_room_id = %s AND p.user_id = %s
+                    AND p.is_representative = 1
                     AND p.is_active = 1 AND p.left_at IS NULL
                     AND f.family_room_deleted_at IS NULL
                     AND u.withdrawn_at IS NULL
@@ -80,7 +248,7 @@ def insert_medication(
             if cursor.fetchone() is None:
                 raise HTTPException(
                     status_code=403,
-                    detail="해당 가족 공간에 투약일지를 작성할 수 없습니다.",
+                    detail="현재 공간의 주보호자만 투약일지를 작성할 수 있습니다.",
                 )
 
             cursor.execute(
@@ -109,6 +277,74 @@ def insert_medication(
         raise HTTPException(
             status_code=500, detail="투약일지를 저장하지 못했습니다.",
         ) from None
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+@router.patch("/update/{medication_log_seq}")
+def update_medication(
+    medication: MedicationUpdate,
+    medication_log_seq: int = Path(gt=0),
+    current_user_id: str = Depends(get_current_user_id),
+):
+    """현재 공간의 주보호자만 투약 내용을 부분 수정한다. 작성자·복약 확인은 보존한다."""
+    conn = None
+    try:
+        conn = connect()
+        with conn.cursor() as cursor:
+            # 권한 확인 행을 잠가 수정 중 권한 변경·참여 종료와의 경합을 방지한다.
+            cursor.execute(
+                """
+                SELECT p.participate_seq
+                FROM participate AS p
+                    JOIN family_room AS f ON f.family_room_id = p.family_room_id
+                    JOIN `user` AS u ON u.user_id = p.user_id
+                WHERE p.family_room_id = %s AND p.user_id = %s
+                    AND p.is_representative = 1
+                    AND p.is_active = 1 AND p.left_at IS NULL
+                    AND f.family_room_deleted_at IS NULL
+                    AND u.withdrawn_at IS NULL
+                LIMIT 1
+                FOR UPDATE
+                """,
+                (medication.family_room_id, current_user_id),
+            )
+            if cursor.fetchone() is None:
+                raise HTTPException(403, "현재 공간의 주보호자만 투약 정보를 수정할 수 있습니다.")
+
+            cursor.execute(
+                """SELECT medication_log_seq FROM medication_log
+                   WHERE medication_log_seq = %s AND family_room_id = %s
+                     AND record_deleted_at IS NULL
+                   LIMIT 1 FOR UPDATE""",
+                (medication_log_seq, medication.family_room_id),
+            )
+            if cursor.fetchone() is None:
+                raise HTTPException(404, "수정할 투약일지가 없거나 삭제되었습니다.")
+
+            # 컬럼명은 서버의 허용 목록만 사용하고 값은 모두 파라미터로 바인딩한다.
+            allowed = ("medication_info", "medication_date", "medication_time", "dosage_unit", "dosage")
+            changed = [name for name in allowed if name in medication.model_fields_set]
+            assignments = ", ".join(f"{name} = %s" for name in changed)
+            cursor.execute(
+                f"""UPDATE medication_log SET {assignments}, record_updated_at = CURRENT_TIMESTAMP
+                    WHERE medication_log_seq = %s AND family_room_id = %s
+                      AND record_deleted_at IS NULL""",
+                (*[getattr(medication, name) for name in changed],
+                 medication_log_seq, medication.family_room_id),
+            )
+        conn.commit()
+        return {"result": "OK", "medication_log_seq": medication_log_seq}
+    except HTTPException:
+        if conn is not None:
+            conn.rollback()
+        raise
+    except (pymysql.MySQLError, ValueError):
+        if conn is not None:
+            conn.rollback()
+        logger.exception("투약 정보 수정 실패")
+        raise HTTPException(500, "투약 정보를 수정하지 못했습니다.") from None
     finally:
         if conn is not None:
             conn.close()
@@ -150,9 +386,12 @@ def select_medications(
                 SELECT m.medication_log_seq, m.family_room_id, m.user_id,
                     m.medication_info, m.medication_date, m.medication_time,
                     m.dosage_unit, m.dosage, m.medication_confirmed_at,
-                    m.recorded_at, m.record_updated_at
+                    m.recorded_at, m.record_updated_at, u.name AS author_name,
+                    m.confirmed_by_user_id, checker.name AS confirmed_by_name
                 FROM medication_log AS m
                     JOIN family_room AS f ON f.family_room_id = m.family_room_id
+                    LEFT JOIN `user` AS u ON u.user_id = m.user_id
+                    LEFT JOIN `user` AS checker ON checker.user_id = m.confirmed_by_user_id
                 WHERE m.family_room_id = %s
                     AND m.record_deleted_at IS NULL
                     AND f.family_room_deleted_at IS NULL

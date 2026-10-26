@@ -71,6 +71,9 @@ class _MedicationFormDialogState extends ConsumerState<MedicationFormDialog> {
     setState(() => _submitted = true);
     if (!_form.currentState!.validate()) return;
     if (ref.read(familyContextProvider) != widget.query.context) return;
+    if (!ref.read(medicationCreateAllowedProvider(widget.query.context))) {
+      return;
+    }
     setState(() => _saving = true);
     try {
       await ref
@@ -101,6 +104,9 @@ class _MedicationFormDialogState extends ConsumerState<MedicationFormDialog> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final sameSpace = ref.watch(familyContextProvider) == widget.query.context;
+    final allowed = ref.watch(
+      medicationCreateAllowedProvider(widget.query.context),
+    );
     final border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
       borderSide: BorderSide(color: colors.outline),
@@ -177,21 +183,33 @@ class _MedicationFormDialogState extends ConsumerState<MedicationFormDialog> {
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 16),
-                        Wrap(
-                          spacing: 12,
-                          runSpacing: 16,
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SizedBox(
-                              width: 125,
+                            Expanded(
                               child: DropdownButtonFormField<String>(
                                 initialValue: _meal,
-                                decoration: field('식사'),
+                                decoration: field('식사').copyWith(
+                                  isDense: true,
+                                  floatingLabelBehavior:
+                                      FloatingLabelBehavior.always,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 12,
+                                  ),
+                                ),
                                 isExpanded: true,
+                                iconSize: 18,
+                                style: Theme.of(context).textTheme.bodyMedium,
                                 items: ['아침', '점심', '저녁']
                                     .map(
                                       (value) => DropdownMenuItem(
                                         value: value,
-                                        child: Text(value),
+                                        child: Text(
+                                          value,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
                                     )
                                     .toList(),
@@ -203,17 +221,31 @@ class _MedicationFormDialogState extends ConsumerState<MedicationFormDialog> {
                                       }),
                               ),
                             ),
-                            SizedBox(
-                              width: 125,
+                            const SizedBox(width: 6),
+                            Expanded(
                               child: DropdownButtonFormField<String>(
                                 initialValue: _timing,
-                                decoration: field('복약 시점'),
+                                decoration: field('복약 시점').copyWith(
+                                  isDense: true,
+                                  floatingLabelBehavior:
+                                      FloatingLabelBehavior.always,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 12,
+                                  ),
+                                ),
                                 isExpanded: true,
+                                iconSize: 18,
+                                style: Theme.of(context).textTheme.bodyMedium,
                                 items: ['식전', '식후']
                                     .map(
                                       (value) => DropdownMenuItem(
                                         value: value,
-                                        child: Text(value),
+                                        child: Text(
+                                          value,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
                                     )
                                     .toList(),
@@ -225,13 +257,22 @@ class _MedicationFormDialogState extends ConsumerState<MedicationFormDialog> {
                                       }),
                               ),
                             ),
-                            SizedBox(
-                              width: 125,
+                            const SizedBox(width: 6),
+                            Expanded(
                               child: TextFormField(
                                 key: const ValueKey('medication-minutes'),
                                 controller: _minutes,
                                 enabled: !_saving,
-                                decoration: field('몇 분'),
+                                decoration: field('몇 분').copyWith(
+                                  isDense: true,
+                                  floatingLabelBehavior:
+                                      FloatingLabelBehavior.always,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 12,
+                                  ),
+                                ),
+                                style: Theme.of(context).textTheme.bodyMedium,
                                 keyboardType: TextInputType.number,
                                 inputFormatters: [
                                   FilteringTextInputFormatter.digitsOnly,
@@ -286,6 +327,11 @@ class _MedicationFormDialogState extends ConsumerState<MedicationFormDialog> {
                             '선택한 공간이 변경됐어요. 닫은 후 다시 작성해 주세요.',
                             style: TextStyle(color: colors.error),
                           ),
+                        if (!allowed)
+                          Text(
+                            '현재 공간의 주보호자만 투약일지를 작성할 수 있어요.',
+                            style: TextStyle(color: colors.error),
+                          ),
                       ],
                     ),
                   ),
@@ -302,7 +348,9 @@ class _MedicationFormDialogState extends ConsumerState<MedicationFormDialog> {
                     ),
                     const Spacer(),
                     FilledButton(
-                      onPressed: _saving || !sameSpace ? null : _save,
+                      onPressed: _saving || !sameSpace || !allowed
+                          ? null
+                          : _save,
                       child: Text(_saving ? '등록 중…' : '추가'),
                     ),
                   ],

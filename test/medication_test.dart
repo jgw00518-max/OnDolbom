@@ -25,6 +25,7 @@ Map<String, dynamic> medicationJson(
   'medication_log_seq': seq,
   'family_room_id': 'room-a',
   'user_id': 'user-a',
+  'author_name': '김가족',
   'medication_info': name,
   'medication_date': date,
   'medication_time': '아침 식후 30분',
@@ -44,6 +45,7 @@ Future<void> mount(
   WidgetTester tester,
   http.Client client, {
   double width = 390,
+  bool primary = false,
 }) async {
   tester.view.physicalSize = Size(width, 844);
   tester.view.devicePixelRatio = 1;
@@ -54,6 +56,7 @@ Future<void> mount(
       overrides: [
         authUserProvider.overrideWith((ref) => Stream.value(null)),
         familyContextProvider.overrideWithValue(family),
+        medicationEditAllowedProvider(family).overrideWithValue(primary),
         medicationHttpClientProvider.overrideWithValue(client),
         apiTokenLoaderProvider.overrideWithValue(() async => 'test-token'),
       ],
@@ -124,7 +127,7 @@ void main() {
     await tester.tap(find.text('테스트 약 A 0.5정'));
     await tester.pumpAndSettle();
     expect(find.text('투약 정보'), findsOneWidget);
-    expect(find.textContaining('작성자: 나'), findsOneWidget);
+    expect(find.textContaining('작성자: 김가족'), findsOneWidget);
     expect(find.text('수정 저장'), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -154,6 +157,7 @@ void main() {
           saved ? [medicationJson(3, '새 테스트 약', date: date!)] : [],
         );
       }),
+      primary: true,
     );
     await tester.tap(find.text('약 추가'));
     await tester.pumpAndSettle();
@@ -185,6 +189,7 @@ void main() {
         return pending.future;
       }),
       width: 320,
+      primary: true,
     );
     await tester.tap(find.text('약 추가'));
     await tester.pumpAndSettle();
