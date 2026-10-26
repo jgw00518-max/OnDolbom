@@ -10,6 +10,29 @@ import 'package:ondolbom/view/auth/password_reset_view.dart';
 import 'package:ondolbom/vm/auth/password_reset_vm.dart';
 
 void main() {
+  for (final width in [320.0, 1100.0]) {
+    testWidgets('재설정 디자인은 ${width.toInt()}px 화면에서도 같은 버튼 색상을 사용한다', (
+      tester,
+    ) async {
+      tester.view.physicalSize = Size(width, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        const ProviderScope(child: MaterialApp(home: PasswordResetView())),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('STEP 1 OF 3'), findsOneWidget);
+      final style = tester
+          .widget<FilledButton>(find.byType(FilledButton))
+          .style!;
+      expect(style.backgroundColor!.resolve({}), const Color(0xFFF6B08A));
+      expect(style.foregroundColor!.resolve({}), const Color(0xFF3E3A39));
+      if (width > 760) expect(find.text('RESET PASSWORD'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
   test('단계별 증명 전달과 비밀번호 확인, 완료 상태를 검증한다', () async {
     final sent = <Map<String, dynamic>>[];
     final api = PasswordResetApi(
@@ -102,7 +125,7 @@ void main() {
     await tester.tap(find.text('인증번호 전송'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).last, '123456');
-    await tester.tap(find.text('인증번호 확인'));
+    await tester.tap(find.widgetWithText(FilledButton, '인증번호 확인'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first, 'new-password');
     await tester.enterText(find.byType(TextFormField).last, 'new-password');

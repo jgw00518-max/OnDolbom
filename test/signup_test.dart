@@ -150,9 +150,9 @@ void main() {
     );
     await tester.tap(find.text('인증번호 전송'));
     await tester.pumpAndSettle();
-    expect(find.text('인증번호 확인'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, '인증번호 확인'), findsOneWidget);
     await tester.enterText(find.byType(TextFormField).last, '123456');
-    await tester.tap(find.text('인증번호 확인'));
+    await tester.tap(find.widgetWithText(FilledButton, '인증번호 확인'));
     await tester.pumpAndSettle();
     expect(find.text('이메일로 가입'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());

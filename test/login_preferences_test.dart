@@ -75,7 +75,7 @@ void main() {
     );
     expect(
       tester
-          .widget<CheckboxListTile>(find.byType(CheckboxListTile).first)
+          .widget<Checkbox>(find.byType(Checkbox).first)
           .value,
       isTrue,
     );
