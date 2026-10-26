@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:ondolbom/view/notifications/notifications_view.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ondolbom/view/medications/medication_list_view.dart';
@@ -9,6 +8,7 @@ import 'package:ondolbom/view/recipient_detail.dart';
 import 'package:ondolbom/view/schedules/schedule_list.dart';
 import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
 import 'package:ondolbom/view/invites/invite_create.dart';
+import 'package:ondolbom/view/widgets/account_drawer.dart';
 
 import 'package:ondolbom/view/family_room/family_member_list.dart';
 
@@ -23,26 +23,22 @@ class FamilyRoomHome extends ConsumerWidget {
 
     if (room == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('돌봄 공간')),
+        drawer: const AccountDrawer(),
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          title: const Text('돌봄 공간'),
+          leading: const AccountMenuButton(),
+        ),
         body: const Center(child: Text('공간을 선택해 주세요.')),
       );
     }
 
     return Scaffold(
+      drawer: AccountDrawer(familyRoomId: room.familyRoomId),
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text('온돌봄'),
-        actions: [
-          IconButton(
-            tooltip: '알림',
-            // 공간 목록과 동일한 알림 화면으로 이동한다.
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const NotificationsView(),
-              ),
-            ),
-            icon: const Icon(Icons.notifications_none),
-          ),
-        ],
+        leading: const AccountMenuButton(),
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),

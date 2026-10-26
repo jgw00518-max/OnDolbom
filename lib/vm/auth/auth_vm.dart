@@ -6,6 +6,7 @@ import 'package:ondolbom/model/auth/login_preferences.dart';
 import 'package:ondolbom/model/auth/google_login.dart';
 import 'package:ondolbom/model/auth/kakao_login.dart';
 import 'package:ondolbom/model/auth/naver_login.dart';
+import 'package:ondolbom/model/auth/signup_api.dart';
 import 'package:ondolbom/vm/auth/user_profile_vm.dart' show apiBaseUrlProvider;
 
 // 인증 SDK 접근 지점을 하나로 모아 사용하고 테스트에서는 대체할 수 있게 한다.
@@ -198,16 +199,31 @@ class AuthVm extends Notifier<AsyncValue<void>> {
     }
   });
 
-  // 계정 생성 성공 시 Firebase가 자동 로그인한다. 가족 프로필은 이후 별도 등록한다.
-  Future<void> signUp(String email, String password) => _run(() async {
+  // 서버에서 이메일 인증 증명을 검사한 뒤 가입하고 기존 Firebase 스트림으로 로그인한다.
+  Future<void> signUp(
+    String email,
+    String password, {
+    required String requestId,
+    required String verificationToken,
+  }) => _run(() async {
+    if (requestId.isEmpty || verificationToken.isEmpty) {
+      throw const SignupFailure('회원가입 이메일 인증을 먼저 완료해 주세요.');
+    }
+    final api = ref.read(signupApiProvider);
+    final auth = ref.read(firebaseAuthProvider);
     // 가입 직후 세션은 유지하지만 재실행 자동 로그인은 별도 선택이 필요하다.
     await ref.read(loginPreferencesProvider).saveAutoLogin(false);
-    await ref
-        .read(firebaseAuthProvider)
-        .createUserWithEmailAndPassword(
-          email: email.trim(),
-          password: password,
-        );
+    await api.post('confirm', {
+      'email': email.trim(),
+      'request_id': requestId,
+      'verification_token': verificationToken,
+      'password': password,
+    });
+    // 서버에서 계정 생성 후 응답 유실/로그인 실패 시에는 로그인 화면에서 재시도한다.
+    await auth.signInWithEmailAndPassword(
+      email: email.trim(),
+      password: password,
+    );
   });
 
   // SDK 로그아웃 결과가 인증 스트림에 반영되면 앱이 로그인 화면으로 전환된다.
@@ -228,6 +244,7 @@ class AuthVm extends Notifier<AsyncValue<void>> {
 
 // SDK 예외 원문 대신 사용자에게 필요한 한국어 안내만 반환한다.
 String authErrorMessage(Object error) {
+  if (error is SignupFailure) return error.message;
   if (error is NaverLoginFailure) return error.message;
   if (error is KakaoLoginFailure) return error.message;
   if (error is! FirebaseAuthException) return '요청을 처리하지 못했습니다. 다시 시도해 주세요.';

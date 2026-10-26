@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/vm/auth/auth_vm.dart';
 import 'package:ondolbom/model/auth/login_preferences.dart';
 import 'package:ondolbom/view/auth/password_reset_view.dart';
+import 'package:ondolbom/view/auth/signup_view.dart';
 
 /// 이메일 인증 화면. 로그인 후 Home의 별도 폼에서 MySQL 가족 프로필을 등록한다.
 class LoginView extends ConsumerStatefulWidget {
@@ -15,8 +16,6 @@ class _LoginViewState extends ConsumerState<LoginView> {
   final _form = GlobalKey<FormState>();
   final _email = TextEditingController();
   final _password = TextEditingController();
-  final _confirmation = TextEditingController();
-  bool _signUp = false;
   bool _rememberEmail = false;
   bool _autoLogin = false;
   bool _preferencesBusy = true;
@@ -75,7 +74,6 @@ class _LoginViewState extends ConsumerState<LoginView> {
     // 화면 종료 시 비밀번호를 포함한 입력 컨트롤러를 정리한다.
     _email.dispose();
     _password.dispose();
-    _confirmation.dispose();
     super.dispose();
   }
 
@@ -83,16 +81,12 @@ class _LoginViewState extends ConsumerState<LoginView> {
     // 화면 입력 검증 후 VM에 위임한다. 서버 호출이나 인증 SDK는 화면에서 직접 쓰지 않는다.
     if (!_form.currentState!.validate()) return;
     final vm = ref.read(authVmProvider.notifier);
-    if (_signUp) {
-      vm.signUp(_email.text, _password.text);
-    } else {
-      vm.signIn(
-        _email.text,
-        _password.text,
-        rememberEmail: _rememberEmail,
-        autoLogin: _autoLogin,
-      );
-    }
+    vm.signIn(
+      _email.text,
+      _password.text,
+      rememberEmail: _rememberEmail,
+      autoLogin: _autoLogin,
+    );
   }
 
   @override
@@ -100,7 +94,7 @@ class _LoginViewState extends ConsumerState<LoginView> {
     final operation = ref.watch(authVmProvider);
     final busy = operation.isLoading || _preferencesBusy;
     return Scaffold(
-      appBar: AppBar(title: Text(_signUp ? '이메일 회원가입' : '온돌봄 로그인')),
+      appBar: AppBar(title: const Text('온돌봄 로그인')),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -137,62 +131,36 @@ class _LoginViewState extends ConsumerState<LoginView> {
                         enabled: !busy,
                         obscureText: true,
                         decoration: const InputDecoration(labelText: '비밀번호'),
-                        autofillHints: [
-                          _signUp
-                              ? AutofillHints.newPassword
-                              : AutofillHints.password,
-                        ],
+                        autofillHints: const [AutofillHints.password],
                         enableSuggestions: false,
                         autocorrect: false,
                         validator: (value) => value == null || value.isEmpty
                             ? '비밀번호를 입력해 주세요.'
                             : null,
                         onFieldSubmitted: (_) {
-                          if (!busy && !_signUp) _submit();
+                          if (!busy) _submit();
                         },
                       ),
-                      if (!_signUp)
-                        CheckboxListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: const Text('아이디 저장'),
-                          value: _rememberEmail,
-                          controlAffinity: ListTileControlAffinity.leading,
-                          onChanged: busy
-                              ? null
-                              : (value) => _changeRememberEmail(value ?? false),
-                        ),
-                      if (!_signUp)
-                        CheckboxListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: const Text('자동 로그인'),
-                          value: _autoLogin,
-                          controlAffinity: ListTileControlAffinity.leading,
-                          onChanged: busy
-                              ? null
-                              : (value) =>
-                                    setState(() => _autoLogin = value ?? false),
-                        ),
+                      CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('아이디 저장'),
+                        value: _rememberEmail,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        onChanged: busy
+                            ? null
+                            : (value) => _changeRememberEmail(value ?? false),
+                      ),
+                      CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('자동 로그인'),
+                        value: _autoLogin,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        onChanged: busy
+                            ? null
+                            : (value) =>
+                                  setState(() => _autoLogin = value ?? false),
+                      ),
                       if (_preferencesError != null) Text(_preferencesError!),
-                      // 가입 모드에서만 비밀번호 확인을 추가한다.
-                      if (_signUp) ...[
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _confirmation,
-                          enabled: !busy,
-                          obscureText: true,
-                          decoration: const InputDecoration(
-                            labelText: '비밀번호 확인',
-                          ),
-                          enableSuggestions: false,
-                          autocorrect: false,
-                          validator: (value) => value != _password.text
-                              ? '비밀번호가 일치하지 않습니다.'
-                              : null,
-                          onFieldSubmitted: (_) {
-                            if (!busy) _submit();
-                          },
-                        ),
-                      ],
                       if (operation.hasError)
                         Padding(
                           padding: const EdgeInsets.only(top: 16),
@@ -206,11 +174,9 @@ class _LoginViewState extends ConsumerState<LoginView> {
                       const SizedBox(height: 24),
                       FilledButton(
                         onPressed: busy ? null : _submit,
-                        child: Text(
-                          busy ? '처리 중…' : (_signUp ? '이메일로 가입' : '로그인'),
-                        ),
+                        child: Text(busy ? '처리 중…' : '로그인'),
                       ),
-                      if (!_signUp) ...[
+                      ...[
                         TextButton(
                           onPressed: busy
                               ? null
@@ -265,13 +231,17 @@ class _LoginViewState extends ConsumerState<LoginView> {
                             ? null
                             : () {
                                 ref.read(authVmProvider.notifier).clearError();
-                                // 모드 전환 시 이전 비밀번호·오류를 남기지 않는다.
+                                // 가입은 별도 인증 단계에서 진행하고 로그인 입력의 비밀번호는 지운다.
                                 _password.clear();
-                                _confirmation.clear();
-                                _form.currentState?.reset();
-                                setState(() => _signUp = !_signUp);
+                                Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => SignupView(
+                                      initialEmail: _email.text.trim(),
+                                    ),
+                                  ),
+                                );
                               },
-                        child: Text(_signUp ? '로그인으로 돌아가기' : '이메일로 회원가입'),
+                        child: const Text('이메일로 회원가입'),
                       ),
                     ],
                   ),

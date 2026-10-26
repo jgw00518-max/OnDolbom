@@ -10,6 +10,7 @@ import smtplib
 import ssl
 import time
 from email.message import EmailMessage
+from email.utils import formataddr, parseaddr
 
 from dotenv import dotenv_values
 from fastapi import APIRouter, HTTPException, Request, Response
@@ -17,6 +18,7 @@ from firebase_admin import auth, firestore
 from pydantic import BaseModel, ConfigDict, SecretStr, field_validator
 
 from python.features.auth.firebase_auth import get_firebase_app
+from python.features.auth.email_template import verification_message
 
 router = APIRouter(prefix="/password-reset")
 INVALID = "인증 정보가 만료되었거나 일치하지 않습니다. 인증번호를 다시 요청해 주세요."
@@ -35,12 +37,15 @@ def digest(secret, value):
     return hmac.new(secret.encode(), value.encode(), hashlib.sha256).hexdigest()
 
 
-def send_code(config, email, code):
+def send_code(config, email, code, purpose="password_reset"):
     message = EmailMessage()
-    message["Subject"] = "온돌봄 비밀번호 재설정 인증번호"
-    message["From"] = config["SMTP_FROM"]
+    message["Subject"] = "온돌봄 회원가입 인증번호" if purpose == "signup" else "온돌봄 비밀번호 재설정 인증번호"
+    # 수신함에서도 이메일 주소 대신 서비스 이름이 먼저 표시되도록 한다.
+    message["From"] = formataddr(("온돌봄", parseaddr(config["SMTP_FROM"])[1]))
     message["To"] = email
-    message.set_content(f"인증번호: {code}\n10분 안에 앱에 입력해 주세요.\n본인이 요청하지 않았다면 무시해 주세요.")
+    text, html = verification_message(code, purpose)
+    message.set_content(text)
+    message.add_alternative(html, subtype="html")
     # TLS 없는 SMTP는 허용하지 않는다. 비밀번호·코드는 로그에 남기지 않는다.
     port = int(config.get("SMTP_PORT") or 587)
     secure = config.get("SMTP_SECURITY", "starttls")
@@ -98,12 +103,13 @@ def password_user(email, app):
     return user
 
 
-def context(email):
+def context(email, purpose="password_reset"):
     config = settings()
     app = get_firebase_app()
     db = firestore.client(app=app)
     secret = config["PASSWORD_RESET_SECRET"]
-    doc = db.collection("password_reset_challenges").document(digest(secret, "email:" + email))
+    # 가입과 재설정의 증명은 서로 다른 컬렉션에 두어 용도 교환을 차단한다.
+    doc = db.collection(f"{purpose}_challenges").document(digest(secret, "email:" + email))
     return config, app, db, doc
 
 
@@ -113,16 +119,20 @@ def run_transaction(db, operation):
 
 @router.post("/request")
 def request_code(payload: EmailInput, request: Request, response: Response):
+    return request_email_code(payload, request, response)
+
+
+def request_email_code(payload, request, response, purpose="password_reset"):
     response.headers["Cache-Control"] = "no-store"
     try:
-        config, app, db, doc = context(payload.email)
+        config, app, db, doc = context(payload.email, purpose)
         secret = config["PASSWORD_RESET_SECRET"]
         now = time.time()
         request_id = secrets.token_urlsafe(32)
         code = f"{secrets.randbelow(1000000):06d}"
         # 신뢰하지 않는 X-Forwarded-For 대신 직접 연결 주소로 보조 제한을 적용한다.
         ip = request.client.host if request.client else "unknown"
-        ip_doc = db.collection("password_reset_limits").document(digest(secret, "ip:" + ip))
+        ip_doc = db.collection(f"{purpose}_limits").document(digest(secret, "ip:" + ip))
 
         def reserve(tx):
             previous = doc.get(transaction=tx).to_dict() or {}
@@ -142,14 +152,27 @@ def request_code(payload: EmailInput, request: Request, response: Response):
 
         if not run_transaction(db, reserve):
             raise HTTPException(429, "잠시 후 다시 요청해 주세요. 재발송은 60초 후 가능합니다.")
-        user = password_user(payload.email, app)
-        if user is not None:
-            send_code(config, payload.email, code)
+        if purpose == "signup":
+            try:
+                auth.get_user_by_email(payload.email, app=app)
+                eligible = False
+            except auth.UserNotFoundError:
+                eligible = True
+            user = None
+        else:
+            user = password_user(payload.email, app)
+            eligible = user is not None
+        if eligible:
+            if purpose == "signup":
+                send_code(config, payload.email, code, purpose="signup")
+            else:
+                send_code(config, payload.email, code)
 
         def activate(tx):
             row = doc.get(transaction=tx).to_dict() or {}
             if row.get("request_id") == request_id:
-                tx.update(doc, {"phase": "code", "uid": user.uid if user else None})
+                tx.update(doc, {"phase": "code", "uid": user.uid if user else None,
+                                "eligible": eligible})
         run_transaction(db, activate)
         # 미가입·소셜 전용·중지 계정 모두 같은 형태의 응답을 반환한다.
         return {"request_id": request_id, "expires_in": 600, "retry_after": 60}
@@ -161,9 +184,13 @@ def request_code(payload: EmailInput, request: Request, response: Response):
 
 @router.post("/verify")
 def verify_code(payload: CodeInput, response: Response):
+    return verify_email_code(payload, response)
+
+
+def verify_email_code(payload, response, purpose="password_reset"):
     response.headers["Cache-Control"] = "no-store"
     try:
-        config, _, db, doc = context(payload.email)
+        config, _, db, doc = context(payload.email, purpose)
         token = secrets.token_urlsafe(32)
         secret = config["PASSWORD_RESET_SECRET"]
 
@@ -173,7 +200,8 @@ def verify_code(payload: CodeInput, response: Response):
                     or row.get("expires", 0) <= time.time() or row.get("attempts", 5) >= 5):
                 return False
             valid = hmac.compare_digest(row.get("code_hash", ""), digest(secret, payload.request_id + ":" + payload.code.get_secret_value()))
-            if not valid or not row.get("uid"):
+            eligible = row.get("eligible") if purpose == "signup" else row.get("uid")
+            if not valid or not eligible:
                 # 예외를 트랜잭션 안에서 던지면 실패 횟수도 롤백되므로 결과를 반환한다.
                 tx.update(doc, {"attempts": row["attempts"] + 1})
                 return False
@@ -182,7 +210,8 @@ def verify_code(payload: CodeInput, response: Response):
             return True
         if not run_transaction(db, verify):
             raise HTTPException(400, INVALID)
-        return {"reset_token": token, "expires_in": 300}
+        token_field = "verification_token" if purpose == "signup" else "reset_token"
+        return {token_field: token, "expires_in": 300}
     except HTTPException:
         raise
     except Exception:

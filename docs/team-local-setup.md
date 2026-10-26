@@ -169,6 +169,8 @@ PC 방화벽에서 필요한 개발용 연결을 허용한다. 주소 예시는 
 
 비밀번호 재설정 메일은 각 PC의 `.env`에 SMTP 설정이 필요하다. `PASSWORD_RESET_SECRET`은 팀 전체가 같은 난수값을 사용한다. 공유 MySQL 스키마 변경은 없다. 자세한 항목과 Firestore 규칙은 아래 안내를 따른다.
 
+- [회원가입 이메일 인증번호](email-signup.md): 같은 SMTP 설정을 사용하며, 인증 완료 전에는 가입할 수 없다.
+
 - [비밀번호 재설정 설정·검증 안내](account-recovery.md)
 
 - [소셜 로그인 구현 상세](social-login-setup.md)
