@@ -10,6 +10,8 @@ import 'package:ondolbom/view/schedules/schedule_list.dart';
 import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
 import 'package:ondolbom/view/invites/invite_create.dart';
 
+import 'package:ondolbom/view/family_room/family_member_list.dart';
+
 class FamilyRoomHome extends ConsumerWidget {
   const FamilyRoomHome({super.key});
 
@@ -143,6 +145,36 @@ class FamilyRoomHome extends ConsumerWidget {
           const SizedBox(height: 28),
 
           // 오늘의 일정
+          // 주보호자와 일반 가족 모두 가족 목록을 조회한다.
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        FamilyMemberList(familyRoomId: room.familyRoomId),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.groups_outlined),
+              label: const Text(
+                '함께하는 가족',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF99522F),
+                backgroundColor: const Color(0xFFFFF3E8),
+                side: const BorderSide(color: Color(0xFFE8DFD7)),
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 28),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -231,7 +263,7 @@ class FamilyRoomHome extends ConsumerWidget {
     ).showSnackBar(const SnackBar(content: Text('아직 연결하지 않은 기능입니다.')));
   }
 
-    // 초대 등록 후 메일 발송 결과를 안내한다.
+  // 초대 등록 후 메일 발송 결과를 안내한다.
   Future<void> inviteCreateAction(
     BuildContext context,
     String familyRoomId,
@@ -255,10 +287,10 @@ class FamilyRoomHome extends ConsumerWidget {
     final message = emailSent
         ? '초대를 등록하고 이메일을 발송했습니다.'
         : '초대는 등록했지만 이메일 발송에 실패했습니다. '
-          '초대받은 계정으로 로그인하면 받은 초대에서 확인할 수 있습니다.';
+              '초대받은 계정으로 로그인하면 받은 초대에서 확인할 수 있습니다.';
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
