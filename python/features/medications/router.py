@@ -3,7 +3,7 @@ from datetime import date
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, NaiveDatetime, model_validator
 import pymysql
 
 from python.features.auth.firebase_auth import require_firebase_user
@@ -75,6 +75,82 @@ class MedicationConfirm(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
     family_room_id: str = Field(min_length=1, max_length=50)
+
+
+class MedicationUnconfirm(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    family_room_id: str = Field(min_length=1, max_length=50)
+    # 목록 응답의 원본 값을 전달한다. 표시용으로 변환한 시간이 아니다.
+    expected_confirmed_at: NaiveDatetime
+    expected_confirmed_by_user_id: str | None = Field(min_length=1, max_length=50)
+
+
+@router.delete("/confirm/{medication_log_seq}")
+def unconfirm_medication(
+    data: MedicationUnconfirm,
+    medication_log_seq: int = Path(gt=0),
+    current_user_id: str = Depends(get_current_user_id),
+):
+    """활성 참여자인 체크 본인 또는 현재 주보호자가 완료 체크를 해제한다."""
+    conn = None
+    try:
+        conn = connect()
+        with conn.cursor() as cursor:
+            # 체크와 같은 잠금 순서로 참여 종료·역할 변경·동시 체크와 직렬화한다.
+            cursor.execute(
+                """SELECT p.participate_seq, p.is_representative FROM participate AS p
+                   JOIN family_room AS f ON f.family_room_id = p.family_room_id
+                   JOIN `user` AS u ON u.user_id = p.user_id
+                   WHERE p.family_room_id = %s AND p.user_id = %s
+                     AND p.is_active = 1 AND p.left_at IS NULL
+                     AND f.family_room_deleted_at IS NULL AND u.withdrawn_at IS NULL
+                   LIMIT 1 FOR UPDATE""",
+                (data.family_room_id, current_user_id),
+            )
+            member = cursor.fetchone()
+            if member is None:
+                raise HTTPException(403, "해당 가족 공간의 투약일지 체크를 해제할 수 없습니다.")
+            key = (medication_log_seq, data.family_room_id)
+            cursor.execute(
+                """SELECT medication_confirmed_at, confirmed_by_user_id FROM medication_log
+                   WHERE medication_log_seq = %s AND family_room_id = %s
+                     AND record_deleted_at IS NULL FOR UPDATE""", key,
+            )
+            record = cursor.fetchone()
+            if record is None:
+                raise HTTPException(404, "투약일지가 없거나 삭제되었습니다.")
+            already_unconfirmed = record["medication_confirmed_at"] is None
+            if not already_unconfirmed:
+                if (not member["is_representative"]
+                        and record["confirmed_by_user_id"] != current_user_id):
+                    raise HTTPException(403, "체크한 본인 또는 현재 주보호자만 체크를 해제할 수 있습니다.")
+                if (record["medication_confirmed_at"] != data.expected_confirmed_at
+                        or record["confirmed_by_user_id"] != data.expected_confirmed_by_user_id):
+                    raise HTTPException(409, "체크 기록이 변경되었습니다. 목록을 새로고침해 주세요.")
+                cursor.execute(
+                    """UPDATE medication_log
+                       SET medication_confirmed_at = NULL, confirmed_by_user_id = NULL
+                       WHERE medication_log_seq = %s AND family_room_id = %s
+                         AND record_deleted_at IS NULL""", key,
+                )
+        conn.commit()
+        return {"result": "OK", "medication_log_seq": medication_log_seq,
+                "already_unconfirmed": already_unconfirmed,
+                "medication_confirmed_at": None, "confirmed_by_user_id": None,
+                "confirmed_by_name": None}
+    except HTTPException:
+        if conn is not None:
+            conn.rollback()
+        raise
+    except (pymysql.MySQLError, ValueError):
+        if conn is not None:
+            conn.rollback()
+        logger.exception("투약일지 체크 해제 실패")
+        raise HTTPException(500, "투약일지 체크를 해제하지 못했습니다.") from None
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 @router.post("/confirm/{medication_log_seq}")

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:ondolbom/model/medications/medication.dart';
 import 'package:ondolbom/vm/family_room/family_context.dart';
+import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
 
 typedef MedicationQuery = ({FamilyContext context, String date});
 final medicationEditAllowedProvider = Provider.family<bool, FamilyContext>((
@@ -28,8 +29,9 @@ final medicationHttpClientProvider = Provider.autoDispose<http.Client>((ref) {
 });
 
 class MedicationFailure implements Exception {
-  const MedicationFailure(this.message);
+  const MedicationFailure(this.message, {this.statusCode});
   final String message;
+  final int? statusCode;
   @override
   String toString() => message;
 }
@@ -76,6 +78,7 @@ class MedicationVm extends AsyncNotifier<MedicationFeed> {
   late Future<String?> Function() _tokenLoader;
   int _generation = 0;
   final _confirming = <int>{};
+  final _confirmationVersions = <int, int>{};
 
   @override
   Future<MedicationFeed> build() async {
@@ -100,6 +103,8 @@ class MedicationVm extends AsyncNotifier<MedicationFeed> {
     Map<String, String>? params,
     Map<String, dynamic>? body,
     bool patch = false,
+    bool delete = false,
+    void Function()? beforeSend,
     int? expectedStatus,
   }) async {
     final generation = _generation;
@@ -113,6 +118,7 @@ class MedicationVm extends AsyncNotifier<MedicationFeed> {
       }
       if (path == 'insert') _ensureCanCreate();
       if (path.startsWith('confirm/')) _ensureConfirmationContext();
+      beforeSend?.call();
       final headers = <String, String>{
         'Accept': 'application/json',
         if (body != null) 'Content-Type': 'application/json; charset=utf-8',
@@ -122,7 +128,13 @@ class MedicationVm extends AsyncNotifier<MedicationFeed> {
         '${_base.replaceFirst(RegExp(r'/+$'), '')}/medications/$path',
       ).replace(queryParameters: params);
       final response =
-          await (patch
+          await (delete
+                  ? _client.delete(
+                      uri,
+                      headers: headers,
+                      body: jsonEncode(body),
+                    )
+                  : patch
                   ? _client.patch(uri, headers: headers, body: jsonEncode(body))
                   : body == null
                   ? _client.get(uri, headers: headers)
@@ -137,7 +149,9 @@ class MedicationVm extends AsyncNotifier<MedicationFeed> {
       }
       if (response.statusCode == 403) {
         throw MedicationFailure(
-          patch
+          delete
+              ? '체크한 본인 또는 현재 주보호자만 체크를 해제할 수 있어요.'
+              : patch
               ? '현재 공간의 주보호자만 투약 정보를 수정할 수 있어요.'
               : path == 'insert'
               ? '현재 공간의 주보호자만 투약일지를 작성할 수 있어요.'
@@ -152,6 +166,7 @@ class MedicationVm extends AsyncNotifier<MedicationFeed> {
           decoded['detail'] is String
               ? decoded['detail'] as String
               : '요청을 처리하지 못했어요. 입력 내용을 확인해 주세요.',
+          statusCode: response.statusCode,
         );
       }
       return decoded;
@@ -183,6 +198,7 @@ class MedicationVm extends AsyncNotifier<MedicationFeed> {
     final before = state.asData?.value;
     if (before == null || before.loadingMore || !before.hasMore) return;
     final generation = _generation;
+    final versions = Map<int, int>.of(_confirmationVersions);
     state = AsyncData(
       MedicationFeed(
         before.items,
@@ -198,6 +214,11 @@ class MedicationVm extends AsyncNotifier<MedicationFeed> {
       final current = state.asData?.value ?? before;
       final unique = {for (final item in current.items) item.seq: item};
       for (final item in next) {
+        if (unique.containsKey(item.seq) &&
+            (_confirming.contains(item.seq) ||
+                versions[item.seq] != _confirmationVersions[item.seq])) {
+          continue;
+        }
         if (unique[item.seq]?.isConfirmed == true && !item.isConfirmed) {
           continue;
         }
@@ -229,7 +250,20 @@ class MedicationVm extends AsyncNotifier<MedicationFeed> {
     }
   }
 
-  Future<void> confirmMedication(Medication item) async {
+  Future<void> confirmMedication(Medication item) => _changeConfirmation(item);
+
+  Future<void> unconfirmMedication(Medication item) =>
+      _changeConfirmation(item, undo: true);
+
+  void _ensureCanUnconfirm(Medication item) {
+    _ensureConfirmationContext();
+    if (item.confirmedByUserId != query.context.userId &&
+        !ref.read(medicationEditAllowedProvider(query.context))) {
+      throw const MedicationFailure('체크한 본인 또는 현재 주보호자만 체크를 해제할 수 있어요.');
+    }
+  }
+
+  Future<void> _changeConfirmation(Medication item, {bool undo = false}) async {
     _ensureConfirmationContext();
     if (item.familyRoomId != query.context.familyRoomId) {
       throw const MedicationFailure('다른 공간의 투약일지는 체크할 수 없어요.');
@@ -240,22 +274,47 @@ class MedicationVm extends AsyncNotifier<MedicationFeed> {
         .where((record) => record.seq == item.seq)
         .firstOrNull;
     if (target == null) throw const MedicationFailure('투약일지를 다시 조회해 주세요.');
-    if (target.isConfirmed || !_confirming.add(item.seq)) return;
+    if (undo) {
+      if (!target.isConfirmed) return;
+      _ensureCanUnconfirm(target);
+      if (target.confirmedAt != item.confirmedAt ||
+          target.confirmedByUserId != item.confirmedByUserId) {
+        throw const MedicationFailure('체크 기록이 변경되었습니다. 다시 확인해 주세요.');
+      }
+    } else if (target.isConfirmed) {
+      return;
+    }
+    if (!_confirming.add(item.seq)) return;
     state = AsyncData(feed.copyWith(confirming: Set.unmodifiable(_confirming)));
     try {
       final result = await _request(
         'confirm/${item.seq}',
-        body: {'family_room_id': query.context.familyRoomId},
+        delete: undo,
+        beforeSend: undo ? () => _ensureCanUnconfirm(target) : null,
+        body: {
+          'family_room_id': query.context.familyRoomId,
+          if (undo) ...{
+            'expected_confirmed_at': target.confirmedAt!.toIso8601String(),
+            'expected_confirmed_by_user_id': target.confirmedByUserId,
+          },
+        },
         expectedStatus: 200,
       );
       final at = DateTime.tryParse(
         result['medication_confirmed_at'] as String? ?? '',
       );
-      if (at == null || result['medication_log_seq'] != item.seq) {
+      if ((!undo && at == null) ||
+          (undo &&
+              (at != null ||
+                  result['confirmed_by_user_id'] != null ||
+                  result['confirmed_by_name'] != null)) ||
+          result['medication_log_seq'] != item.seq) {
         throw const MedicationFailure('체크 결과를 확인하지 못했어요. 다시 시도해 주세요.');
       }
       final current = state.asData?.value;
       if (ref.mounted && current != null) {
+        _confirmationVersions[item.seq] =
+            (_confirmationVersions[item.seq] ?? 0) + 1;
         state = AsyncData(
           current.copyWith(
             items: [
@@ -272,6 +331,16 @@ class MedicationVm extends AsyncNotifier<MedicationFeed> {
           ),
         );
       }
+    } on MedicationFailure catch (error) {
+      if (undo && error.statusCode == 409 && ref.mounted) {
+        ref.invalidateSelf();
+        try {
+          await future;
+        } catch (_) {
+          // 조회 실패는 목록의 오류 상태로 표시하고 원래 충돌 안내도 유지한다.
+        }
+      }
+      rethrow;
     } finally {
       _confirming.remove(item.seq);
       if (ref.mounted) {

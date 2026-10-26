@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/testing.dart';
 import 'package:ondolbom/view/medications/medication_list_view.dart';
-import 'package:ondolbom/vm/family_context.dart';
-import 'package:ondolbom/vm/family_room_notifier.dart';
+import 'package:ondolbom/vm/family_room/family_context.dart';
+import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
 import 'package:ondolbom/vm/medications/medication_vm.dart';
 
 import 'medication_edit_test.dart' show RoleRooms;

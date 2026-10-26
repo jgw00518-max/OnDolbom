@@ -57,6 +57,16 @@ Bearer 토큰의 사용자로 한 번만 등록하며 취소 API는 없습니다
 처음 배포하는 DB에서는 서버 실행 전 `python -m python.features.memos.migrate_likes`로
 좋아요 기록 테이블을 생성해야 합니다. 기존 메모 테이블과 데이터는 유지합니다.
 
+## 투약일지 체크 해제 API
+
+`DELETE /medications/confirm/{medication_log_seq}`로 체크를 해제합니다.
+JSON 본문에는 `family_room_id`, `expected_confirmed_at`, `expected_confirmed_by_user_id`가 필요합니다.
+두 expected 값에는 목록/체크 응답의 체크 시간·사용자 ID 원본을 전달합니다.
+현재 공간의 활성 참여자 중 체크한 본인 또는 현재 주보호자만 허용합니다.
+기록이 변경되었으면 409, 이미 미완료면 200과 `already_unconfirmed:true`를 반환합니다.
+해제 시 기존 체크 시간과 확인자 ID를 NULL로 비우며 테이블 구조는 변경하지 않습니다.
+본문·응답 예와 상세 권한은 [투약일지 안내](../docs/medications-frontend.md)를 참고하세요.
+
 ## 투약일지 작성·조회 API
 
 `POST /medications/insert`로 현재 참여 중인 공간의 주보호자만 투약일지를 작성합니다.

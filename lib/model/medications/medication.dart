@@ -67,7 +67,7 @@ class Medication {
   );
 
   Medication withConfirmation(
-    DateTime at,
+    DateTime? at,
     String? checkerId,
     String? checkerName,
   ) => Medication(

@@ -5,7 +5,10 @@ import unittest
 from uuid import uuid4
 
 from python.database import connect
-from python.features.medications.router import MedicationConfirm, confirm_medication, select_medications
+from python.features.medications.router import (
+    MedicationConfirm, MedicationUnconfirm, confirm_medication,
+    select_medications, unconfirm_medication,
+)
 
 
 @unittest.skipUnless(os.environ.get("ONDOLBOM_MYSQL_TESTS") == "1", "explicit MySQL test opt-in required")
@@ -45,6 +48,35 @@ class MedicationConfirmationMySQLTests(unittest.TestCase):
             conn.commit()
         finally:
             conn.close()
+
+    def test_concurrent_unchecks_clear_once_and_allow_rechecking(self):
+        confirmed = confirm_medication(MedicationConfirm(family_room_id=self.room_id), self.seq, self.user_id)
+        data = MedicationUnconfirm(
+            family_room_id=self.room_id,
+            expected_confirmed_at=confirmed["medication_confirmed_at"],
+            expected_confirmed_by_user_id=self.user_id,
+        )
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            responses = list(pool.map(lambda _: unconfirm_medication(data, self.seq, self.user_id), range(8)))
+        self.assertEqual(sum(not result["already_unconfirmed"] for result in responses), 1)
+        for result in responses:
+            self.assertIsNone(result["medication_confirmed_at"])
+            self.assertIsNone(result["confirmed_by_user_id"])
+            self.assertIsNone(result["confirmed_by_name"])
+        conn = connect()
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute("""SELECT user_id, medication_confirmed_at, confirmed_by_user_id
+                    FROM medication_log WHERE medication_log_seq = %s""", (self.seq,))
+                row = cursor.fetchone()
+                self.assertEqual(row["user_id"], self.user_id)
+                self.assertIsNone(row["medication_confirmed_at"])
+                self.assertIsNone(row["confirmed_by_user_id"])
+        finally:
+            conn.close()
+        rechecked = confirm_medication(MedicationConfirm(family_room_id=self.room_id), self.seq, self.user_id)
+        self.assertFalse(rechecked["already_confirmed"])
+        self.assertEqual(rechecked["confirmed_by_user_id"], self.user_id)
 
     def test_concurrent_checks_keep_first_checker_name_time_and_original_author(self):
         data = MedicationConfirm(family_room_id=self.room_id)

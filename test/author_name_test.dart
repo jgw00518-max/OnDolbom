@@ -6,7 +6,7 @@ import 'package:ondolbom/model/chats/chat_message.dart';
 import 'package:ondolbom/model/medications/medication.dart';
 import 'package:ondolbom/view/chats/chat_view.dart';
 import 'package:ondolbom/vm/chats/chat_vm.dart';
-import 'package:ondolbom/vm/family_context.dart';
+import 'package:ondolbom/vm/family_room/family_context.dart';
 
 import 'chat_test.dart' as chat;
 import 'medication_test.dart' as medication;

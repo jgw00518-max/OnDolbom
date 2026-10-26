@@ -8,9 +8,9 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:ondolbom/model/family/participate.dart';
 import 'package:ondolbom/view/medications/medication_list_view.dart';
-import 'package:ondolbom/vm/family_context.dart';
-import 'package:ondolbom/vm/family_room_notifier.dart';
-import 'package:ondolbom/vm/family_room_state.dart';
+import 'package:ondolbom/vm/family_room/family_context.dart';
+import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
+import 'package:ondolbom/vm/family_room/family_room_state.dart';
 import 'package:ondolbom/vm/medications/medication_vm.dart';
 import 'medication_test.dart' as fixture;
 

@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:ondolbom/model/medications/medication.dart';
-import 'package:ondolbom/vm/family_context.dart';
+import 'package:ondolbom/vm/family_room/family_context.dart';
 import 'package:ondolbom/vm/medications/medication_vm.dart';
 
 import 'medication_test.dart' as fixture;
@@ -143,7 +143,7 @@ void main() {
     expect(find.text('1/1 완료'), findsOneWidget);
   });
 
-  testWidgets('이미 체크된 기록은 취소할 수 없고 저장된 확인자를 표시한다', (tester) async {
+  testWidgets('다른 가족이 체크한 기록은 해제할 수 없고 저장된 확인자를 표시한다', (tester) async {
     var posts = 0;
     await fixture.mount(
       tester,

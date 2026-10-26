@@ -27,7 +27,9 @@ VM은 토큰 조회 후 요청 전에도 작성 권한을 재검사하고 서버
 삭제 API와 조작 버튼은 아직 제공하지 않습니다.
 복약 완료 체크는 백엔드 API와 Flutter 목록·상세에 연결했습니다.
 목록의 체크 아이콘 또는 상세의 `복약 완료 체크` 버튼으로 등록하며, 체크한 사용자 이름과 서버 시간을 표시합니다.
-주보호자 외 일반 참여자도 체크할 수 있고, 이미 완료된 기록은 다시 체크하거나 취소할 수 없습니다.
+주보호자 외 일반 참여자도 체크할 수 있고, 이미 완료된 기록의 중복 체크는 최초 사용자·시간을 유지합니다.
+해제 API는 체크한 본인과 현재 주보호자에게 허용하며, 목록의 완료 체크 아이콘과 상세의 `체크 해제` 버튼에 연결했습니다.
+확인창에서 해제를 선택하면 미완료 상태로 갱신하며 확인자·체크 시간과 완료 개수도 함께 변경합니다.
 처리 중 중복 클릭을 차단하고 실패하면 기존 미완료 상태에서 재시도합니다.
 복약 상태는 서버의 `medication_confirmed_at` 값으로 표시하며, 새 기록은 미확인 상태입니다.
 추가한 기록은 선택한 날짜 한 번의 기록이며 반복 일정으로 생성하지 않습니다.
@@ -126,7 +128,7 @@ Content-Type: application/json
 클라이언트가 체크 사용자·이름·시간을 전달하면 422로 거절합니다.
 참여·공간·사용자와 대상 투약일지를 잠근 뒤 체크하여 동시 요청에도 최초 체크만 반영합니다.
 이미 체크된 기록에 재요청하거나 다른 참여자가 체크해도 최초 사용자·시간을 유지합니다.
-체크 취소 API는 제공하지 않습니다. 작성자와 약 정보·내용 수정 시각은 변경하지 않습니다.
+체크 해제는 아래 DELETE API를 사용합니다. 작성자와 약 정보·내용 수정 시각은 변경하지 않습니다.
 
 HTTP 200 응답 예:
 
@@ -155,6 +157,55 @@ $env:ONDOLBOM_MYSQL_TESTS = '1'
 python -m unittest python.tests.test_medication_confirmation_mysql -v
 Remove-Item Env:ONDOLBOM_MYSQL_TESTS
 ```
+
+## 투약 완료 체크 해제 API
+
+`DELETE /medications/confirm/{medication_log_seq}`에 Firebase Bearer 토큰과 JSON 본문을 전달합니다.
+Swagger UI의 해당 DELETE 항목에서도 테스트할 수 있습니다.
+
+```json
+{
+  "family_room_id": "공간 ID",
+  "expected_confirmed_at": "2026-10-26T14:25:03",
+  "expected_confirmed_by_user_id": "체크 사용자 ID"
+}
+```
+
+두 `expected_` 필드는 목록/체크 응답의 `medication_confirmed_at`, `confirmed_by_user_id`
+원본 값을 그대로 사용합니다. 시간은 화면의 오전/오후 표시로 변환하지 않습니다.
+확인자가 없는 과거 완료 기록은 `expected_confirmed_by_user_id`에 null을 명시합니다.
+
+- 현재 공간의 활성 참여자이며, 체크한 본인 또는 현재 주보호자여야 합니다.
+- 일반 가족은 타인의 체크를 해제할 수 없고, 확인자 없는 과거 기록은 현재 주보호자만 해제할 수 있습니다.
+- 참여 종료·비활성·탈퇴·삭제된 공간은 403, 없거나 삭제된 기록·다른 공간 기록은 404입니다.
+- 체크 시간 또는 확인자가 달라졌으면 409이며, 목록을 갱신한 뒤 다시 확인해야 합니다.
+- 이미 미완료라면 활성 참여자의 재요청에 200과 `already_unconfirmed: true`를 반환하며 변경하지 않습니다.
+- 정상 해제는 기존 두 체크 컬럼을 NULL로 변경합니다. 테이블 구조 변경이나 해제 이력 저장은 없습니다.
+- 미인증은 401, 입력 오류는 422, DB 오류는 500입니다. 실패 시 rollback합니다.
+
+HTTP 200 응답 예:
+
+```json
+{
+  "result": "OK",
+  "medication_log_seq": 42,
+  "already_unconfirmed": false,
+  "medication_confirmed_at": null,
+  "confirmed_by_user_id": null,
+  "confirmed_by_name": null
+}
+```
+
+참여·역할과 투약일지 행을 체크 API와 같은 순서로 잠급니다.
+동시 해제 요청은 한 번만 변경하며, 해제 후에는 기존 POST API로 다시 체크할 수 있습니다.
+Flutter는 현재 선택 공간의 본인 체크 또는 주보호자에게만 해제 조작을 제공합니다.
+해제 전 확인창을 표시하고, 처리 중에는 같은 항목의 체크·해제·수정을 비활성화합니다.
+API 응답의 미완료 상태를 목록·상세에 반영하며 `already_unconfirmed: true`도 성공으로 처리합니다.
+실패하면 기존 상태를 유지하고 재시도할 수 있습니다. 409는 목록을 다시 조회하고 변경 안내를 표시합니다.
+원본 체크 시간과 사용자 ID를 보내며, 토큰 로딩 중 계정·공간이나 주보호자 권한이 바뀌면 요청을 차단합니다.
+추가 페이지 응답이 늦게 도착해도 해당 요청 중 완료된 체크·해제 결과를 덮어쓰지 않습니다.
+Flutter 검증은 `test/medication_unconfirmation_test.dart`에서 수행합니다.
+권한·충돌·실패 테스트는 `python/tests/test_medication_unconfirmation.py`에서 수행합니다.
 
 ## 실행과 인증 연결
 

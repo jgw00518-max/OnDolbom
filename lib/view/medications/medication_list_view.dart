@@ -14,6 +14,7 @@ class MedicationListView extends ConsumerStatefulWidget {
 }
 
 class _MedicationListViewState extends ConsumerState<MedicationListView> {
+  final _unconfirmDialogs = <int>{};
   late DateTime _date = DateUtils.dateOnly(
     widget.initialDate ?? DateTime.now(),
   );
@@ -61,6 +62,46 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
           ),
         ),
       );
+    }
+  }
+
+  Future<void> _unconfirm(MedicationQuery query, Medication item) async {
+    if (!_unconfirmDialogs.add(item.seq)) return;
+    try {
+      final approved = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('복약 완료 체크 해제'),
+          content: const Text('체크를 해제하면 미완료로 표시됩니다.\n체크를 해제하시겠습니까?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('취소'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('해제'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || approved != true) return;
+      await ref
+          .read(medicationVmProvider(query).notifier)
+          .unconfirmMedication(item);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is MedicationFailure
+                ? error.message
+                : '체크를 해제하지 못했어요. 다시 시도해 주세요.',
+          ),
+        ),
+      );
+    } finally {
+      _unconfirmDialogs.remove(item.seq);
     }
   }
 
@@ -265,18 +306,34 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
                                             ListTile(
                                               leading: IconButton(
                                                 tooltip: item.isConfirmed
-                                                    ? '복약 완료'
+                                                    ? (canCreate ||
+                                                              item.confirmedByUserId ==
+                                                                  selected
+                                                                      .userId
+                                                          ? '복약 완료 체크 해제'
+                                                          : '복약 완료')
                                                     : '복약 완료 체크',
                                                 onPressed:
-                                                    item.isConfirmed ||
+                                                    (item.isConfirmed &&
+                                                            !canCreate &&
+                                                            item.confirmedByUserId !=
+                                                                selected
+                                                                    .userId) ||
                                                         data.confirming
                                                             .contains(
                                                               item.seq,
                                                             ) ||
                                                         selected.userId.isEmpty
                                                     ? null
-                                                    : () =>
-                                                          _confirm(query, item),
+                                                    : () => item.isConfirmed
+                                                          ? _unconfirm(
+                                                              query,
+                                                              item,
+                                                            )
+                                                          : _confirm(
+                                                              query,
+                                                              item,
+                                                            ),
                                                 icon:
                                                     data.confirming.contains(
                                                       item.seq,
@@ -398,6 +455,12 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
               feed != null &&
               !record.isConfirmed &&
               !confirming;
+          final canUnconfirm =
+              current == room &&
+              room.userId.isNotEmpty &&
+              feed != null &&
+              record.isConfirmed &&
+              (canEdit || record.confirmedByUserId == room.userId);
           return AlertDialog(
             title: const Text('투약 정보'),
             content: SingleChildScrollView(
@@ -408,6 +471,13 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
               ),
             ),
             actions: [
+              if (canUnconfirm)
+                TextButton(
+                  onPressed: confirming
+                      ? null
+                      : () => _unconfirm(query, record),
+                  child: Text(confirming ? '해제 중…' : '체크 해제'),
+                ),
               if (!record.isConfirmed)
                 TextButton(
                   onPressed: canConfirm ? () => _confirm(query, record) : null,
