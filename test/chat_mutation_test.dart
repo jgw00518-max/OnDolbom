@@ -198,7 +198,7 @@ void main() {
     );
     pending.complete(http.Response('{"detail":"failed"}', 503));
     await tester.pumpAndSettle();
-    expect(find.text('failed'), findsOneWidget);
+    expect(find.text('메시지의 최신 상태가 요청한 결과와 다릅니다. 내용을 확인해 주세요.'), findsOneWidget);
     expect(find.text('수정한 내용'), findsOneWidget);
     expect(patches, 1);
     await tester.tap(find.text('저장'));

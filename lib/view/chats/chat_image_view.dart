@@ -24,8 +24,9 @@ class ChatImageView extends ConsumerWidget {
             true,
       ),
     );
-    if (deleted)
+    if (deleted) {
       return const Text('삭제된 메시지입니다.', style: TextStyle(color: Colors.grey));
+    }
     final provider = chatImageProvider(query);
     return SizedBox(
       width: expanded ? double.infinity : 220,

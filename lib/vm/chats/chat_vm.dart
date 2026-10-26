@@ -73,6 +73,10 @@ class ChatFailure implements Exception {
   String toString() => message;
 }
 
+class ChatOutcomeUnknown extends ChatFailure {
+  const ChatOutcomeUnknown() : super('변경 결과를 확인하지 못했습니다. 다시 연결해 확인해 주세요.');
+}
+
 final chatHttpClientProvider = Provider.autoDispose<http.Client>((ref) {
   final client = http.Client();
   ref.onDispose(client.close);
@@ -443,6 +447,7 @@ class ChatVm extends Notifier<ChatState> {
     bool delete = false,
     bool checkContext = false,
     void Function()? beforeSend,
+    void Function()? onSend,
   }) async {
     void ensureActive() {
       if (!_active(session) ||
@@ -463,6 +468,7 @@ class ChatVm extends Notifier<ChatState> {
         'Accept': 'application/json',
         if (!delete) 'Content-Type': 'application/json; charset=utf-8',
       };
+      onSend?.call();
       final response =
           await (delete
                   ? _client.delete(
@@ -488,16 +494,24 @@ class ChatVm extends Notifier<ChatState> {
       if (response.statusCode == 401) {
         throw const ChatFailure('다시 로그인해 주세요.', 401);
       }
-      final decoded =
-          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
       if (response.statusCode != 200) {
+        String? detail;
+        try {
+          final errorBody = jsonDecode(utf8.decode(response.bodyBytes));
+          if (errorBody is Map<String, dynamic> &&
+              errorBody['detail'] is String) {
+            detail = errorBody['detail'] as String;
+          }
+        } on FormatException {
+          // 프록시의 HTML 오류 응답도 HTTP 상태를 유지해 권한·입력 오류와 구분한다.
+        }
         throw ChatFailure(
-          decoded['detail'] is String
-              ? decoded['detail'] as String
-              : '채팅 변경사항을 처리하지 못했습니다.',
+          detail ?? '채팅 변경사항을 처리하지 못했습니다.',
           response.statusCode,
         );
       }
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+      if (decoded is! Map<String, dynamic>) throw const FormatException();
       return decoded;
     } on TimeoutException {
       throw const ChatFailure('응답이 지연되고 있어요. 최신 메시지를 확인한 뒤 다시 시도해 주세요.');
@@ -567,6 +581,61 @@ class ChatVm extends Notifier<ChatState> {
   Future<void> deleteMessage(ChatMessage item) =>
       _changeMessage(item, delete: true);
 
+  Future<void> _verifyChangeOutcome(
+    _Session session,
+    ChatMessage item,
+    Map<int, int> snapshot, {
+    required bool delete,
+    String? content,
+  }) async {
+    void ensureCurrentSession() {
+      if (!_active(session) || ref.read(familyContextProvider) != context) {
+        throw const ChatFailure('로그인 계정 또는 선택한 공간이 변경되었습니다.');
+      }
+      if (state.status == ChatStatus.blocked) {
+        throw ChatFailure(state.error ?? '채팅 접근 권한을 확인해 주세요.');
+      }
+    }
+
+    bool confirmed() {
+      final current = state.messages
+          .where((message) => message.seq == item.seq)
+          .firstOrNull;
+      return snapshot[item.seq] != session.revisions[item.seq] &&
+          current != null &&
+          current.roomId == context.familyRoomId &&
+          current.userId == context.userId &&
+          (delete
+              ? current.isDeleted
+              : !current.isDeleted &&
+                    current.content == content &&
+                    current.hasImage == item.hasImage);
+    }
+
+    ensureCurrentSession();
+    if (confirmed()) return;
+    try {
+      await _refresh(session, [item.seq]);
+    } catch (error) {
+      ensureCurrentSession();
+      // 권한 거절을 과거 이벤트로 덮어 성공 처리하지 않는다.
+      if (error is ChatFailure &&
+          (error.status == 401 || error.status == 403)) {
+        _blocked(session, error.message);
+        rethrow;
+      }
+      if (confirmed()) return;
+      throw const ChatOutcomeUnknown();
+    }
+    ensureCurrentSession();
+    if (confirmed()) return;
+    if (snapshot[item.seq] != session.revisions[item.seq] ||
+        !state.messages.any((message) => message.seq == item.seq)) {
+      throw const ChatFailure('메시지의 최신 상태가 요청한 결과와 다릅니다. 내용을 확인해 주세요.');
+    }
+    throw const ChatOutcomeUnknown();
+  }
+
   Future<void> _changeMessage(
     ChatMessage item, {
     String? content,
@@ -610,6 +679,7 @@ class ChatVm extends Notifier<ChatState> {
     if (!session.changing.add(item.seq)) return;
     state = state.copyWith(changing: Set.unmodifiable(session.changing));
     final snapshot = Map<int, int>.of(session.revisions);
+    var sent = false;
     try {
       final result = await _jsonRequest(
         session,
@@ -617,11 +687,19 @@ class ChatVm extends Notifier<ChatState> {
         delete: delete,
         checkContext: true,
         beforeSend: ensureAllowed,
+        onSend: () => sent = true,
         body: {'family_room_id': context.familyRoomId, 'content': content},
       );
-      final saved = ChatMessage.fromJson(
-        result['message'] as Map<String, dynamic>,
-      );
+      late ChatMessage saved;
+      try {
+        final message = result['message'];
+        if (message is! Map<String, dynamic>) throw const FormatException();
+        saved = ChatMessage.fromJson(message);
+      } on FormatException {
+        throw const ChatFailure('메시지 변경 결과를 확인하지 못했어요.');
+      } on TypeError {
+        throw const ChatFailure('메시지 변경 결과를 확인하지 못했어요.');
+      }
       if (saved.seq != item.seq ||
           saved.userId != context.userId ||
           (delete && !saved.isDeleted)) {
@@ -639,6 +717,23 @@ class ChatVm extends Notifier<ChatState> {
         await _refreshEvent(session, item.seq);
       }
     } catch (error) {
+      final uncertain =
+          error is ChatFailure &&
+          (error.status == null ||
+              (error.status! >= 500 && error.status! <= 599));
+      if (sent &&
+          uncertain &&
+          _active(session) &&
+          ref.read(familyContextProvider) == context) {
+        await _verifyChangeOutcome(
+          session,
+          item,
+          snapshot,
+          delete: delete,
+          content: content,
+        );
+        return;
+      }
       if (_active(session) && error is ChatFailure) {
         if (error.status == 401) {
           _blocked(session, error.message);
