@@ -9,7 +9,7 @@ import 'package:http/testing.dart';
 import 'package:ondolbom/main.dart';
 import 'package:ondolbom/model/memos/memo.dart';
 import 'package:ondolbom/vm/auth/auth_vm.dart';
-import 'package:ondolbom/vm/family_context.dart';
+import 'package:ondolbom/vm/family_room/family_context.dart';
 import 'package:ondolbom/view/memos/memo_list_view.dart';
 import 'package:ondolbom/view/memos/memo_form_view.dart';
 import 'package:ondolbom/vm/memos/memo_vm.dart';

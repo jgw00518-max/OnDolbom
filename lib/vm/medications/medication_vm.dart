@@ -4,8 +4,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:ondolbom/model/medications/medication.dart';
-import 'package:ondolbom/vm/family_context.dart';
-import 'package:ondolbom/vm/family_room_notifier.dart';
+import 'package:ondolbom/vm/family_room/family_context.dart';
 
 typedef MedicationQuery = ({FamilyContext context, String date});
 final medicationEditAllowedProvider = Provider.family<bool, FamilyContext>((

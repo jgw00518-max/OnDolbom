@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/model/medications/medication.dart';
 import 'package:ondolbom/view/medications/medication_form_view.dart';
 import 'package:ondolbom/view/medications/medication_edit_view.dart';
-import 'package:ondolbom/vm/family_context.dart';
+import 'package:ondolbom/vm/family_room/family_context.dart';
 import 'package:ondolbom/vm/medications/medication_vm.dart';
 
 class MedicationListView extends ConsumerStatefulWidget {

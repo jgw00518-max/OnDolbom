@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ondolbom/model/schedules/schedule.dart';
 import 'package:ondolbom/view/schedules/schedule_create.dart';
-import 'package:ondolbom/vm/family_room_notifier.dart';
+import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
 import 'package:ondolbom/vm/schedules/schedule_vm.dart';
 
 class ScheduleList extends ConsumerStatefulWidget {

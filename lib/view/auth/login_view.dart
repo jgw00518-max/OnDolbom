@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/vm/auth/auth_vm.dart';
+import 'package:ondolbom/model/auth/login_preferences.dart';
+import 'package:ondolbom/view/auth/password_reset_view.dart';
 
 /// 이메일 인증 화면. 로그인 후 Home의 별도 폼에서 MySQL 가족 프로필을 등록한다.
 class LoginView extends ConsumerStatefulWidget {
@@ -15,6 +17,58 @@ class _LoginViewState extends ConsumerState<LoginView> {
   final _password = TextEditingController();
   final _confirmation = TextEditingController();
   bool _signUp = false;
+  bool _rememberEmail = false;
+  bool _autoLogin = false;
+  bool _preferencesBusy = true;
+  String? _preferencesError;
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreEmail();
+  }
+
+  Future<void> _restoreEmail() async {
+    try {
+      final email = await ref.read(loginPreferencesProvider).readEmail();
+      final autoLogin = await ref
+          .read(loginPreferencesProvider)
+          .readAutoLogin();
+      if (!mounted) return;
+      // 복원 중 입력을 잠가 늦게 읽은 저장값이 사용자의 입력을 덮어쓰지 않게 한다.
+      _email.text = email ?? '';
+      _rememberEmail = email != null;
+      _autoLogin = autoLogin;
+    } catch (_) {
+      if (mounted) _preferencesError = '저장한 아이디를 불러오지 못했습니다.';
+    } finally {
+      if (mounted) setState(() => _preferencesBusy = false);
+    }
+  }
+
+  Future<void> _changeRememberEmail(bool value) async {
+    if (value) {
+      setState(() => _rememberEmail = true);
+      return;
+    }
+    setState(() => _preferencesBusy = true);
+    try {
+      // 선택 해제 시에는 다음 로그인 성공을 기다리지 않고 즉시 삭제한다.
+      await ref.read(loginPreferencesProvider).clearEmail();
+      if (mounted) {
+        setState(() {
+          _rememberEmail = false;
+          _preferencesError = null;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _preferencesError = '저장한 아이디를 삭제하지 못했습니다. 다시 시도해 주세요.');
+      }
+    } finally {
+      if (mounted) setState(() => _preferencesBusy = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -32,14 +86,19 @@ class _LoginViewState extends ConsumerState<LoginView> {
     if (_signUp) {
       vm.signUp(_email.text, _password.text);
     } else {
-      vm.signIn(_email.text, _password.text);
+      vm.signIn(
+        _email.text,
+        _password.text,
+        rememberEmail: _rememberEmail,
+        autoLogin: _autoLogin,
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final operation = ref.watch(authVmProvider);
-    final busy = operation.isLoading;
+    final busy = operation.isLoading || _preferencesBusy;
     return Scaffold(
       appBar: AppBar(title: Text(_signUp ? '이메일 회원가입' : '온돌봄 로그인')),
       body: SafeArea(
@@ -92,6 +151,28 @@ class _LoginViewState extends ConsumerState<LoginView> {
                           if (!busy && !_signUp) _submit();
                         },
                       ),
+                      if (!_signUp)
+                        CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('아이디 저장'),
+                          value: _rememberEmail,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          onChanged: busy
+                              ? null
+                              : (value) => _changeRememberEmail(value ?? false),
+                        ),
+                      if (!_signUp)
+                        CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('자동 로그인'),
+                          value: _autoLogin,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          onChanged: busy
+                              ? null
+                              : (value) =>
+                                    setState(() => _autoLogin = value ?? false),
+                        ),
+                      if (_preferencesError != null) Text(_preferencesError!),
                       // 가입 모드에서만 비밀번호 확인을 추가한다.
                       if (_signUp) ...[
                         const SizedBox(height: 16),
@@ -129,6 +210,56 @@ class _LoginViewState extends ConsumerState<LoginView> {
                           busy ? '처리 중…' : (_signUp ? '이메일로 가입' : '로그인'),
                         ),
                       ),
+                      if (!_signUp) ...[
+                        TextButton(
+                          onPressed: busy
+                              ? null
+                              : () => Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => PasswordResetView(
+                                      initialEmail: _email.text.trim(),
+                                    ),
+                                  ),
+                                ),
+                          child: const Text('비밀번호 찾기'),
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton(
+                          onPressed: busy
+                              ? null
+                              : () => ref
+                                    .read(authVmProvider.notifier)
+                                    .signInWithGoogle(
+                                      autoLogin: _autoLogin,
+                                      rememberEmail: _rememberEmail,
+                                    ),
+                          child: const Text('Google로 계속하기'),
+                        ),
+                        const SizedBox(height: 8),
+                        OutlinedButton(
+                          onPressed: busy
+                              ? null
+                              : () => ref
+                                    .read(authVmProvider.notifier)
+                                    .signInWithKakao(
+                                      autoLogin: _autoLogin,
+                                      rememberEmail: _rememberEmail,
+                                    ),
+                          child: const Text('카카오로 계속하기'),
+                        ),
+                        const SizedBox(height: 8),
+                        OutlinedButton(
+                          onPressed: busy
+                              ? null
+                              : () => ref
+                                    .read(authVmProvider.notifier)
+                                    .signInWithNaver(
+                                      autoLogin: _autoLogin,
+                                      rememberEmail: _rememberEmail,
+                                    ),
+                          child: const Text('네이버로 계속하기'),
+                        ),
+                      ],
                       TextButton(
                         onPressed: busy
                             ? null

@@ -11,7 +11,7 @@ import 'package:ondolbom/vm/auth/auth_vm.dart';
 import 'package:ondolbom/model/medications/medication.dart';
 import 'package:ondolbom/view/medications/medication_form_view.dart';
 import 'package:ondolbom/view/medications/medication_list_view.dart';
-import 'package:ondolbom/vm/family_context.dart';
+import 'package:ondolbom/vm/family_room/family_context.dart';
 import 'package:ondolbom/vm/medications/medication_vm.dart';
 
 const family = (familyRoomId: 'room-a', userId: 'user-a', roomName: '가족 돌봄 공간');

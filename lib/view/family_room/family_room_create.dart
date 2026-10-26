@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ondolbom/vm/family_room_notifier.dart';
+import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
 
 class FamilyRoomCreate extends ConsumerStatefulWidget {
   const FamilyRoomCreate({super.key});

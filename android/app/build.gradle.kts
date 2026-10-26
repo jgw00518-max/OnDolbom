@@ -1,3 +1,5 @@
+import java.util.Base64
+
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
@@ -6,6 +8,15 @@ plugins {
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+// Dart 실행 옵션과 동일한 키로 카카오 복귀 URL을 구성한다.
+val kakaoNativeAppKey = (project.findProperty("dart-defines") as? String)
+    ?.split(",")
+    ?.map { String(Base64.getDecoder().decode(it), Charsets.UTF_8) }
+    ?.firstOrNull { it.startsWith("KAKAO_NATIVE_APP_KEY=") }
+    ?.substringAfter("=")
+    ?.takeIf { it.matches(Regex("[a-fA-F0-9]{32}")) }
+    ?: "unconfigured"
 
 android {
     namespace = "com.example.ondolbom"
@@ -18,6 +29,7 @@ android {
     }
 
     defaultConfig {
+        manifestPlaceholders["kakaoNativeAppKey"] = kakaoNativeAppKey
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.ondolbom"
         // You can update the following values to match your application needs.

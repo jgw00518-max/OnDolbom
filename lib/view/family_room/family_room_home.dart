@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ondolbom/view/notifications/notifications_view.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ondolbom/view/medications/medication_list_view.dart';
@@ -6,7 +7,7 @@ import 'package:ondolbom/view/chats/chat_view.dart';
 import 'package:ondolbom/view/memos/memo_list_view.dart';
 import 'package:ondolbom/view/recipient_detail.dart';
 import 'package:ondolbom/view/schedules/schedule_list.dart';
-import 'package:ondolbom/vm/family_room_notifier.dart';
+import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
 import 'package:ondolbom/view/invites/invite_create.dart';
 
 class FamilyRoomHome extends ConsumerWidget {
@@ -30,7 +31,13 @@ class FamilyRoomHome extends ConsumerWidget {
         title: const Text('온돌봄'),
         actions: [
           IconButton(
-            onPressed: () => preparingAction(context),
+            tooltip: '알림',
+            // 공간 목록과 동일한 알림 화면으로 이동한다.
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const NotificationsView(),
+              ),
+            ),
             icon: const Icon(Icons.notifications_none),
           ),
         ],
@@ -224,13 +231,13 @@ class FamilyRoomHome extends ConsumerWidget {
     ).showSnackBar(const SnackBar(content: Text('아직 연결하지 않은 기능입니다.')));
   }
 
-  // 주보호자가 가족 초대 화면으로 이동한다.
+    // 초대 등록 후 메일 발송 결과를 안내한다.
   Future<void> inviteCreateAction(
     BuildContext context,
     String familyRoomId,
     String recipientName,
   ) async {
-    final created = await Navigator.push<bool>(
+    final emailSent = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => InviteCreate(
@@ -240,12 +247,18 @@ class FamilyRoomHome extends ConsumerWidget {
       ),
     );
 
-    if (!context.mounted || created != true) {
+    // 뒤로 가기로 취소한 경우에는 안내하지 않는다.
+    if (!context.mounted || emailSent == null) {
       return;
     }
 
+    final message = emailSent
+        ? '초대를 등록하고 이메일을 발송했습니다.'
+        : '초대는 등록했지만 이메일 발송에 실패했습니다. '
+          '초대받은 계정으로 로그인하면 받은 초대에서 확인할 수 있습니다.';
+
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('초대를 등록했습니다. 초대받은 계정에서 받은 초대를 확인해 주세요.')),
+      SnackBar(content: Text(message)),
     );
   }
 }

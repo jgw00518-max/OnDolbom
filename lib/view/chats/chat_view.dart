@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/model/chats/chat_message.dart';
 import 'package:ondolbom/vm/chats/chat_vm.dart';
-import 'package:ondolbom/vm/family_context.dart';
+import 'package:ondolbom/vm/family_room/family_context.dart';
 
 class ChatView extends ConsumerStatefulWidget {
   const ChatView({super.key});
