@@ -3,6 +3,9 @@
 from fastapi import FastAPI
 
 from python.features.auth.router import router as auth_router
+from python.features.auth.kakao_auth import router as kakao_auth_router
+from python.features.auth.naver_auth import router as naver_auth_router
+from python.features.auth.password_reset import router as password_reset_router
 from python.features.chats.router import router as chats_router
 from python.features.notifications.router import router as notifications_router
 from python.features.family_room.router import router as family_room_router
@@ -13,6 +16,9 @@ from python.features.invites.router import router as invites_router
 
 
 app = FastAPI(title="온돌봄 사용자 API")
+app.include_router(kakao_auth_router, prefix="/auth", tags=["auth"])
+app.include_router(naver_auth_router, prefix="/auth", tags=["auth"])
+app.include_router(password_reset_router, prefix="/auth", tags=["auth"])
 
 app.include_router(
     auth_router,

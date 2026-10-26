@@ -6,5 +6,12 @@ service cloud.firestore {
     match /schedule_notifications/{document=**} {
       allow read, write: if false;
     }
+    // 인증번호·재설정 토큰은 서버 Admin SDK만 접근한다.
+    match /password_reset_challenges/{document=**} {
+      allow read, write: if false;
+    }
+    match /password_reset_limits/{document=**} {
+      allow read, write: if false;
+    }
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ondolbom/view/notifications/notifications_view.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ondolbom/view/medications/medication_list_view.dart';
@@ -30,7 +31,13 @@ class FamilyRoomHome extends ConsumerWidget {
         title: const Text('온돌봄'),
         actions: [
           IconButton(
-            onPressed: () => preparingAction(context),
+            tooltip: '알림',
+            // 공간 목록과 동일한 알림 화면으로 이동한다.
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const NotificationsView(),
+              ),
+            ),
             icon: const Icon(Icons.notifications_none),
           ),
         ],
