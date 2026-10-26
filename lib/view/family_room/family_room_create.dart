@@ -6,16 +6,16 @@ class FamilyRoomCreate extends ConsumerStatefulWidget {
   const FamilyRoomCreate({super.key});
 
   @override
-  ConsumerState<FamilyRoomCreate> createState() =>
-      _FamilyRoomCreateState();
+  ConsumerState<FamilyRoomCreate> createState() => _FamilyRoomCreateState();
 }
 
-class _FamilyRoomCreateState
-    extends ConsumerState<FamilyRoomCreate> {
+class _FamilyRoomCreateState extends ConsumerState<FamilyRoomCreate> {
   late TextEditingController nameController;
   late TextEditingController birthController;
   late TextEditingController addressController;
   late TextEditingController notesController;
+
+  int? selectedGender;
 
   @override
   void initState() {
@@ -37,7 +37,7 @@ class _FamilyRoomCreateState
     super.dispose();
   }
 
-     @override
+  @override
   Widget build(BuildContext context) {
     final state = ref.watch(familyRoomProvider);
     final colors = Theme.of(context).colorScheme;
@@ -50,9 +50,7 @@ class _FamilyRoomCreateState
             const Text('온돌봄'),
             const SizedBox(width: 12),
             OutlinedButton(
-              onPressed: state.isLoading
-                  ? null
-                  : () => Navigator.pop(context),
+              onPressed: state.isLoading ? null : () => Navigator.pop(context),
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -92,10 +90,7 @@ class _FamilyRoomCreateState
               const Expanded(
                 child: Text(
                   '가족 공간 만들기',
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -109,8 +104,47 @@ class _FamilyRoomCreateState
             controller: nameController,
             enabled: !state.isLoading,
             maxLength: 30,
-            decoration: inputDecoration(context).copyWith(
-              counterText: '',
+            decoration: inputDecoration(context).copyWith(counterText: ''),
+          ),
+          const SizedBox(height: 24),
+
+          // 남성은 1, 여성은 2로 저장하며 반드시 하나를 선택한다.
+          inputTitle('성별'),
+          SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<int>(
+              segments: const [
+                ButtonSegment<int>(value: 1, label: Text('남성')),
+                ButtonSegment<int>(value: 2, label: Text('여성')),
+              ],
+              selected: selectedGender == null ? <int>{} : {selectedGender!},
+              emptySelectionAllowed: selectedGender == null,
+              showSelectedIcon: false,
+              style: ButtonStyle(
+                backgroundColor: WidgetStateProperty.resolveWith<Color>(
+                  (states) => states.contains(WidgetState.selected)
+                      ? const Color(0xFFFFEBD9)
+                      : Colors.white,
+                ),
+                foregroundColor: WidgetStateProperty.resolveWith<Color>(
+                  (states) => states.contains(WidgetState.selected)
+                      ? const Color(0xFF99522F)
+                      : const Color(0xFF78716A),
+                ),
+                side: const WidgetStatePropertyAll(
+                  BorderSide(color: Color(0xFFE8DFD7)),
+                ),
+                padding: const WidgetStatePropertyAll(
+                  EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+              onSelectionChanged: state.isLoading
+                  ? null
+                  : (selection) {
+                      setState(() {
+                        selectedGender = selection.first;
+                      });
+                    },
             ),
           ),
           const SizedBox(height: 24),
@@ -123,9 +157,7 @@ class _FamilyRoomCreateState
             onTap: () => birthAction(),
             decoration: inputDecoration(context).copyWith(
               hintText: '년-월-일',
-              suffixIcon: const Icon(
-                Icons.calendar_month_outlined,
-              ),
+              suffixIcon: const Icon(Icons.calendar_month_outlined),
             ),
           ),
           const SizedBox(height: 24),
@@ -135,9 +167,7 @@ class _FamilyRoomCreateState
             controller: addressController,
             enabled: !state.isLoading,
             maxLength: 255,
-            decoration: inputDecoration(context).copyWith(
-              counterText: '',
-            ),
+            decoration: inputDecoration(context).copyWith(counterText: ''),
           ),
           const SizedBox(height: 24),
 
@@ -188,17 +218,13 @@ class _FamilyRoomCreateState
                   height: 56,
                   child: FilledButton(
                     style: FilledButton.styleFrom(
-                      backgroundColor:
-                          colors.secondaryContainer,
-                      foregroundColor:
-                          colors.onSecondaryContainer,
+                      backgroundColor: colors.secondaryContainer,
+                      foregroundColor: colors.onSecondaryContainer,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    onPressed: state.isLoading
-                        ? null
-                        : () => createAction(),
+                    onPressed: state.isLoading ? null : () => createAction(),
                     child: Text(
                       state.isLoading ? '생성 중...' : '공간 만들기',
                       style: const TextStyle(
@@ -215,7 +241,7 @@ class _FamilyRoomCreateState
       ),
     );
   } // build
-   // build
+  // build
 
   // ----- function -----
 
@@ -223,9 +249,7 @@ class _FamilyRoomCreateState
   Future<void> birthAction() async {
     final selectedDate = await showDatePicker(
       context: context,
-      initialDate:
-          DateTime.tryParse(birthController.text) ??
-          DateTime(1950),
+      initialDate: DateTime.tryParse(birthController.text) ?? DateTime(1950),
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
     );
@@ -245,11 +269,18 @@ class _FamilyRoomCreateState
     final name = nameController.text.trim();
 
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('돌봄대상자 이름을 입력해 주세요.'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('돌봄대상자 이름을 입력해 주세요.')));
+      return;
+    }
+
+    final gender = selectedGender;
+
+    if (gender == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('성별을 선택해 주세요.')));
       return;
     }
 
@@ -261,6 +292,7 @@ class _FamilyRoomCreateState
         .read(familyRoomProvider.notifier)
         .createRoom(
           name: name,
+          gender: gender,
           birthDate: birth.isEmpty ? null : birth,
           address: address.isEmpty ? null : address,
           notes: notes.isEmpty ? null : notes,
@@ -274,25 +306,21 @@ class _FamilyRoomCreateState
       Navigator.pop(context, true);
     } else {
       final message =
-          ref.read(familyRoomProvider).errorMessage ??
-          '공간을 생성하지 못했습니다.';
+          ref.read(familyRoomProvider).errorMessage ?? '공간을 생성하지 못했습니다.';
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
-    // 입력칸 위 제목
+  // 입력칸 위 제목
   Widget inputTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Text(
         title,
-        style: const TextStyle(
-          fontSize: 17,
-          fontWeight: FontWeight.bold,
-        ),
+        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -305,21 +333,14 @@ class _FamilyRoomCreateState
       filled: true,
       fillColor: Colors.white,
       contentPadding: const EdgeInsets.all(20),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-      ),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(
-          color: colors.outline,
-        ),
+        borderSide: BorderSide(color: colors.outline),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(
-          color: colors.primary,
-          width: 2,
-        ),
+        borderSide: BorderSide(color: colors.primary, width: 2),
       ),
     );
   }
