@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/model/memos/memo.dart';
 import 'package:ondolbom/view/memos/memo_form_view.dart';
+import 'package:ondolbom/view/memos/memo_image_view.dart';
+import 'package:ondolbom/view/memos/memo_like_button.dart';
 import 'package:ondolbom/view/memos/memo_style.dart';
 import 'package:ondolbom/vm/memos/memo_vm.dart';
 
@@ -25,7 +27,7 @@ class MemoListView extends ConsumerWidget {
       action: FilledButton.tonal(
         onPressed: canWrite
             ? () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
+                MaterialPageRoute<MemoFormResult>(
                   builder: (_) => MemoFormView(selected: selected),
                 ),
               )
@@ -167,10 +169,20 @@ class _MemoCard extends StatelessWidget {
               style: const TextStyle(fontSize: 15, height: 1.65),
             ),
             const SizedBox(height: 12),
+            if (memo.hasImage) ...[
+              MemoImageView(
+                memo: memo,
+                selected: selected,
+                height: 120,
+                expandable: false,
+              ),
+              const SizedBox(height: 12),
+            ],
             MemoMetadata(
-              author: memo.userId == selected.userId ? '나' : memo.userId,
+              author: memo.authorLabel,
               date: memo.writtenAt,
               likes: memo.likes ?? 0,
+              likeButton: MemoLikeButton(memo: memo, selected: selected),
             ),
             const SizedBox(height: 8),
             Align(
@@ -190,40 +202,171 @@ class _MemoCard extends StatelessWidget {
   );
 }
 
-class MemoDetailView extends StatelessWidget {
+class MemoDetailView extends ConsumerStatefulWidget {
   const MemoDetailView({super.key, required this.memo, required this.selected});
   final Memo memo;
   final MemoContext selected;
 
   @override
-  Widget build(BuildContext context) => MemoLayout(
-    roomName: selected.roomName,
-    title: '메모 상세',
-    onBack: () => Navigator.of(context).pop(),
-    child: SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              MemoMetadata(
-                author: memo.userId == selected.userId ? '나' : memo.userId,
-                date: memo.writtenAt,
-                likes: memo.likes ?? 0,
+  ConsumerState<MemoDetailView> createState() => _MemoDetailViewState();
+}
+
+class _MemoDetailViewState extends ConsumerState<MemoDetailView> {
+  late String _content = widget.memo.memoContent ?? '';
+  late bool _hasImage = widget.memo.hasImage;
+  bool _deleting = false;
+  bool _finished = false;
+
+  bool get _canManage =>
+      ref.read(memoContextProvider) == widget.selected &&
+      widget.selected.userId.isNotEmpty &&
+      widget.memo.userId == widget.selected.userId &&
+      widget.memo.familyRoomId == widget.selected.familyRoomId;
+
+  Future<void> _edit() async {
+    if (_deleting || !_canManage) return;
+    // 재수정 시에도 직전에 저장한 내용을 입력창에 표시한다.
+    final memo = Memo.fromJson({
+      ...widget.memo.toJson(),
+      'memo_content': _content,
+      'has_image': _hasImage,
+    });
+    final result = await Navigator.of(context).push<MemoFormResult>(
+      MaterialPageRoute<MemoFormResult>(
+        builder: (_) => MemoFormView(selected: widget.selected, memo: memo),
+      ),
+    );
+    if (mounted && result != null) {
+      setState(() {
+        _content = result.content;
+        _hasImage = result.hasImage;
+      });
+    }
+  }
+
+  Future<void> _delete() async {
+    if (_deleting || !_canManage) return;
+    setState(() => _deleting = true);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('메모를 삭제할까요?'),
+        content: const Text('삭제한 메모는 목록에서 사라져요.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('삭제하기'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    if (confirmed != true || !_canManage) {
+      setState(() => _deleting = false);
+      return;
+    }
+    try {
+      await ref
+          .read(memoVmProvider(widget.selected).notifier)
+          .deleteMemo(widget.memo);
+      if (!mounted) return;
+      setState(() => _finished = true);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final messenger = ScaffoldMessenger.of(context);
+        Navigator.of(context).pop();
+        messenger.showSnackBar(const SnackBar(content: Text('메모를 삭제했어요.')));
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _deleting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is MemoFailure ? error.message : '삭제하지 못했어요. 다시 시도해 주세요.',
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final current = ref.watch(memoContextProvider);
+    ref.watch(memoVmProvider(widget.selected));
+    final ownMemo =
+        widget.selected.userId.isNotEmpty &&
+        widget.memo.userId == widget.selected.userId &&
+        widget.memo.familyRoomId == widget.selected.familyRoomId;
+    return PopScope(
+      canPop: !_deleting || _finished,
+      child: MemoLayout(
+        roomName: widget.selected.roomName,
+        title: '메모 상세',
+        onBack: _deleting ? null : () => Navigator.of(context).pop(),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  MemoMetadata(
+                    author: widget.memo.authorLabel,
+                    date: widget.memo.writtenAt,
+                    likes: widget.memo.likes ?? 0,
+                    likeButton: MemoLikeButton(
+                      memo: widget.memo,
+                      selected: widget.selected,
+                      disabled: _deleting,
+                    ),
+                  ),
+                  const Divider(height: 36),
+                  SelectableText(
+                    _content,
+                    style: const TextStyle(fontSize: 16, height: 1.8),
+                  ),
+                  if (_hasImage) ...[
+                    const SizedBox(height: 16),
+                    MemoImageView(memo: widget.memo, selected: widget.selected),
+                  ],
+                  if (ownMemo) ...[
+                    const SizedBox(height: 24),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: _deleting || !_canManage ? null : _edit,
+                          icon: const Icon(Icons.edit_outlined),
+                          label: const Text('수정'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: _deleting || !_canManage ? null : _delete,
+                          icon: const Icon(Icons.delete_outline),
+                          label: Text(_deleting ? '삭제 중…' : '삭제'),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (current != widget.selected)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 12),
+                      child: Text('선택한 공간이 변경됐어요. 목록으로 돌아가 주세요.'),
+                    ),
+                ],
               ),
-              const Divider(height: 36),
-              SelectableText(
-                memo.memoContent ?? '',
-                style: const TextStyle(fontSize: 16, height: 1.8),
-              ),
-            ],
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _Message extends StatelessWidget {

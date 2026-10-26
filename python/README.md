@@ -41,6 +41,22 @@ python -m uvicorn python.main:app --reload
 참여 종료·사용자 탈퇴·공간 삭제 시에는 조회와 작성 모두 403을 반환합니다.
 투약일지 조회·작성도 투약일지 라우터 내부에 별도로 구현한 인증 의존성을 사용합니다.
 
+메모 사진 첨부는 `POST /memos/insert-with-image`,
+`PATCH /memos/update-with-image/{memo_id}`에서 multipart/form-data로 지원합니다.
+필수 필드는 `family_room_id`, `memo_content`이며 `image`는 최대 한 장(5MiB)입니다.
+수정 시 파일 생략은 유지, 파일 첨부는 교체, `remove_image=true`는 제거입니다.
+기존 `memo_image` LONG BLOB에 텍스트와 함께 한 트랜잭션으로 저장합니다.
+추가 의존성 `Pillow`, `python-multipart`는 `requirements.txt`에 포함되어 있습니다.
+이미지 조회와 Flutter 동작은 [메모 기능 구현 안내](../docs/memos-frontend.md)를 참고하세요.
+
+메모 좋아요 등록은 `POST /memos/like/{memo_id}`이며 JSON 본문은
+`{"family_room_id":"공간ID","author_user_id":"메모 작성자 ID"}`입니다.
+Bearer 토큰의 사용자로 한 번만 등록하며 취소 API는 없습니다.
+재전송은 HTTP 200과 `already_liked:true`를 반환하고 개수를 증가시키지 않습니다.
+목록 응답에는 현재 사용자의 `is_liked` 플래그도 포함됩니다.
+처음 배포하는 DB에서는 서버 실행 전 `python -m python.features.memos.migrate_likes`로
+좋아요 기록 테이블을 생성해야 합니다. 기존 메모 테이블과 데이터는 유지합니다.
+
 ## 투약일지 작성·조회 API
 
 `POST /medications/insert`로 현재 참여 중인 공간에 투약일지를 작성합니다.

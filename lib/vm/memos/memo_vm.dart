@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:ondolbom/model/memos/memo.dart';
 import 'package:ondolbom/vm/family_room/family_context.dart';
 
@@ -19,11 +21,115 @@ final memoHttpClientProvider = Provider.autoDispose<http.Client>((ref) {
   return client;
 });
 
+const maxMemoImageBytes = 5 * 1024 * 1024;
+
+// 선택기는 단일 사진만 반환하며 테스트에서는 이 provider를 대체한다.
+final memoImagePickerProvider = Provider<Future<Uint8List?> Function()>((ref) {
+  return () async {
+    final file = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 2560,
+      maxHeight: 2560,
+      imageQuality: 85,
+      requestFullMetadata: false,
+    );
+    if (file == null) return null;
+    if (await file.length() > maxMemoImageBytes) {
+      throw const MemoFailure('이미지는 5MB 이하로 첨부해 주세요.');
+    }
+    return file.readAsBytes();
+  };
+});
+
+typedef MemoImageQuery = ({
+  MemoContext context,
+  String memoId,
+  String authorId,
+});
+
+final memoImageProvider = FutureProvider.autoDispose
+    .family<Uint8List, MemoImageQuery>((ref, query) async {
+      final current = ref.watch(memoContextProvider);
+      final client = ref.watch(memoHttpClientProvider);
+      final baseUrl = ref
+          .watch(apiBaseUrlProvider)
+          .replaceFirst(RegExp(r'/+$'), '');
+      final tokenLoader = ref.watch(apiTokenLoaderProvider);
+      if (current != query.context) throw const MemoFailure('선택한 공간이 변경됐어요.');
+      try {
+        final token = await tokenLoader().timeout(const Duration(seconds: 15));
+        if (token == null || token.isEmpty) {
+          throw const MemoFailure('로그인이 필요해요.');
+        }
+        if (!ref.mounted || ref.read(memoContextProvider) != query.context) {
+          throw const MemoFailure('선택한 공간이 변경됐어요.');
+        }
+        final response = await client
+            .get(
+              Uri.parse(
+                '$baseUrl/memos/image/${Uri.encodeComponent(query.memoId)}',
+              ).replace(
+                queryParameters: {
+                  'family_room_id': query.context.familyRoomId,
+                  'author_user_id': query.authorId,
+                },
+              ),
+              headers: {'Authorization': 'Bearer $token'},
+            )
+            .timeout(const Duration(seconds: 15));
+        if (!ref.mounted || ref.read(memoContextProvider) != query.context) {
+          throw const MemoFailure('선택한 공간이 변경됐어요.');
+        }
+        if (response.statusCode != 200) {
+          throw const MemoFailure('사진을 불러오지 못했어요.');
+        }
+        return response.bodyBytes;
+      } on TimeoutException {
+        throw const MemoFailure('사진 응답이 지연되고 있어요.');
+      } on http.ClientException {
+        throw const MemoFailure('사진을 불러오지 못했어요. 연결 상태를 확인해 주세요.');
+      }
+    }, retry: (_, _) => null);
+
 class MemoFailure implements Exception {
   const MemoFailure(this.message);
   final String message;
   @override
   String toString() => message;
+}
+
+class MemoLikeResult {
+  const MemoLikeResult(this.likes);
+  final int likes;
+}
+
+// 목록·상세의 요청 상태와 서버 응답을 같은 메모 식별자로 공유한다.
+final memoLikeProvider = AsyncNotifierProvider.autoDispose
+    .family<MemoLikeVm, MemoLikeResult?, MemoImageQuery>(
+      MemoLikeVm.new,
+      retry: (_, _) => null,
+    );
+
+class MemoLikeVm extends AsyncNotifier<MemoLikeResult?> {
+  MemoLikeVm(this.query);
+  final MemoImageQuery query;
+
+  @override
+  MemoLikeResult? build() => null;
+
+  Future<void> like(Memo memo) async {
+    if (state.isLoading || state.asData?.value != null || memo.isLiked) return;
+    state = const AsyncLoading();
+    try {
+      final result = await ref
+          .read(memoVmProvider(query.context).notifier)
+          .likeMemo(memo);
+      if (ref.mounted) state = AsyncData(result);
+    } catch (_) {
+      if (ref.mounted) state = const AsyncData(null);
+      rethrow;
+    }
+  }
 }
 
 class MemoFeed {
@@ -72,8 +178,9 @@ class MemoVm extends AsyncNotifier<MemoFeed> {
 
   Future<Map<String, dynamic>> _request(
     Future<http.Response> Function(Map<String, String> headers) send,
-    int expected,
-  ) async {
+    int expected, {
+    bool requireCurrentContext = false,
+  }) async {
     final generation = _generation;
     try {
       final token = await _tokenLoader().timeout(const Duration(seconds: 15));
@@ -83,6 +190,9 @@ class MemoVm extends AsyncNotifier<MemoFeed> {
       if (!ref.mounted || generation != _generation) {
         throw const MemoFailure('로그인 상태가 변경되었습니다.');
       }
+      if (requireCurrentContext && ref.read(memoContextProvider) != context) {
+        throw const MemoFailure('선택한 공간이 변경됐어요. 목록으로 돌아가 주세요.');
+      }
       final response = await send({
         'Authorization': 'Bearer $token',
         'Accept': 'application/json',
@@ -90,6 +200,9 @@ class MemoVm extends AsyncNotifier<MemoFeed> {
       }).timeout(const Duration(seconds: 15));
       if (!ref.mounted || generation != _generation) {
         throw const MemoFailure('로그인 상태가 변경되었습니다.');
+      }
+      if (requireCurrentContext && ref.read(memoContextProvider) != context) {
+        throw const MemoFailure('선택한 공간이 변경됐어요. 목록에서 처리 결과를 확인해 주세요.');
       }
       if (response.statusCode == 401) {
         throw const MemoFailure('로그인이 필요해요. 로그인 상태를 확인해 주세요.');
@@ -165,7 +278,7 @@ class MemoVm extends AsyncNotifier<MemoFeed> {
     }
   }
 
-  Future<void> createMemo(String content) async {
+  Future<void> createMemo(String content, {Uint8List? image}) async {
     final text = content.trim();
     if (text.isEmpty || text.runes.length > 10000) {
       throw const MemoFailure('메모는 1~10,000자로 작성해 주세요.');
@@ -173,17 +286,161 @@ class MemoVm extends AsyncNotifier<MemoFeed> {
     if (context.userId.isEmpty || context.familyRoomId.isEmpty) {
       throw const MemoFailure('사용자와 돌봄 공간을 먼저 선택해 주세요.');
     }
+    _validateImage(image);
     await _request(
+      (headers) => image != null
+          ? _multipart('POST', 'insert-with-image', headers, text, image: image)
+          : _client.post(
+              _uri('insert'),
+              headers: headers,
+              body: jsonEncode({
+                'family_room_id': context.familyRoomId,
+                'memo_content': text,
+              }),
+            ),
+      201,
+      requireCurrentContext: image != null,
+    );
+    if (ref.mounted) ref.invalidateSelf();
+  }
+
+  void _checkCanManage(Memo memo) {
+    if (ref.read(memoContextProvider) != context) {
+      throw const MemoFailure('선택한 공간이 변경됐어요. 목록으로 돌아가 주세요.');
+    }
+    if (context.userId.isEmpty ||
+        memo.userId != context.userId ||
+        memo.familyRoomId != context.familyRoomId) {
+      throw const MemoFailure('이 공간의 메모 작성자만 수정하거나 삭제할 수 있어요.');
+    }
+  }
+
+  Future<void> updateMemo(
+    Memo memo,
+    String content, {
+    Uint8List? image,
+    bool removeImage = false,
+  }) async {
+    _checkCanManage(memo);
+    final text = content.trim();
+    if (text.isEmpty || text.runes.length > 10000) {
+      throw const MemoFailure('메모는 1~10,000자로 작성해 주세요.');
+    }
+    _validateImage(image);
+    if (image != null && removeImage) {
+      throw const MemoFailure('사진 첨부와 제거를 동시에 할 수 없어요.');
+    }
+    await _request(
+      (headers) => image != null || removeImage
+          ? _multipart(
+              'PATCH',
+              'update-with-image/${Uri.encodeComponent(memo.memoId)}',
+              headers,
+              text,
+              image: image,
+              removeImage: removeImage,
+            )
+          : _client.patch(
+              _uri('update/${Uri.encodeComponent(memo.memoId)}'),
+              headers: headers,
+              body: jsonEncode({
+                'family_room_id': context.familyRoomId,
+                'memo_content': text,
+              }),
+            ),
+      200,
+      requireCurrentContext: true,
+    );
+    if (ref.mounted) {
+      ref.invalidate(
+        memoImageProvider((
+          context: context,
+          memoId: memo.memoId,
+          authorId: memo.userId,
+        )),
+      );
+      ref.invalidateSelf();
+    }
+  }
+
+  void _validateImage(Uint8List? image) {
+    if (image != null && (image.isEmpty || image.length > maxMemoImageBytes)) {
+      throw const MemoFailure('이미지는 5MB 이하의 파일로 첨부해 주세요.');
+    }
+  }
+
+  Future<http.Response> _multipart(
+    String method,
+    String path,
+    Map<String, String> headers,
+    String content, {
+    Uint8List? image,
+    bool removeImage = false,
+  }) async {
+    final request = http.MultipartRequest(method, _uri(path))
+      ..headers['Authorization'] = headers['Authorization']!
+      ..fields['family_room_id'] = context.familyRoomId
+      ..fields['memo_content'] = content;
+    if (removeImage) request.fields['remove_image'] = 'true';
+    if (image != null) {
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'image',
+          image,
+          filename: 'memo-image.jpg',
+        ),
+      );
+    }
+    return http.Response.fromStream(await _client.send(request));
+  }
+
+  Future<void> deleteMemo(Memo memo) async {
+    _checkCanManage(memo);
+    await _request(
+      (headers) => _client.delete(
+        _uri('delete/${Uri.encodeComponent(memo.memoId)}', {
+          'family_room_id': context.familyRoomId,
+        }),
+        headers: headers,
+      ),
+      200,
+      requireCurrentContext: true,
+    );
+    if (ref.mounted) {
+      ref.invalidate(
+        memoImageProvider((
+          context: context,
+          memoId: memo.memoId,
+          authorId: memo.userId,
+        )),
+      );
+      ref.invalidateSelf();
+    }
+  }
+
+  Future<MemoLikeResult> likeMemo(Memo memo) async {
+    if (ref.read(memoContextProvider) != context ||
+        context.userId.isEmpty ||
+        context.familyRoomId.isEmpty ||
+        memo.familyRoomId != context.familyRoomId) {
+      throw const MemoFailure('선택한 공간과 로그인 상태를 확인해 주세요.');
+    }
+    final body = await _request(
       (headers) => _client.post(
-        _uri('insert'),
+        _uri('like/${Uri.encodeComponent(memo.memoId)}'),
         headers: headers,
         body: jsonEncode({
           'family_room_id': context.familyRoomId,
-          'memo_content': text,
+          'author_user_id': memo.userId,
         }),
       ),
-      201,
+      200,
+      requireCurrentContext: true,
     );
-    if (ref.mounted) ref.invalidateSelf();
+    final likes = body['likes'];
+    if (likes is! int || likes < 0 || body['is_liked'] != true) {
+      throw const MemoFailure('좋아요 응답을 확인하지 못했어요. 다시 시도해 주세요.');
+    }
+    return MemoLikeResult(likes);
   }
 }

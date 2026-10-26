@@ -123,10 +123,12 @@ class MemoMetadata extends StatelessWidget {
     required this.author,
     required this.date,
     required this.likes,
+    this.likeButton,
   });
   final String author;
   final DateTime? date;
   final int likes;
+  final Widget? likeButton;
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -139,24 +141,25 @@ class MemoMetadata extends StatelessWidget {
         ),
       ),
       const SizedBox(height: 12),
-      Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.favorite_border,
-            size: 16,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
+      likeButton ??
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.favorite_border,
+                size: 16,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 5),
+              Text(
+                '좋아요 $likes',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 12,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 5),
-          Text(
-            '좋아요 $likes',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
     ],
   );
 }
