@@ -1,5 +1,19 @@
 # 구현된 사용자 인증 API
 
+비밀번호 재설정은 `/auth/password-reset/request` → `/verify` → `/confirm`의 이메일 인증번호 방식이다. [API·SMTP 설정·검증 안내](account-recovery.md)
+
+소셜 로그인·로컬 서버 설정은 [팀원 로컬 설정 안내](team-local-setup.md)를 참고한다.
+
+| 소셜 인증 API | 동작 |
+| --- | --- |
+| POST /auth/kakao | 카카오 토큰 앱 소속·이메일 검증 후 Firebase Custom Token 발급 |
+| POST /auth/naver/start | 앱의 challenge와 서버 state를 연결하고 네이버 인증 URL 반환 |
+| GET /auth/naver/callback | 등록된 서버 Callback, 인가 코드와 state만 앱 스킴으로 전달 |
+| POST /auth/naver/exchange | state·앱 verifier·코드를 일회 검증하고 서버에서 교환 후 Firebase Custom Token 발급 |
+
+Custom Token은 Flutter Firebase SDK에서 로그인하는 용도이며 /auth/me에 직접 전달하지 않는다.
+실제 API에는 Firebase 로그인 후 발급된 ID 토큰을 사용한다. 네이버 임시 인증 상태는 각 로컬 서버 메모리에 5분 저장된다.
+
 일정 앱 내 알림 API는 [일정 알림 안내](schedule-notifications.md)를 참고한다.
 알림은 Firestore에 저장한다. Firestore 생성·색인 적용·일정 등록 API 연결 후 실제 연동 검증이 필요하다.
 
