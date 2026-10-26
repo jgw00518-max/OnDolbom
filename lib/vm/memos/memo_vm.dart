@@ -4,9 +4,9 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:ondolbom/model/memos/memo.dart';
-import 'package:ondolbom/vm/family_context.dart';
+import 'package:ondolbom/vm/family_room/family_context.dart';
 
-export 'package:ondolbom/vm/family_context.dart' show apiBaseUrlProvider;
+export 'package:ondolbom/vm/family_room/family_context.dart' show apiBaseUrlProvider;
 
 typedef MemoContext = FamilyContext;
 

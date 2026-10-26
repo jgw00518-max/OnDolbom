@@ -167,7 +167,7 @@ class _InviteCreateState extends ConsumerState<InviteCreate> {
     });
 
     try {
-      await ref.read(inviteVmProvider).createInvite(
+            final emailSent = await ref.read(inviteVmProvider).createInvite(
         familyRoomId: widget.familyRoomId,
         email: email,
       );
@@ -182,7 +182,7 @@ class _InviteCreateState extends ConsumerState<InviteCreate> {
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          Navigator.pop(context, true);
+          Navigator.pop(context, emailSent);
         }
       });
     } catch (error) {

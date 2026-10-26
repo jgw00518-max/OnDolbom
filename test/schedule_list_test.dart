@@ -15,8 +15,8 @@ import 'package:ondolbom/view/schedules/schedule_list.dart';
 import 'package:ondolbom/view/schedules/schedule_create.dart';
 import 'package:ondolbom/vm/auth/auth_vm.dart';
 import 'package:ondolbom/vm/auth/user_profile_vm.dart';
-import 'package:ondolbom/vm/family_room_notifier.dart';
-import 'package:ondolbom/vm/family_room_state.dart';
+import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
+import 'package:ondolbom/vm/family_room/family_room_state.dart';
 import 'package:ondolbom/vm/schedules/schedule_vm.dart';
 
 class CalendarUser extends Fake implements User {

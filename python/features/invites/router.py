@@ -7,6 +7,11 @@ from pymysql import MySQLError
 from python.database import connect
 from python.features.auth.firebase_auth import require_firebase_user
 
+from python.features.invites.send_email import send_invite_email
+
+import logging
+import smtplib
+
 
 router = APIRouter(
     prefix="/invites",
@@ -188,7 +193,26 @@ def create_invite(
                     status_code=409,
                     detail="이미 공간에 참여 중인 가족입니다.",
                 )
-
+            
+            # 발송 성공 후 7일이 지난 대기 초대를 만료 처리한다.
+            cursor.execute(
+                """
+                UPDATE invite
+                SET invite_status = %s
+                WHERE family_room_id = %s
+                  AND LOWER(TRIM(invite_email)) = %s
+                  AND invite_status = %s
+                  AND invite_deleted_at IS NULL
+                  AND DATE_ADD(invite_at, INTERVAL 7 DAY)
+                      <= CURRENT_TIMESTAMP
+                """,
+                (
+                    "만료",
+                    data.family_room_id,
+                    invite_email,
+                    "대기",
+                ),
+            )
             # 같은 공간·이메일의 대기 초대를 중복 생성하지 않는다.
             cursor.execute(
                 """
@@ -196,7 +220,7 @@ def create_invite(
                 FROM invite
                 WHERE family_room_id = %s
                   AND LOWER(TRIM(invite_email)) = %s
-                  AND invite_status = %s
+                  AND invite_status IN (%s, %s)
                   AND invite_deleted_at IS NULL
                 LIMIT 1
                 FOR UPDATE
@@ -205,13 +229,14 @@ def create_invite(
                     data.family_room_id,
                     invite_email,
                     "대기",
+                    "발송대기",
                 ),
             )
 
             if cursor.fetchone() is not None:
                 raise HTTPException(
                     status_code=409,
-                    detail="이미 대기 중인 초대가 있습니다.",
+                    detail="이미 대기 중이거나 발송 중인 초대가 있습니다.",
                 )
 
             invite_id = str(uuid4())
@@ -233,16 +258,66 @@ def create_invite(
                     data.family_room_id,
                     current_user["user_id"],
                     invite_email,
-                    "대기",
+                    "발송대기",
                 ),
             )
+
+         # 초대 내역을 발송대기 상태로 먼저 저장한다.
+        conn.commit()
+
+        email_sent = False
+        invite_status = "발송실패"
+
+        try:
+            send_invite_email(invite_email)
+            email_sent = True
+            invite_status = "대기"
+
+        except (smtplib.SMTPException, OSError, ValueError):
+            logging.warning("초대 이메일 발송에 실패했습니다.")
+
+        with conn.cursor() as cursor:
+            if email_sent:
+                # 발송에 성공한 시각부터 유효기간을 계산한다.
+                cursor.execute(
+                    """
+                    UPDATE invite
+                    SET invite_at = CURRENT_TIMESTAMP,
+                        invite_status = %s
+                    WHERE invite_id = %s
+                      AND invite_status = %s
+                      AND invite_deleted_at IS NULL
+                    """,
+                    (
+                        "대기",
+                        invite_id,
+                        "발송대기",
+                    ),
+                )
+            else:
+                # 실패한 초대는 수락 가능한 대기 상태로 두지 않는다.
+                cursor.execute(
+                    """
+                    UPDATE invite
+                    SET invite_status = %s
+                    WHERE invite_id = %s
+                      AND invite_status = %s
+                      AND invite_deleted_at IS NULL
+                    """,
+                    (
+                        "발송실패",
+                        invite_id,
+                        "발송대기",
+                    ),
+                )
 
         conn.commit()
 
         return {
             "result": "OK",
             "invite_id": invite_id,
-            "invite_status": "대기",
+            "invite_status": invite_status,
+            "email_sent": email_sent,
         }
 
     except HTTPException:
@@ -282,6 +357,19 @@ def get_received_invites(
         conn = connect()
 
         with conn.cursor() as cursor:
+            # 로그인한 이메일의 유효기간이 지난 초대를 만료 처리한다.
+            cursor.execute(
+                """
+                UPDATE invite
+                SET invite_status = %s
+                WHERE LOWER(TRIM(invite_email)) = %s
+                  AND invite_status = %s
+                  AND invite_deleted_at IS NULL
+                  AND DATE_ADD(invite_at, INTERVAL 7 DAY)
+                      <= CURRENT_TIMESTAMP
+                """,
+                ("만료", email, "대기"),
+            )
             cursor.execute(
                 """
                 SELECT
@@ -298,16 +386,18 @@ def get_received_invites(
                 JOIN `user` AS u
                   ON u.user_id = i.inviter_id
                 WHERE LOWER(TRIM(i.invite_email)) = %s
-                  AND i.invite_status = %s
+                  AND i.invite_status IN (%s, %s) 
                   AND i.invite_deleted_at IS NULL
                   AND f.family_room_deleted_at IS NULL
                   AND u.withdrawn_at IS NULL
                 ORDER BY i.invite_at DESC, i.invite_id
                 """,
-                (email, "대기"),
+                (email, "대기", "만료"),
             )
 
             invites = cursor.fetchall()
+
+        conn.commit()
 
         return {"results": invites}
 
@@ -406,6 +496,41 @@ def accept_invite(
                     status_code=404,
                     detail="받은 초대가 없거나 확인할 수 없습니다.",
                 )
+            # 이미 만료 처리된 초대는 수락할 수 없다.
+            if invite["invite_status"] == "만료":
+                raise HTTPException(
+                    status_code=409,
+                    detail="유효기간이 지난 초대입니다. 주보호자에게 다시 초대를 요청해 주세요.",
+                )
+
+            # 화면을 열어둔 사이 유효기간이 지났는지도 확인한다.
+            cursor.execute(
+                """
+                UPDATE invite
+                SET invite_status = %s
+                WHERE invite_id = %s
+                  AND family_room_id = %s
+                  AND invite_status = %s
+                  AND invite_deleted_at IS NULL
+                  AND DATE_ADD(invite_at, INTERVAL 7 DAY)
+                      <= CURRENT_TIMESTAMP
+                """,
+                (
+                    "만료",
+                    invite_id,
+                    family_room_id,
+                    "대기",
+                ),
+            )
+
+            if cursor.rowcount == 1:
+                # 만료 상태를 확정한 다음 수락을 차단한다.
+                conn.commit()
+
+                raise HTTPException(
+                    status_code=409,
+                    detail="유효기간이 지난 초대입니다. 주보호자에게 다시 초대를 요청해 주세요.",
+                )
 
             if invite["invite_status"] != "대기":
                 raise HTTPException(
@@ -456,6 +581,8 @@ def accept_invite(
                   AND family_room_id = %s
                   AND invite_status = %s
                   AND invite_deleted_at IS NULL
+                  AND DATE_ADD(invite_at, INTERVAL 7 DAY)
+                      > CURRENT_TIMESTAMP
                 """,
                 (
                     "수락",
@@ -492,6 +619,394 @@ def accept_invite(
         raise HTTPException(
             status_code=503,
             detail="초대를 수락하지 못했습니다.",
+        ) from None
+
+    finally:
+        if conn is not None:
+            conn.close()
+
+# 받은 초대를 거절한다.
+@router.post("/{invite_id}/reject")
+def reject_invite(
+    invite_id: str,
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    email = (current_user["user_email"] or "").strip().lower()
+    conn = None
+
+    if not email:
+        raise HTTPException(
+            status_code=403,
+            detail="사용자 이메일을 확인할 수 없습니다.",
+        )
+
+    try:
+        conn = connect()
+
+        with conn.cursor() as cursor:
+            # 본인에게 온 초대인지 확인하고 공간 ID를 가져온다.
+            cursor.execute(
+                """
+                SELECT family_room_id
+                FROM invite
+                WHERE invite_id = %s
+                  AND LOWER(TRIM(invite_email)) = %s
+                  AND invite_deleted_at IS NULL
+                """,
+                (invite_id, email),
+            )
+
+            invite_room = cursor.fetchone()
+
+            if invite_room is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="받은 초대가 없거나 확인할 수 없습니다.",
+                )
+
+            family_room_id = invite_room["family_room_id"]
+
+            # 수락 처리와 동일하게 공간부터 잠근다.
+            cursor.execute(
+                """
+                SELECT family_room_id
+                FROM family_room
+                WHERE family_room_id = %s
+                  AND family_room_deleted_at IS NULL
+                FOR UPDATE
+                """,
+                (family_room_id,),
+            )
+
+            if cursor.fetchone() is None:
+                raise HTTPException(
+                    status_code=403,
+                    detail="이용할 수 없는 가족 공간입니다.",
+                )
+
+            # 수락·거절 요청이 동시에 처리되지 않도록 초대를 잠근다.
+            cursor.execute(
+                """
+                SELECT invite_status
+                FROM invite
+                WHERE invite_id = %s
+                  AND family_room_id = %s
+                  AND LOWER(TRIM(invite_email)) = %s
+                  AND invite_deleted_at IS NULL
+                FOR UPDATE
+                """,
+                (invite_id, family_room_id, email),
+            )
+
+            invite = cursor.fetchone()
+
+            if invite is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="받은 초대가 없거나 확인할 수 없습니다.",
+                )
+
+            if invite["invite_status"] == "만료":
+                raise HTTPException(
+                    status_code=409,
+                    detail="유효기간이 지난 초대입니다.",
+                )
+
+            if invite["invite_status"] != "대기":
+                raise HTTPException(
+                    status_code=409,
+                    detail="이미 처리되었거나 발송이 완료되지 않은 초대입니다.",
+                )
+
+            # 거절 직전에도 만료 여부를 확인한다.
+            cursor.execute(
+                """
+                UPDATE invite
+                SET invite_status = %s
+                WHERE invite_id = %s
+                  AND family_room_id = %s
+                  AND invite_status = %s
+                  AND invite_deleted_at IS NULL
+                  AND DATE_ADD(invite_at, INTERVAL 7 DAY)
+                      <= CURRENT_TIMESTAMP
+                """,
+                ("만료", invite_id, family_room_id, "대기"),
+            )
+
+            if cursor.rowcount == 1:
+                conn.commit()
+
+                raise HTTPException(
+                    status_code=409,
+                    detail="유효기간이 지난 초대입니다.",
+                )
+
+            # 아직 유효한 초대만 거절한다.
+            cursor.execute(
+                """
+                UPDATE invite
+                SET invite_status = %s
+                WHERE invite_id = %s
+                  AND family_room_id = %s
+                  AND invite_status = %s
+                  AND invite_deleted_at IS NULL
+                  AND DATE_ADD(invite_at, INTERVAL 7 DAY)
+                      > CURRENT_TIMESTAMP
+                """,
+                ("거절", invite_id, family_room_id, "대기"),
+            )
+
+            if cursor.rowcount != 1:
+                raise HTTPException(
+                    status_code=409,
+                    detail="초대 상태가 변경되었거나 유효기간이 지났습니다. 다시 조회해 주세요.",
+                )
+
+        conn.commit()
+
+        return {
+            "result": "OK",
+            "invite_id": invite_id,
+            "invite_status": "거절",
+        }
+
+    except HTTPException:
+        if conn is not None:
+            conn.rollback()
+        raise
+
+    except (MySQLError, ValueError):
+        if conn is not None:
+            conn.rollback()
+
+        raise HTTPException(
+            status_code=503,
+            detail="초대를 거절하지 못했습니다.",
+        ) from None
+
+    finally:
+        if conn is not None:
+            conn.close()
+
+# 현재 주보호자로 관리하는 공간의 보낸 초대를 조회한다.
+@router.get("/sent")
+def get_sent_invites(
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    user_id = current_user["user_id"]
+    conn = None
+
+    try:
+        conn = connect()
+
+        with conn.cursor() as cursor:
+            # 관리 중인 공간의 대기 초대 중 7일이 지난 건을 만료 처리한다.
+            cursor.execute(
+                """
+                UPDATE invite AS i
+                JOIN family_room AS f
+                  ON f.family_room_id = i.family_room_id
+                JOIN participate AS p
+                  ON p.family_room_id = i.family_room_id
+                SET i.invite_status = %s
+                WHERE p.user_id = %s
+                  AND p.is_representative = 1
+                  AND p.left_at IS NULL
+                  AND f.family_room_deleted_at IS NULL
+                  AND i.invite_deleted_at IS NULL
+                  AND i.invite_status = %s
+                  AND DATE_ADD(i.invite_at, INTERVAL 7 DAY)
+                      <= CURRENT_TIMESTAMP
+                """,
+                ("만료", user_id, "대기"),
+            )
+
+            # 공간별 역할을 검사하여 현재 주보호자인 공간만 조회한다.
+            cursor.execute(
+                """
+                SELECT DISTINCT
+                    i.invite_id,
+                    i.family_room_id,
+                    i.invite_email,
+                    i.invite_at,
+                    i.invite_status,
+                    f.care_recipient_name,
+                    u.name AS inviter_name
+                FROM invite AS i
+                JOIN family_room AS f
+                  ON f.family_room_id = i.family_room_id
+                JOIN participate AS p
+                  ON p.family_room_id = i.family_room_id
+                JOIN `user` AS u
+                  ON u.user_id = i.inviter_id
+                WHERE p.user_id = %s
+                  AND p.is_representative = 1
+                  AND p.left_at IS NULL
+                  AND f.family_room_deleted_at IS NULL
+                  AND i.invite_deleted_at IS NULL
+                ORDER BY i.invite_at DESC, i.invite_id
+                """,
+                (user_id,),
+            )
+
+            invites = cursor.fetchall()
+
+        # 조회 과정에서 변경한 만료 상태를 저장한다.
+        conn.commit()
+
+        return {"results": invites}
+
+    except (MySQLError, ValueError):
+        if conn is not None:
+            conn.rollback()
+
+        raise HTTPException(
+            status_code=503,
+            detail="보낸 초대를 불러오지 못했습니다.",
+        ) from None
+
+    finally:
+        if conn is not None:
+            conn.close()
+
+# 현재 주보호자가 아직 수락되지 않은 유효한 초대를 취소한다.
+@router.post("/{invite_id}/cancel")
+def cancel_invite(
+    invite_id: str,
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    conn = None
+
+    try:
+        conn = connect()
+
+        with conn.cursor() as cursor:
+            # 취소할 초대의 공간을 확인한다.
+            cursor.execute(
+                """
+                SELECT family_room_id
+                FROM invite
+                WHERE invite_id = %s
+                  AND invite_deleted_at IS NULL
+                """,
+                (invite_id,),
+            )
+
+            invite_room = cursor.fetchone()
+
+            if invite_room is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="초대가 없거나 확인할 수 없습니다.",
+                )
+
+            family_room_id = invite_room["family_room_id"]
+
+        # 공간을 잠그고 현재 참여 중인 주보호자인지 검사한다.
+        check_inviter(
+            conn,
+            family_room_id,
+            current_user["user_id"],
+        )
+
+        with conn.cursor() as cursor:
+            # 수락·거절·취소가 동시에 처리되지 않도록 초대를 잠근다.
+            cursor.execute(
+                """
+                SELECT invite_status
+                FROM invite
+                WHERE invite_id = %s
+                  AND family_room_id = %s
+                  AND invite_deleted_at IS NULL
+                FOR UPDATE
+                """,
+                (invite_id, family_room_id),
+            )
+
+            invite = cursor.fetchone()
+
+            if invite is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="초대가 없거나 확인할 수 없습니다.",
+                )
+
+            if invite["invite_status"] == "만료":
+                raise HTTPException(
+                    status_code=409,
+                    detail="이미 만료된 초대입니다.",
+                )
+
+            if invite["invite_status"] != "대기":
+                raise HTTPException(
+                    status_code=409,
+                    detail="유효한 대기 초대만 취소할 수 있습니다.",
+                )
+
+            # 취소 직전 유효기간이 지났다면 만료 상태로 저장한다.
+            cursor.execute(
+                """
+                UPDATE invite
+                SET invite_status = %s
+                WHERE invite_id = %s
+                  AND family_room_id = %s
+                  AND invite_status = %s
+                  AND invite_deleted_at IS NULL
+                  AND DATE_ADD(invite_at, INTERVAL 7 DAY)
+                      <= CURRENT_TIMESTAMP
+                """,
+                ("만료", invite_id, family_room_id, "대기"),
+            )
+
+            if cursor.rowcount == 1:
+                conn.commit()
+
+                raise HTTPException(
+                    status_code=409,
+                    detail="이미 만료된 초대입니다.",
+                )
+
+            # 아직 유효한 대기 초대만 취소한다.
+            cursor.execute(
+                """
+                UPDATE invite
+                SET invite_status = %s
+                WHERE invite_id = %s
+                  AND family_room_id = %s
+                  AND invite_status = %s
+                  AND invite_deleted_at IS NULL
+                  AND DATE_ADD(invite_at, INTERVAL 7 DAY)
+                      > CURRENT_TIMESTAMP
+                """,
+                ("취소", invite_id, family_room_id, "대기"),
+            )
+
+            if cursor.rowcount != 1:
+                raise HTTPException(
+                    status_code=409,
+                    detail="초대 상태가 변경되었거나 만료되었습니다. 다시 조회해 주세요.",
+                )
+
+        conn.commit()
+
+        return {
+            "result": "OK",
+            "invite_id": invite_id,
+            "invite_status": "취소",
+        }
+
+    except HTTPException:
+        if conn is not None:
+            conn.rollback()
+        raise
+
+    except (MySQLError, ValueError):
+        if conn is not None:
+            conn.rollback()
+
+        raise HTTPException(
+            status_code=503,
+            detail="초대를 취소하지 못했습니다.",
         ) from None
 
     finally:
