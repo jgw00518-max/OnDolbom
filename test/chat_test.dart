@@ -11,8 +11,8 @@ import 'package:ondolbom/model/chats/chat_message.dart';
 import 'package:ondolbom/view/chats/chat_view.dart';
 import 'package:ondolbom/view/family_room/family_room_home.dart';
 import 'package:ondolbom/vm/chats/chat_vm.dart';
-import 'package:ondolbom/vm/family_context.dart';
-import 'package:ondolbom/vm/family_room_notifier.dart';
+import 'package:ondolbom/vm/family_room/family_context.dart';
+import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
 import 'family_care_connection_test.dart' show CareRooms;
 
 const room = (familyRoomId: 'room-a', userId: 'db-user', roomName: '가족 A');

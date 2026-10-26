@@ -6,7 +6,7 @@ import 'package:ondolbom/model/family/family_room.dart';
 import 'package:ondolbom/model/family/participate.dart';
 import 'package:ondolbom/vm/auth/auth_vm.dart';
 import 'package:ondolbom/vm/auth/user_profile_vm.dart';
-import 'package:ondolbom/vm/family_room_state.dart';
+import 'package:ondolbom/vm/family_room/family_room_state.dart';
 
 final familyRoomProvider =
     NotifierProvider<FamilyRoomNotifier, FamilyRoomState>(

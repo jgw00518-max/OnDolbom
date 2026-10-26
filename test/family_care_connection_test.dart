@@ -12,9 +12,9 @@ import 'package:ondolbom/model/family/family_room.dart';
 import 'package:ondolbom/view/family_room/family_room_home.dart';
 import 'package:ondolbom/vm/auth/auth_vm.dart';
 import 'package:ondolbom/vm/auth/user_profile_vm.dart' as profile;
-import 'package:ondolbom/vm/family_context.dart';
-import 'package:ondolbom/vm/family_room_notifier.dart';
-import 'package:ondolbom/vm/family_room_state.dart';
+import 'package:ondolbom/vm/family_room/family_context.dart';
+import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
+import 'package:ondolbom/vm/family_room/family_room_state.dart';
 import 'package:ondolbom/vm/memos/memo_vm.dart';
 import 'package:ondolbom/vm/medications/medication_vm.dart';
 

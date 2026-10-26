@@ -22,19 +22,30 @@ final inviteVmProvider = Provider<InviteVm>((ref) {
 });
 
 // 로그인 계정이 변경되면 받은 초대도 다시 조회한다.
-final receivedInvitesProvider =
-    FutureProvider.autoDispose<List<FamilyInvite>>(
-      (ref) async {
-        final user = await ref.watch(authUserProvider.future);
+final receivedInvitesProvider = FutureProvider.autoDispose<List<FamilyInvite>>((
+  ref,
+) async {
+  final user = await ref.watch(authUserProvider.future);
 
-        if (user == null) {
-          throw Exception('로그인이 필요합니다.');
-        }
+  if (user == null) {
+    throw Exception('로그인이 필요합니다.');
+  }
 
-        return ref.read(inviteVmProvider).fetchReceivedInvites();
-      },
-      retry: (retryCount, error) => null,
-    );
+  return ref.read(inviteVmProvider).fetchReceivedInvites();
+}, retry: (retryCount, error) => null);
+
+// 로그인한 사용자가 주보호자로 관리하는 공간의 보낸 초대를 조회한다.
+final sentInvitesProvider = FutureProvider.autoDispose<List<FamilyInvite>>((
+  ref,
+) async {
+  final user = await ref.watch(authUserProvider.future);
+
+  if (user == null) {
+    throw Exception('로그인이 필요합니다.');
+  }
+
+  return ref.read(inviteVmProvider).fetchSentInvites();
+}, retry: (retryCount, error) => null);
 
 class InviteVm {
   InviteVm(this.ref);
@@ -42,9 +53,7 @@ class InviteVm {
   final Ref ref;
 
   String get baseUrl {
-    return ref
-        .read(apiBaseUrlProvider)
-        .replaceAll(RegExp(r'/+$'), '');
+    return ref.read(apiBaseUrlProvider).replaceAll(RegExp(r'/+$'), '');
   }
 
   // 요청할 때 현재 사용자의 로그인 토큰을 가져온다.
@@ -76,14 +85,9 @@ class InviteVm {
   }
 
   // 서버가 보낸 오류 메시지를 읽는다.
-  String getErrorMessage(
-    http.Response response,
-    String defaultMessage,
-  ) {
+  String getErrorMessage(http.Response response, String defaultMessage) {
     try {
-      final body = jsonDecode(
-        utf8.decode(response.bodyBytes),
-      );
+      final body = jsonDecode(utf8.decode(response.bodyBytes));
 
       if (body is Map && body['detail'] is String) {
         return body['detail'] as String;
@@ -110,33 +114,23 @@ class InviteVm {
         .read(inviteHttpClientProvider)
         .get(
           Uri.parse('$baseUrl/invites/received'),
-          headers: {
-            'Authorization': 'Bearer $token',
-          },
+          headers: {'Authorization': 'Bearer $token'},
         )
         .timeout(const Duration(seconds: 15));
 
     checkLoginUser(uid);
 
     if (response.statusCode != 200) {
-      throw Exception(
-        getErrorMessage(
-          response,
-          '받은 초대를 불러오지 못했습니다.',
-        ),
-      );
+      throw Exception(getErrorMessage(response, '받은 초대를 불러오지 못했습니다.'));
     }
 
-    final body = jsonDecode(
-      utf8.decode(response.bodyBytes),
-    ) as Map<String, dynamic>;
+    final body =
+        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
 
     final results = body['results'] as List<dynamic>;
 
     return results.map((item) {
-      return FamilyInvite.fromJson(
-        item as Map<String, dynamic>,
-      );
+      return FamilyInvite.fromJson(item as Map<String, dynamic>);
     }).toList();
   }
 
@@ -154,28 +148,20 @@ class InviteVm {
     final response = await ref
         .read(inviteHttpClientProvider)
         .post(
-          Uri.parse(
-            '$baseUrl/invites/${Uri.encodeComponent(inviteId)}/accept',
-          ),
-          headers: {
-            'Authorization': 'Bearer $token',
-          },
+          Uri.parse('$baseUrl/invites/${Uri.encodeComponent(inviteId)}/accept'),
+          headers: {'Authorization': 'Bearer $token'},
         )
         .timeout(const Duration(seconds: 15));
 
     checkLoginUser(uid);
 
     if (response.statusCode != 200) {
-      throw Exception(
-        getErrorMessage(
-          response,
-          '초대를 수락하지 못했습니다.',
-        ),
-      );
+      throw Exception(getErrorMessage(response, '초대를 수락하지 못했습니다.'));
     }
   } // build
-    // 주보호자가 가족 공간에 초대를 등록한다.
-  Future<void> createInvite({
+
+  // 주보호자가 가족 공간에 초대를 등록한다.
+  Future<bool> createInvite({
     required String familyRoomId,
     required String email,
   }) async {
@@ -201,17 +187,101 @@ class InviteVm {
             'invite_email': email.trim(),
           }),
         )
-        .timeout(const Duration(seconds: 15));
+        .timeout(const Duration(seconds: 45));
 
     checkLoginUser(uid);
 
     if (response.statusCode != 201) {
-      throw Exception(
-        getErrorMessage(
-          response,
-          '초대를 등록하지 못했습니다.',
-        ),
-      );
+      throw Exception(getErrorMessage(response, '초대를 등록하지 못했습니다.'));
+    }
+    final body = jsonDecode(utf8.decode(response.bodyBytes));
+    return body['email_sent'] == true;
+  } // build
+
+  // 본인에게 온 초대를 거절한다.
+  Future<void> rejectInvite(String inviteId) async {
+    final user = ref.read(firebaseAuthProvider).currentUser;
+
+    if (user == null) {
+      throw Exception('로그인이 필요합니다.');
+    }
+
+    final uid = user.uid;
+    final token = await getLoginToken(uid);
+
+    final response = await ref
+        .read(inviteHttpClientProvider)
+        .post(
+          Uri.parse('$baseUrl/invites/${Uri.encodeComponent(inviteId)}/reject'),
+          headers: {'Authorization': 'Bearer $token'},
+        )
+        .timeout(const Duration(seconds: 15));
+
+    checkLoginUser(uid);
+
+    if (response.statusCode != 200) {
+      throw Exception(getErrorMessage(response, '초대를 거절하지 못했습니다.'));
+    }
+  }
+
+  // 서버에서 보낸 초대 목록을 가져온다.
+  Future<List<FamilyInvite>> fetchSentInvites() async {
+    final user = ref.read(firebaseAuthProvider).currentUser;
+
+    if (user == null) {
+      throw Exception('로그인이 필요합니다.');
+    }
+
+    final uid = user.uid;
+    final token = await getLoginToken(uid);
+
+    final response = await ref
+        .read(inviteHttpClientProvider)
+        .get(
+          Uri.parse('$baseUrl/invites/sent'),
+          headers: {'Authorization': 'Bearer $token'},
+        )
+        .timeout(const Duration(seconds: 15));
+
+    checkLoginUser(uid);
+
+    if (response.statusCode != 200) {
+      throw Exception(getErrorMessage(response, '보낸 초대를 불러오지 못했습니다.'));
+    }
+
+    final body =
+        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+
+    final results = body['results'] as List<dynamic>;
+
+    return results.map((item) {
+      return FamilyInvite.fromJson(item as Map<String, dynamic>);
+    }).toList();
+  } // build
+
+  // 현재 주보호자가 보낸 초대를 취소한다.
+  Future<void> cancelInvite(String inviteId) async {
+    final user = ref.read(firebaseAuthProvider).currentUser;
+
+    if (user == null) {
+      throw Exception('로그인이 필요합니다.');
+    }
+
+    final uid = user.uid;
+    final token = await getLoginToken(uid);
+
+    final response = await ref
+        .read(inviteHttpClientProvider)
+        .post(
+          Uri.parse('$baseUrl/invites/${Uri.encodeComponent(inviteId)}/cancel'),
+          headers: {'Authorization': 'Bearer $token'},
+        )
+        .timeout(const Duration(seconds: 15));
+
+    checkLoginUser(uid);
+
+    if (response.statusCode != 200) {
+      throw Exception(getErrorMessage(response, '초대를 취소하지 못했습니다.'));
     }
   }
 } // class
