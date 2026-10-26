@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:ondolbom/main.dart';
+import 'package:ondolbom/model/memos/memo.dart';
 import 'package:ondolbom/vm/auth/auth_vm.dart';
 import 'package:ondolbom/vm/family_context.dart';
 import 'package:ondolbom/view/memos/memo_list_view.dart';
@@ -58,6 +59,44 @@ Future<void> mount(WidgetTester tester, http.Client client) async {
 }
 
 void main() {
+  test('작성자 이름은 공백을 제거하고 없는 경우 ID 대신 기본 문구를 사용한다', () {
+    for (final name in [null, '', '   ']) {
+      final memo = Memo.fromJson({...memoJson('1', '내용'), 'author_name': name});
+      expect(memo.authorLabel, '이름 없는 가족');
+      expect(memo.userId, 'user-a');
+    }
+    final memo = Memo.fromJson({
+      ...memoJson('1', '내용'),
+      'author_name': '  김가족  ',
+    });
+    expect(memo.authorLabel, '김가족');
+    expect(memo.toJson()['author_name'], '  김가족  ');
+  });
+
+  testWidgets('내 메모와 다른 가족 메모의 목록·상세에 작성자 이름을 표시한다', (tester) async {
+    await mount(
+      tester,
+      MockClient(
+        (_) async => listResponse([
+          {...memoJson('mine', '내 메모'), 'author_name': '김본인'},
+          {
+            ...memoJson('other', '가족 메모'),
+            'user_id': 'other-user-id',
+            'author_name': '이가족',
+          },
+        ]),
+      ),
+    );
+    expect(find.textContaining('김본인 ·'), findsOneWidget);
+    expect(find.textContaining('이가족 ·'), findsOneWidget);
+    expect(find.textContaining('other-user-id'), findsNothing);
+    await tester.tap(find.text('가족 메모'));
+    await tester.pumpAndSettle();
+    expect(find.text('메모 상세'), findsOneWidget);
+    expect(find.textContaining('이가족 ·'), findsOneWidget);
+    expect(find.textContaining('other-user-id'), findsNothing);
+  });
+
   testWidgets('목록에서 상세를 열고 메모를 작성하면 목록을 다시 조회한다', (tester) async {
     var saved = false;
     var posts = 0;
