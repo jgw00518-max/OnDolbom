@@ -49,7 +49,7 @@ void main() {
     expect(find.textContaining('other-user-id'), findsNothing);
   });
 
-  testWidgets('채팅은 본인·가족의 과거 대화와 실시간 메시지에 이름을 표시한다', (tester) async {
+  testWidgets('채팅은 본인을 나로 표시하고 다른 가족은 이름으로 표시한다', (tester) async {
     final socket = chat.TestSocket();
     await tester.pumpWidget(
       ProviderScope(
@@ -73,7 +73,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('김본인'), findsOneWidget);
+    expect(find.text('나'), findsOneWidget);
+    expect(find.text('김본인'), findsNothing);
     expect(find.text('이가족'), findsOneWidget);
     expect(find.text('other-user-id'), findsNothing);
     expect(find.text('db-user'), findsNothing);

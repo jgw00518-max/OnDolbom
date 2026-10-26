@@ -57,6 +57,27 @@ Bearer 토큰의 사용자로 한 번만 등록하며 취소 API는 없습니다
 처음 배포하는 DB에서는 서버 실행 전 `python -m python.features.memos.migrate_likes`로
 좋아요 기록 테이블을 생성해야 합니다. 기존 메모 테이블과 데이터는 유지합니다.
 
+## 채팅 본문 수정·전체 삭제 API
+
+`PATCH /chats/messages/{chat_seq}`에 `family_room_id`, `content` JSON을 보내 본문을 수정합니다.
+`DELETE /chats/messages/{chat_seq}?family_room_id=공간ID`로 메시지 전체를 소프트 삭제합니다.
+현재 공간의 활성 참여자인 작성자 본인만 허용하며, 이미지만 변경하는 기능은 없습니다.
+삭제된 메시지는 조회·이벤트에서 원문 대신 삭제 안내를 반환하며 이미지 조회도 차단합니다.
+저장 후 기존 `message` WebSocket 이벤트에 `action: updated/deleted`를 추가해 전달합니다.
+재연결 시 과거 메시지의 수정·삭제는 `POST /chats/messages/refresh`로 최대 100개씩 조회합니다.
+필드·응답·권한은 [채팅 안내](../docs/chats-implementation.md)를 참고하세요.
+
+## 채팅 이미지 전송 API
+
+`POST /chats/messages/with-image`에 Bearer 토큰과 multipart/form-data를 전달합니다.
+필수 입력은 `family_room_id`, `client_message_id`(UUID), `image` 한 장이며,
+`content`는 선택입니다. 최대 5MiB의 JPG·PNG·WEBP 정지 이미지를 허용합니다.
+기존 `live_chat.chat_image`에 메시지와 함께 저장하므로 테이블 변경은 없습니다.
+저장 후 기존 WebSocket으로 `has_image`를 포함한 메시지 정보를 전달합니다.
+이미지는 `GET /chats/messages/{chat_seq}/image?family_room_id=공간ID`로 인증 후 조회합니다.
+동일 UUID·내용·이미지 재시도는 원본 반환, 다른 내용의 UUID 재사용은 409입니다.
+필드·응답·Swagger 테스트 방법은 [채팅 안내](../docs/chats-implementation.md)를 참고하세요.
+
 ## 투약일지 체크 해제 API
 
 `DELETE /medications/confirm/{medication_log_seq}`로 체크를 해제합니다.

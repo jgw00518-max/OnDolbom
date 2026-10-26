@@ -101,13 +101,18 @@ class TestToken extends Notifier<String?> {
 }
 
 class Harness {
-  Harness({http.Client? client, Future<String?> Function()? token}) {
+  Harness({
+    http.Client? client,
+    Future<String?> Function()? token,
+    bool imageContext = false,
+  }) {
     container = ProviderContainer(
       overrides: [
+        if (imageContext) familyContextProvider.overrideWithValue(room),
         apiBaseUrlProvider.overrideWithValue('https://example.test/api'),
         apiTokenLoaderProvider.overrideWith((ref) {
           final value = ref.watch(testTokenProvider);
-          return token ?? () async => value;
+          return () async => token == null ? value : await token();
         }),
         chatHttpClientProvider.overrideWithValue(
           client ?? MockClient((_) async => page([])),
@@ -257,6 +262,10 @@ void main() {
     final cursors = <String?>[];
     final harness = Harness(
       client: MockClient((request) async {
+        if (request.url.path.endsWith('/refresh')) {
+          expect(jsonDecode(request.body)['message_ids'], [1]);
+          return page([message(1)]);
+        }
         final after = request.url.queryParameters['after_id'];
         cursors.add(after);
         if (after == '1') return page([message(2)], more: true, after: 2);

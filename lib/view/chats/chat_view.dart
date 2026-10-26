@@ -1,7 +1,12 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/model/chats/chat_message.dart';
 import 'package:ondolbom/vm/chats/chat_vm.dart';
+import 'package:ondolbom/vm/chats/chat_image_vm.dart';
+import 'package:ondolbom/view/chats/chat_image_view.dart';
+import 'package:ondolbom/view/chats/chat_edit_dialog.dart';
 import 'package:ondolbom/vm/family_room/family_context.dart';
 
 class ChatView extends ConsumerStatefulWidget {
@@ -15,6 +20,9 @@ class _ChatViewState extends ConsumerState<ChatView>
   final _input = TextEditingController();
   final _scroll = ScrollController();
   FamilyContext? _selected;
+  Uint8List? _image;
+  bool _picking = false;
+  bool _actionsOpen = false;
 
   @override
   void initState() {
@@ -32,6 +40,7 @@ class _ChatViewState extends ConsumerState<ChatView>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState lifecycle) {
+    if (_picking) return;
     final selected = _selected;
     if (selected == null ||
         selected.userId.isEmpty ||
@@ -48,9 +57,134 @@ class _ChatViewState extends ConsumerState<ChatView>
   }
 
   void _send(ChatVm vm) {
-    if (!vm.send(_input.text)) return;
+    if (!vm.send(_input.text, image: _image)) return;
     _input.clear();
+    setState(() => _image = null);
     if (_scroll.hasClients) _scroll.jumpTo(0);
+  }
+
+  Future<void> _pickImage(FamilyContext selected) async {
+    if (_picking) return;
+    setState(() => _picking = true);
+    try {
+      final bytes = await ref.read(chatImagePickerProvider)();
+      if (!mounted ||
+          ref.read(familyContextProvider) != selected ||
+          bytes == null) {
+        return;
+      }
+      if (bytes.isEmpty || bytes.length > maxChatImageBytes) {
+        throw const ChatFailure('이미지는 비어 있지 않은 5MB 이하 파일로 첨부해 주세요.');
+      }
+      setState(() => _image = bytes);
+    } catch (error) {
+      if (!mounted || ref.read(familyContextProvider) != selected) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is ChatFailure
+                ? error.message
+                : '사진을 선택하지 못했어요. 사진 접근 권한을 확인해 주세요.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _picking = false);
+    }
+  }
+
+  Future<void> _messageActions(
+    FamilyContext selected,
+    ChatMessage message,
+  ) async {
+    if (_actionsOpen) return;
+    _actionsOpen = true;
+    try {
+      final action = await showModalBottomSheet<String>(
+        context: context,
+        builder: (context) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.edit_outlined),
+                title: const Text('수정'),
+                onTap: () => Navigator.pop(context, 'edit'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete_outline),
+                title: const Text('삭제'),
+                onTap: () => Navigator.pop(context, 'delete'),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (!mounted ||
+          action == null ||
+          ref.read(familyContextProvider) != selected) {
+        return;
+      }
+      final state = ref.read(chatVmProvider(selected));
+      final current = state.messages
+          .where((item) => item.seq == message.seq)
+          .firstOrNull;
+      if (current == null ||
+          current.isDeleted ||
+          current.userId != selected.userId ||
+          state.status != ChatStatus.connected ||
+          state.loadingHistory ||
+          state.changing.contains(current.seq)) {
+        return;
+      }
+      if (action == 'edit') {
+        await showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => ChatEditDialog(selected: selected, message: current),
+        );
+      } else {
+        final approved = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('메시지 삭제'),
+            content: const Text('이 메시지를 삭제하시겠습니까?\n첨부 사진도 함께 숨겨집니다.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('취소'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('삭제'),
+              ),
+            ],
+          ),
+        );
+        if (!mounted ||
+            approved != true ||
+            ref.read(familyContextProvider) != selected) {
+          return;
+        }
+        await ref
+            .read(chatVmProvider(selected).notifier)
+            .deleteMessage(current);
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              error is ChatFailure
+                  ? error.message
+                  : '메시지를 변경하지 못했어요. 다시 시도해 주세요.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      _actionsOpen = false;
+    }
   }
 
   @override
@@ -58,6 +192,7 @@ class _ChatViewState extends ConsumerState<ChatView>
     final selected = ref.watch(familyContextProvider);
     if (_selected != selected) {
       _input.clear();
+      _image = null;
       _selected = selected;
     }
     if (selected.userId.isEmpty || selected.familyRoomId.isEmpty) {
@@ -166,6 +301,34 @@ class _ChatViewState extends ConsumerState<ChatView>
                                     ? () => vm.retry(message.id)
                                     : null,
                                 retryEnabled: state.canSend,
+                                image: message.image == null
+                                    ? null
+                                    : Stack(
+                                        children: [
+                                          Image.memory(
+                                            message.image!,
+                                            width: 220,
+                                            height: 160,
+                                            fit: BoxFit.contain,
+                                            cacheWidth: 600,
+                                            errorBuilder: (_, _, _) =>
+                                                const Text('사진을 표시할 수 없어요.'),
+                                          ),
+                                          if (!message.failed)
+                                            const Positioned(
+                                              right: 8,
+                                              bottom: 8,
+                                              child: SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                    ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
                               );
                             }
                             final messageIndex = index - pending.length;
@@ -183,19 +346,73 @@ class _ChatViewState extends ConsumerState<ChatView>
                             return _Bubble(
                               key: ValueKey('chat-${message.seq}'),
                               content: message.content,
+                              isDeleted: message.isDeleted,
                               mine: message.userId == selected.userId,
-                              author: message.authorLabel,
-                              footer: _time(message),
+                              author: message.userId == selected.userId
+                                  ? '나'
+                                  : message.authorLabel,
+                              footer: state.changing.contains(message.seq)
+                                  ? '변경 중…'
+                                  : '${_time(message)}${message.updatedAt != null && !message.isDeleted ? ' · 수정됨' : ''}',
+                              onLongPress:
+                                  message.userId == selected.userId &&
+                                      !message.isDeleted &&
+                                      state.status == ChatStatus.connected &&
+                                      !state.loadingHistory &&
+                                      !state.changing.contains(message.seq)
+                                  ? () => _messageActions(selected, message)
+                                  : null,
+                              image: message.hasImage && !message.isDeleted
+                                  ? ChatImageView(
+                                      query: (
+                                        context: selected,
+                                        seq: message.seq,
+                                      ),
+                                    )
+                                  : null,
                             );
                           },
                         ),
                 ),
                 const Divider(height: 1),
+                if (_image != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                    child: Row(
+                      children: [
+                        Image.memory(
+                          _image!,
+                          width: 80,
+                          height: 80,
+                          fit: BoxFit.contain,
+                          cacheWidth: 200,
+                          errorBuilder: (_, _, _) =>
+                              const Text('사진을 표시할 수 없어요.'),
+                        ),
+                        const SizedBox(width: 8),
+                        const Expanded(child: Text('첨부 사진 1장')),
+                        IconButton(
+                          tooltip: '첨부 사진 제거',
+                          onPressed: _picking
+                              ? null
+                              : () => setState(() => _image = null),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+                  ),
                 Padding(
                   padding: const EdgeInsets.all(12),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
+                      IconButton(
+                        tooltip: _image == null ? '사진 첨부' : '첨부 사진 변경',
+                        onPressed: state.canSend && !_picking
+                            ? () => _pickImage(selected)
+                            : null,
+                        icon: const Icon(Icons.photo_outlined),
+                      ),
                       Expanded(
                         child: TextField(
                           key: const ValueKey('chat-input'),
@@ -217,7 +434,10 @@ class _ChatViewState extends ConsumerState<ChatView>
                         builder: (context, value, _) => IconButton.filled(
                           tooltip: '메시지 전송',
                           onPressed:
-                              state.canSend && value.text.trim().isNotEmpty
+                              state.canSend &&
+                                  !_picking &&
+                                  (value.text.trim().isNotEmpty ||
+                                      _image != null)
                               ? () => _send(vm)
                               : null,
                           icon: const Icon(Icons.send),
@@ -250,6 +470,9 @@ class _Bubble extends StatelessWidget {
     this.author = '나',
     this.retry,
     this.retryEnabled = false,
+    this.image,
+    this.onLongPress,
+    this.isDeleted = false,
   });
   final String content;
   final String author;
@@ -257,46 +480,86 @@ class _Bubble extends StatelessWidget {
   final String footer;
   final VoidCallback? retry;
   final bool retryEnabled;
+  final Widget? image;
+  final VoidCallback? onLongPress;
+  final bool isDeleted;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 420),
-        margin: EdgeInsets.only(
-          bottom: 12,
-          left: mine ? 40 : 0,
-          right: mine ? 0 : 40,
-        ),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: mine ? colors.secondaryContainer : Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: colors.outlineVariant),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              author,
-              style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
-            ),
-            const SizedBox(height: 4),
-            SelectableText(content),
-            const SizedBox(height: 6),
-            Text(
-              footer,
-              style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
-            ),
-            if (retry != null)
-              TextButton(
-                onPressed: retryEnabled ? retry : null,
-                child: const Text('재전송'),
+      child: GestureDetector(
+        onLongPress: onLongPress,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 420),
+          margin: EdgeInsets.only(
+            bottom: 12,
+            left: mine ? 40 : 0,
+            right: mine ? 0 : 40,
+          ),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: mine
+                ? colors.secondaryContainer
+                : Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colors.outlineVariant),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    author,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                  if (onLongPress != null)
+                    IconButton(
+                      tooltip: '메시지 메뉴',
+                      onPressed: onLongPress,
+                      constraints: const BoxConstraints(
+                        minWidth: 32,
+                        minHeight: 32,
+                      ),
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.more_horiz, size: 18),
+                    ),
+                ],
               ),
-          ],
+              const SizedBox(height: 4),
+              ?image,
+              if (image != null && content.isNotEmpty)
+                const SizedBox(height: 6),
+              if (content.isNotEmpty)
+                (onLongPress == null
+                    ? SelectableText(
+                        content,
+                        style: isDeleted
+                            ? const TextStyle(color: Colors.grey)
+                            : null,
+                      )
+                    : Text(content)),
+              const SizedBox(height: 6),
+              Text(
+                footer,
+                style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
+              ),
+              if (retry != null)
+                TextButton(
+                  onPressed: retryEnabled ? retry : null,
+                  child: const Text('재전송'),
+                ),
+            ],
+          ),
         ),
       ),
     );

@@ -20,6 +20,7 @@ MESSAGE = {'type': 'message', 'client_message_id': REQUEST_ID, 'content': '안�
 def row():
     return {'chat_seq': 7, 'family_room_id': 'room-a', 'user_id': 'db-user',
             'author_name': '김가족',
+            'has_image': 0,
             'chat_content': MESSAGE['content'], 'client_message_id': REQUEST_ID,
             'sent_at': datetime(2026, 10, 25, 18), 'live_chat_updated_at': None}
 
@@ -74,7 +75,8 @@ class ChatTests(unittest.TestCase):
         for condition in ('is_active = 1', 'left_at IS NULL', 'withdrawn_at IS NULL', 'family_room_deleted_at IS NULL'):
             self.assertIn(condition, membership.args[0])
         self.assertEqual(query.args[1], ('room-a', 9, 2))
-        self.assertNotIn('chat_image', query.args[0])
+        self.assertIn('(chat_image IS NOT NULL) AS has_image', query.args[0])
+        self.assertNotIn('chat_image,', query.args[0])
         self.assertIn('u.name FROM `user` AS u WHERE u.user_id = live_chat.user_id', query.args[0])
         self.db.close.assert_called_once()
 

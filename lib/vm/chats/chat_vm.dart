@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -11,10 +12,11 @@ import 'package:ondolbom/vm/family_room/family_context.dart';
 enum ChatStatus { connecting, connected, reconnecting, offline, blocked }
 
 class PendingChat {
-  const PendingChat(this.id, this.content, {this.failed = false});
+  const PendingChat(this.id, this.content, {this.failed = false, this.image});
   final String id;
   final String content;
   final bool failed;
+  final Uint8List? image;
 }
 
 class ChatState {
@@ -26,6 +28,7 @@ class ChatState {
     this.loadingOlder = false,
     this.hasOlder = false,
     this.error,
+    this.changing = const {},
   });
   final List<ChatMessage> messages;
   final List<PendingChat> pending;
@@ -34,6 +37,7 @@ class ChatState {
   final bool loadingOlder;
   final bool hasOlder;
   final String? error;
+  final Set<int> changing;
   bool get canSend =>
       status == ChatStatus.connected &&
       !loadingHistory &&
@@ -48,6 +52,7 @@ class ChatState {
     bool? hasOlder,
     String? error,
     bool clearError = false,
+    Set<int>? changing,
   }) => ChatState(
     messages: messages ?? this.messages,
     pending: pending ?? this.pending,
@@ -56,6 +61,7 @@ class ChatState {
     loadingOlder: loadingOlder ?? this.loadingOlder,
     hasOlder: hasOlder ?? this.hasOlder,
     error: clearError ? null : error ?? this.error,
+    changing: changing ?? this.changing,
   );
 }
 
@@ -89,6 +95,9 @@ class _Session {
   Timer? reconnectTimer;
   Timer? authTimer;
   final Map<String, Timer> acknowledgements = {};
+  final Set<String> uploads = {};
+  final Set<int> changing = {};
+  final Map<int, int> revisions = {};
 
   void disconnect() {
     attempt++;
@@ -236,6 +245,11 @@ class ChatVm extends Notifier<ChatState> {
           _merge(session, [
             ChatMessage.fromJson(data['message'] as Map<String, dynamic>),
           ]);
+          if (data['action'] == 'updated' || data['action'] == 'deleted') {
+            final seq =
+                (data['message'] as Map<String, dynamic>)['chat_seq'] as int;
+            unawaited(_refreshEvent(session, seq));
+          }
         case 'ping':
           channel.sink.add(jsonEncode({'type': 'pong'}));
         case 'error':
@@ -253,15 +267,33 @@ class ChatVm extends Notifier<ChatState> {
     }
   }
 
-  void _merge(_Session session, List<ChatMessage> incoming) {
+  void _merge(
+    _Session session,
+    List<ChatMessage> incoming, {
+    Map<int, int>? snapshot,
+  }) {
     if (!_active(session)) return;
     if (incoming.any((message) => message.roomId != context.familyRoomId)) {
       throw const FormatException();
     }
-    final byId = {
-      for (final message in [...state.messages, ...incoming])
-        message.seq: message,
-    };
+    final byId = {for (final message in state.messages) message.seq: message};
+    for (final message in incoming) {
+      if (snapshot != null &&
+          snapshot[message.seq] != session.revisions[message.seq]) {
+        continue;
+      }
+      final previous = byId[message.seq];
+      if (previous?.isDeleted == true && !message.isDeleted) continue;
+      if (!message.isDeleted &&
+          previous?.updatedAt != null &&
+          (message.updatedAt == null ||
+              previous!.updatedAt!.isAfter(message.updatedAt!))) {
+        continue;
+      }
+      byId[message.seq] = message;
+      session.revisions[message.seq] =
+          (session.revisions[message.seq] ?? 0) + 1;
+    }
     final messages = byId.values.toList()
       ..sort((a, b) => a.seq.compareTo(b.seq));
     final confirmed = messages
@@ -326,14 +358,16 @@ class ChatVm extends Notifier<ChatState> {
     // 재연결 당시 마지막 ID를 고정한다. 복구 도중 들어오는 실시간 메시지와 합친다.
     var after = state.messages.isEmpty ? 0 : state.messages.last.seq;
     final reconnecting = session.synced;
+    final loadedIds = state.messages.map((item) => item.seq).toList();
     try {
       do {
+        final snapshot = Map<int, int>.of(session.revisions);
         final page = await _history(
           session,
           reconnecting ? {'after_id': '$after'} : {},
         );
         if (!_active(session) || !identical(session.channel, channel)) return;
-        _merge(session, _rows(page));
+        _merge(session, _rows(page), snapshot: snapshot);
         if (!reconnecting) {
           state = state.copyWith(hasOlder: page['has_more'] == true);
           break;
@@ -343,6 +377,10 @@ class ChatVm extends Notifier<ChatState> {
         if (next <= after) throw const FormatException();
         after = next;
       } while (true);
+      if (reconnecting && loadedIds.isNotEmpty) {
+        await _refresh(session, loadedIds, channel: channel);
+        if (!_active(session) || !identical(session.channel, channel)) return;
+      }
       session.synced = true;
       session.retries = 0;
       state = state.copyWith(loadingHistory: false, clearError: true);
@@ -373,11 +411,12 @@ class ChatVm extends Notifier<ChatState> {
     }
     state = state.copyWith(loadingOlder: true);
     try {
+      final snapshot = Map<int, int>.of(session.revisions);
       final page = await _history(session, {
         'before_id': '${state.messages.first.seq}',
       });
       if (!_active(session)) return;
-      _merge(session, _rows(page));
+      _merge(session, _rows(page), snapshot: snapshot);
       state = state.copyWith(
         loadingOlder: false,
         hasOlder: page['has_more'] == true,
@@ -397,6 +436,225 @@ class ChatVm extends Notifier<ChatState> {
     }
   }
 
+  Future<Map<String, dynamic>> _jsonRequest(
+    _Session session,
+    List<String> path, {
+    Map<String, dynamic>? body,
+    bool delete = false,
+    bool checkContext = false,
+    void Function()? beforeSend,
+  }) async {
+    void ensureActive() {
+      if (!_active(session) ||
+          (checkContext && ref.read(familyContextProvider) != context)) {
+        throw const ChatFailure('로그인 계정 또는 선택한 공간이 변경되었습니다.');
+      }
+    }
+
+    try {
+      final token = await _tokenLoader().timeout(const Duration(seconds: 15));
+      ensureActive();
+      if (token == null || token.isEmpty) {
+        throw const ChatFailure('다시 로그인해 주세요.', 401);
+      }
+      beforeSend?.call();
+      final headers = {
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+        if (!delete) 'Content-Type': 'application/json; charset=utf-8',
+      };
+      final response =
+          await (delete
+                  ? _client.delete(
+                      _uri(
+                        path,
+                        query: {'family_room_id': context.familyRoomId},
+                      ),
+                      headers: headers,
+                    )
+                  : path.last == 'refresh'
+                  ? _client.post(
+                      _uri(path),
+                      headers: headers,
+                      body: jsonEncode(body),
+                    )
+                  : _client.patch(
+                      _uri(path),
+                      headers: headers,
+                      body: jsonEncode(body),
+                    ))
+              .timeout(const Duration(seconds: 15));
+      ensureActive();
+      if (response.statusCode == 401) {
+        throw const ChatFailure('다시 로그인해 주세요.', 401);
+      }
+      final decoded =
+          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+      if (response.statusCode != 200) {
+        throw ChatFailure(
+          decoded['detail'] is String
+              ? decoded['detail'] as String
+              : '채팅 변경사항을 처리하지 못했습니다.',
+          response.statusCode,
+        );
+      }
+      return decoded;
+    } on TimeoutException {
+      throw const ChatFailure('응답이 지연되고 있어요. 최신 메시지를 확인한 뒤 다시 시도해 주세요.');
+    } on http.ClientException {
+      throw const ChatFailure('서버에 연결하지 못했어요. 다시 시도해 주세요.');
+    } on FormatException {
+      throw const ChatFailure('채팅 서버 응답을 확인하지 못했어요.');
+    }
+  }
+
+  Future<void> _refresh(
+    _Session session,
+    List<int> ids, {
+    WebSocketChannel? channel,
+  }) async {
+    for (var offset = 0; offset < ids.length; offset += 100) {
+      final batch = ids.skip(offset).take(100).toSet();
+      final snapshot = Map<int, int>.of(session.revisions);
+      final result = await _jsonRequest(
+        session,
+        ['messages', 'refresh'],
+        body: {
+          'family_room_id': context.familyRoomId,
+          'message_ids': batch.toList(),
+        },
+      );
+      if (!_active(session) ||
+          (channel != null && !identical(session.channel, channel))) {
+        return;
+      }
+      final rows = _rows(result);
+      if (rows.any((item) => !batch.contains(item.seq))) {
+        throw const FormatException();
+      }
+      _merge(session, rows, snapshot: snapshot);
+      final missing = (result['missing_ids'] as List<dynamic>? ?? [])
+          .cast<int>()
+          .toSet();
+      state = state.copyWith(
+        messages: [
+          for (final item in state.messages)
+            if (!batch.contains(item.seq) ||
+                !missing.contains(item.seq) ||
+                snapshot[item.seq] != session.revisions[item.seq])
+              item,
+        ],
+      );
+    }
+  }
+
+  Future<void> _refreshEvent(_Session session, int seq) async {
+    try {
+      await _refresh(session, [seq]);
+    } catch (error) {
+      if (!_active(session)) return;
+      if (error is ChatFailure &&
+          (error.status == 401 || error.status == 403)) {
+        _blocked(session, error.message);
+      } else {
+        state = state.copyWith(error: '변경된 메시지를 확인하지 못했어요. 다시 연결해 주세요.');
+      }
+    }
+  }
+
+  Future<void> updateMessage(ChatMessage item, String content) =>
+      _changeMessage(item, content: content.trim());
+  Future<void> deleteMessage(ChatMessage item) =>
+      _changeMessage(item, delete: true);
+
+  Future<void> _changeMessage(
+    ChatMessage item, {
+    String? content,
+    bool delete = false,
+  }) async {
+    final session = _session;
+    if (session == null || !_active(session)) {
+      throw const ChatFailure('채팅에 다시 연결해 주세요.');
+    }
+    ChatMessage ensureAllowed() {
+      if (!_active(session) ||
+          ref.read(familyContextProvider) != context ||
+          state.status != ChatStatus.connected ||
+          state.loadingHistory) {
+        throw const ChatFailure('로그인 계정과 선택한 공간의 연결 상태를 확인해 주세요.');
+      }
+      final current = state.messages
+          .where((record) => record.seq == item.seq)
+          .firstOrNull;
+      if (item.roomId != context.familyRoomId ||
+          current == null ||
+          current.userId != context.userId) {
+        throw const ChatFailure('본인이 보낸 메시지만 수정하거나 삭제할 수 있어요.');
+      }
+      if (current.isDeleted) throw const ChatFailure('이미 삭제된 메시지입니다.');
+      if (!delete &&
+          (current.content != item.content ||
+              current.updatedAt != item.updatedAt)) {
+        throw const ChatFailure('메시지가 변경되었습니다. 닫은 뒤 다시 수정해 주세요.');
+      }
+      return current;
+    }
+
+    final current = ensureAllowed();
+    if (!delete &&
+        (content == null ||
+            content.runes.length > 4000 ||
+            (content.isEmpty && !current.hasImage))) {
+      throw const ChatFailure('텍스트는 1~4,000자로 입력해 주세요. 사진 설명은 비울 수 있습니다.');
+    }
+    if (!session.changing.add(item.seq)) return;
+    state = state.copyWith(changing: Set.unmodifiable(session.changing));
+    final snapshot = Map<int, int>.of(session.revisions);
+    try {
+      final result = await _jsonRequest(
+        session,
+        ['messages', '${item.seq}'],
+        delete: delete,
+        checkContext: true,
+        beforeSend: ensureAllowed,
+        body: {'family_room_id': context.familyRoomId, 'content': content},
+      );
+      final saved = ChatMessage.fromJson(
+        result['message'] as Map<String, dynamic>,
+      );
+      if (saved.seq != item.seq ||
+          saved.userId != context.userId ||
+          (delete && !saved.isDeleted)) {
+        throw const ChatFailure('메시지 변경 결과를 확인하지 못했어요.');
+      }
+      final changedWhileWaiting =
+          snapshot[item.seq] != session.revisions[item.seq];
+      _merge(session, [saved], snapshot: snapshot);
+      if (changedWhileWaiting &&
+          state.messages
+                  .where((record) => record.seq == item.seq)
+                  .firstOrNull
+                  ?.isDeleted !=
+              true) {
+        await _refreshEvent(session, item.seq);
+      }
+    } catch (error) {
+      if (_active(session) && error is ChatFailure) {
+        if (error.status == 401) {
+          _blocked(session, error.message);
+        } else if (error.status == 404 || error.status == 409) {
+          await _refreshEvent(session, item.seq);
+        }
+      }
+      rethrow;
+    } finally {
+      session.changing.remove(item.seq);
+      if (_active(session)) {
+        state = state.copyWith(changing: Set.unmodifiable(session.changing));
+      }
+    }
+  }
+
   String _newId() {
     final random = Random.secure();
     final bytes = List.generate(16, (_) => random.nextInt(256));
@@ -408,14 +666,24 @@ class ChatVm extends Notifier<ChatState> {
     return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20)}';
   }
 
-  bool send(String text) {
+  bool send(String text, {Uint8List? image}) {
     if (!state.canSend) return false;
     final content = text.trim();
-    if (content.isEmpty || content.runes.length > 4000) {
-      state = state.copyWith(error: '메시지는 1~4,000자로 입력해 주세요.');
+    if ((content.isEmpty && image == null) || content.runes.length > 4000) {
+      state = state.copyWith(error: '텍스트 또는 사진을 첨부해 주세요. 텍스트는 최대 4,000자입니다.');
       return false;
     }
-    final message = PendingChat(_newId(), content);
+    if (image != null && (image.isEmpty || image.length > 5 * 1024 * 1024)) {
+      state = state.copyWith(error: '이미지는 비어 있지 않은 5MB 이하 파일로 첨부해 주세요.');
+      return false;
+    }
+    final message = PendingChat(
+      _newId(),
+      content,
+      image: image == null
+          ? null
+          : Uint8List.fromList(image).asUnmodifiableView(),
+    );
     state = state.copyWith(
       pending: [...state.pending, message],
       clearError: true,
@@ -430,7 +698,11 @@ class ChatVm extends Notifier<ChatState> {
       (message) => message.id == id && message.failed,
     );
     if (matches.isEmpty) return;
-    final message = PendingChat(id, matches.first.content);
+    final message = PendingChat(
+      id,
+      matches.first.content,
+      image: matches.first.image,
+    );
     state = state.copyWith(
       pending: [
         for (final item in state.pending) item.id == id ? message : item,
@@ -442,6 +714,10 @@ class ChatVm extends Notifier<ChatState> {
 
   void _transmit(PendingChat message) {
     final session = _session!;
+    if (message.image != null) {
+      unawaited(_upload(session, message));
+      return;
+    }
     try {
       session.channel!.sink.add(
         jsonEncode({
@@ -466,6 +742,94 @@ class ChatVm extends Notifier<ChatState> {
     }
   }
 
+  Future<void> _upload(_Session session, PendingChat message) async {
+    if (!session.uploads.add(message.id)) return;
+    try {
+      final token = await _tokenLoader().timeout(const Duration(seconds: 15));
+      if (!_active(session) || ref.read(familyContextProvider) != context) {
+        return;
+      }
+      if (token == null || token.isEmpty) {
+        throw const ChatFailure('다시 로그인해 주세요.', 401);
+      }
+      final request =
+          http.MultipartRequest('POST', _uri(['messages', 'with-image']))
+            ..headers['Authorization'] = 'Bearer $token'
+            ..fields.addAll({
+              'family_room_id': context.familyRoomId,
+              'client_message_id': message.id,
+              'content': message.content,
+            })
+            ..files.add(
+              http.MultipartFile.fromBytes(
+                'image',
+                message.image!,
+                filename: 'chat-image',
+              ),
+            );
+      final response = await (() async {
+        final streamed = await _client.send(request);
+        return http.Response.fromStream(streamed);
+      })().timeout(const Duration(seconds: 45));
+      if (!_active(session) || ref.read(familyContextProvider) != context) {
+        return;
+      }
+      // 실시간 전달로 이미 저장을 확인했으면 늦게 도착한 오류를 표시하지 않는다.
+      if (!state.pending.any((item) => item.id == message.id)) return;
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        throw ChatFailure('로그인과 가족 공간 참여 상태를 확인해 주세요.', response.statusCode);
+      }
+      final payload =
+          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw ChatFailure(
+          payload['detail'] is String
+              ? payload['detail'] as String
+              : '사진을 전송하지 못했어요. 파일과 연결 상태를 확인해 주세요.',
+          response.statusCode,
+        );
+      }
+      final saved = ChatMessage.fromJson(
+        payload['message'] as Map<String, dynamic>,
+      );
+      if (saved.clientId != message.id ||
+          saved.userId != context.userId ||
+          !saved.hasImage) {
+        throw const FormatException();
+      }
+      _merge(session, [saved]);
+    } catch (error) {
+      if (!_active(session) ||
+          ref.read(familyContextProvider) != context ||
+          !state.pending.any((item) => item.id == message.id)) {
+        return;
+      }
+      state = state.copyWith(
+        pending: [
+          for (final item in state.pending)
+            if (item.id == message.id)
+              PendingChat(
+                item.id,
+                item.content,
+                image: item.image,
+                failed: true,
+              )
+            else
+              item,
+        ],
+        error: error is ChatFailure
+            ? error.message
+            : '사진 전송을 확인하지 못했어요. 재전송하면 중복 저장을 확인합니다.',
+      );
+      if (error is ChatFailure &&
+          (error.status == 401 || error.status == 403)) {
+        _blocked(session, error.message);
+      }
+    } finally {
+      session.uploads.remove(message.id);
+    }
+  }
+
   void _failPending(_Session session) {
     for (final timer in session.acknowledgements.values) {
       timer.cancel();
@@ -474,7 +838,10 @@ class ChatVm extends Notifier<ChatState> {
     state = state.copyWith(
       pending: [
         for (final item in state.pending)
-          PendingChat(item.id, item.content, failed: true),
+          if (session.uploads.contains(item.id))
+            item
+          else
+            PendingChat(item.id, item.content, image: item.image, failed: true),
       ],
     );
   }
