@@ -3,6 +3,7 @@
 from fastapi import FastAPI
 
 from python.features.auth.router import router as auth_router
+from python.features.chats.router import router as chats_router
 from python.features.notifications.router import router as notifications_router
 from python.features.family_room.router import router as family_room_router
 from python.features.memos.router import router as memos_router
@@ -41,6 +42,7 @@ app.include_router(
 # 각 기능 파일에 지정된 경로를 유지한다.
 app.include_router(memos_router)
 app.include_router(medications_router)
+app.include_router(chats_router)
 
 
 @app.get("/health", tags=["health"])
