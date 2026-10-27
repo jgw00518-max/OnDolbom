@@ -11,6 +11,7 @@ from python.features.auth.signup import router as signup_router
 from python.features.inquiries.router import router as inquiries_router
 from python.features.notices.router import router as notices_router
 from python.features.chats.router import router as chats_router
+from python.features.exports.router import router as exports_router
 from python.features.notifications.router import router as notifications_router
 from python.features.family_room.router import router as family_room_router
 from python.features.memos.router import router as memos_router
@@ -57,6 +58,7 @@ app.include_router(
 app.include_router(memos_router)
 app.include_router(medications_router)
 app.include_router(chats_router)
+app.include_router(exports_router)
 
 
 @app.get("/health", tags=["health"])

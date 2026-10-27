@@ -14,6 +14,21 @@ python -m uvicorn python.main:app --reload
 - `main.py`: FastAPI 생성, 기능별 라우터 등록, `/health` 제공
 - `database.py`: `.env` 읽기, 필수 MySQL 설정 검사, DictCursor·수동 commit 연결 생성
 
+## 가족 공간 삭제
+
+`DELETE /family-room/{family_room_id}`로 현재 활성 주보호자가 가족 공간을 소프트 삭제합니다.
+`family_room_deleted_at`만 기록하고 모든 연결 데이터·이미지·참여·문의 이력을 보존합니다.
+삭제 확정 후 해당 공간의 현재 프로세스 채팅 연결을 종료합니다.
+권한·중복 요청·응답·제한은 [공간 삭제 API 안내](../docs/family-room-delete-api.md)를 참고합니다.
+
+## 메모·채팅 내보내기
+
+`POST /exports/download`로 현재 참여 중인 가족 공간의 메모·채팅을 HTML·이미지 ZIP 또는 PDF로 받습니다.
+`format`은 기본 `html_zip`이며 `pdf`를 지정하면 한글 폰트와 선택 이미지를 포함한 PDF를 반환합니다.
+`requirements.txt` 설치와 `features/exports/fonts/`의 폰트·라이선스 동봉이 필요합니다.
+새 DB 테이블·컬럼·마이그레이션은 필요하지 않으며 투약 정보·투약일지는 조회하지 않습니다.
+기간·범위·이미지 옵션, 권한, 오류·재요청과 제한은 [내보내기 API 안내](../docs/exports-api.md)를 참고합니다.
+
 ## 메모 API와 인증 연결
 
 `POST /memos/insert`에 아래 JSON을 보내 텍스트 메모를 작성합니다.
@@ -57,9 +72,41 @@ Bearer 토큰의 사용자로 한 번만 등록하며 취소 API는 없습니다
 처음 배포하는 DB에서는 서버 실행 전 `python -m python.features.memos.migrate_likes`로
 좋아요 기록 테이블을 생성해야 합니다. 기존 메모 테이블과 데이터는 유지합니다.
 
+## 채팅 본문 수정·전체 삭제 API
+
+`PATCH /chats/messages/{chat_seq}`에 `family_room_id`, `content` JSON을 보내 본문을 수정합니다.
+`DELETE /chats/messages/{chat_seq}?family_room_id=공간ID`로 메시지 전체를 소프트 삭제합니다.
+현재 공간의 활성 참여자인 작성자 본인만 허용하며, 이미지만 변경하는 기능은 없습니다.
+삭제된 메시지는 조회·이벤트에서 원문 대신 삭제 안내를 반환하며 이미지 조회도 차단합니다.
+저장 후 기존 `message` WebSocket 이벤트에 `action: updated/deleted`를 추가해 전달합니다.
+재연결 시 과거 메시지의 수정·삭제는 `POST /chats/messages/refresh`로 최대 100개씩 조회합니다.
+필드·응답·권한은 [채팅 안내](../docs/chats-implementation.md)를 참고하세요.
+
+## 채팅 이미지 전송 API
+
+`POST /chats/messages/with-image`에 Bearer 토큰과 multipart/form-data를 전달합니다.
+필수 입력은 `family_room_id`, `client_message_id`(UUID), `image` 한 장이며,
+`content`는 선택입니다. 최대 5MiB의 JPG·PNG·WEBP 정지 이미지를 허용합니다.
+기존 `live_chat.chat_image`에 메시지와 함께 저장하므로 테이블 변경은 없습니다.
+저장 후 기존 WebSocket으로 `has_image`를 포함한 메시지 정보를 전달합니다.
+이미지는 `GET /chats/messages/{chat_seq}/image?family_room_id=공간ID`로 인증 후 조회합니다.
+동일 UUID·내용·이미지 재시도는 원본 반환, 다른 내용의 UUID 재사용은 409입니다.
+필드·응답·Swagger 테스트 방법은 [채팅 안내](../docs/chats-implementation.md)를 참고하세요.
+
+## 투약일지 체크 해제 API
+
+`DELETE /medications/confirm/{medication_log_seq}`로 체크를 해제합니다.
+JSON 본문에는 `family_room_id`, `expected_confirmed_at`, `expected_confirmed_by_user_id`가 필요합니다.
+두 expected 값에는 목록/체크 응답의 체크 시간·사용자 ID 원본을 전달합니다.
+현재 공간의 활성 참여자 중 체크한 본인 또는 현재 주보호자만 허용합니다.
+기록이 변경되었으면 409, 이미 미완료면 200과 `already_unconfirmed:true`를 반환합니다.
+해제 시 기존 체크 시간과 확인자 ID를 NULL로 비우며 테이블 구조는 변경하지 않습니다.
+본문·응답 예와 상세 권한은 [투약일지 안내](../docs/medications-frontend.md)를 참고하세요.
+
 ## 투약일지 작성·조회 API
 
-`POST /medications/insert`로 현재 참여 중인 공간에 투약일지를 작성합니다.
+`POST /medications/insert`로 현재 참여 중인 공간의 주보호자만 투약일지를 작성합니다.
+일반 참여자의 작성은 403으로 거절하며 조회는 기존처럼 허용합니다.
 아래 항목은 모두 필수이며 문자열의 앞뒤 공백은 제거합니다.
 
 ```json
@@ -83,7 +130,13 @@ Bearer 토큰의 사용자로 한 번만 등록하며 취소 API는 없습니다
 
 성공 응답은 HTTP 201과 `{"result": "OK", "medication_log_seq": 42}` 형식입니다.
 일지 번호는 DB 자동 증가 값이며 기록 시각은 DB 기본값을 사용합니다.
-투약 확인 시각은 null로 시작합니다. 투약 완료 체크 API는 이번 작성 기능에 포함하지 않습니다.
+투약 확인 시각은 null로 시작합니다.
+복약 완료 체크는 `POST /medications/confirm/{medication_log_seq}`에
+`{"family_room_id":"공간ID"}`를 전송합니다. 해당 공간의 활성 참여자가 체크할 수 있습니다.
+인증된 사용자 ID와 DB 시간을 저장하고 `confirmed_by_user_id`, `confirmed_by_name`,
+`medication_confirmed_at`을 응답합니다. 체크 이름은 `user.name`에서 조회합니다.
+목록에도 이 필드를 반환하며 재요청은 `already_confirmed:true`로 최초 체크를 유지합니다.
+최초 배포 시 `python -m python.features.medications.migrate_confirmation`으로 체크 사용자 컬럼을 추가합니다.
 저장 중 참여 종료·공간 삭제·사용자 탈퇴와의 충돌을 막도록 참여 확인 행을 잠그고,
 전체 성공 시 한 번 commit, 실패 시 rollback하며 연결을 종료합니다.
 

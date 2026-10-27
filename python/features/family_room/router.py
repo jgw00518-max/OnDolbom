@@ -1,7 +1,7 @@
 from datetime import date
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Path
 from pydantic import BaseModel, Field, field_validator
 
 from python.database import connect
@@ -12,15 +12,64 @@ from fastapi import Depends, Header, HTTPException
 
 from pymysql import MySQLError
 from python.features.auth.firebase_auth import require_firebase_user
+from python.features.chats.connection_manager import manager as chat_manager
+from starlette.concurrency import run_in_threadpool
 
 
 router = APIRouter()
 
 
+def _soft_delete_family_room(family_room_id: str, user_id: str) -> dict:
+    """공간과 권한을 잠근 뒤 공간 삭제 시각만 기록한다. 연결 데이터는 보존한다."""
+    connection = None
+    try:
+        connection = connect()
+        with connection.cursor() as cursor:
+            # 초대 수락·대상자 수정과 동일하게 공간부터 잠근다.
+            cursor.execute('''SELECT family_room_deleted_at FROM family_room
+                WHERE family_room_id = %s FOR UPDATE''', (family_room_id,))
+            room = cursor.fetchone()
+            if room is None:
+                raise HTTPException(404, "가족 공간을 찾을 수 없습니다.")
+            cursor.execute('''SELECT p.participate_seq, p.is_representative
+                FROM participate AS p JOIN `user` AS u ON u.user_id = p.user_id
+                WHERE p.family_room_id = %s AND p.user_id = %s
+                  AND p.is_active = 1 AND p.left_at IS NULL
+                  AND u.withdrawn_at IS NULL
+                LIMIT 1 FOR UPDATE''', (family_room_id, user_id))
+            member = cursor.fetchone()
+            if member is None or member["is_representative"] != 1:
+                raise HTTPException(403, "현재 공간의 주보호자만 가족 공간을 삭제할 수 있습니다.")
+            deleted_at = room["family_room_deleted_at"]
+            already_deleted = deleted_at is not None
+            if not already_deleted:
+                cursor.execute('''UPDATE family_room
+                    SET family_room_deleted_at = CURRENT_TIMESTAMP
+                    WHERE family_room_id = %s AND family_room_deleted_at IS NULL''',
+                               (family_room_id,))
+                cursor.execute('''SELECT family_room_deleted_at FROM family_room
+                    WHERE family_room_id = %s''', (family_room_id,))
+                deleted_at = cursor.fetchone()["family_room_deleted_at"]
+        connection.commit()
+        return {"result": "OK", "family_room_id": family_room_id,
+                "family_room_deleted_at": deleted_at, "already_deleted": already_deleted}
+    except HTTPException:
+        if connection is not None:
+            connection.rollback()
+        raise
+    except (MySQLError, ValueError):
+        if connection is not None:
+            connection.rollback()
+        raise HTTPException(503, "가족 공간을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.") from None
+    finally:
+        if connection is not None:
+            connection.close()
+
+
 # 화면에서 입력받는 대상자 정보
 class FamilyRoomCreate(BaseModel):
     care_recipient_name: str = Field(min_length=1, max_length=30)
-    gender: int | None = None
+    gender: int = Field(ge=1, le=2)
     birth_date: date | None = None
     care_address: str | None = Field(default=None, max_length=255)
     special_notes: str | None = None
@@ -35,7 +84,31 @@ class FamilyRoomCreate(BaseModel):
 
         return value
 
+# 대상자 정보 편집 화면에서 전달받는 값
+class FamilyRecipientUpdate(BaseModel):
+    care_recipient_name: str = Field(min_length=1, max_length=30)
+    gender: int = Field(ge=1, le=2)
+    birth_date: date | None = None
+    care_address: str | None = Field(default=None, max_length=255)
+    special_notes: str | None = None
 
+    @field_validator("care_recipient_name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        value = value.strip()
+
+        if not value:
+            raise ValueError("대상자 이름을 입력해 주세요.")
+
+        return value
+
+    @field_validator("birth_date")
+    @classmethod
+    def validate_birth_date(cls, value: date | None) -> date | None:
+        if value is not None and value > date.today():
+            raise ValueError("생년월일은 미래 날짜로 입력할 수 없습니다.")
+
+        return value
 # 로그인 확인을 완료한 사용자 ID를 전달받아 실행한다.
 # 아직 API 주소에는 연결하지 않는다.
 def create_family_room(
@@ -233,7 +306,18 @@ def get_current_user_id(
         if conn is not None:
             conn.close()
 
-# Depends(get_dev_user_id) 부분을 
+# 공간 소프트 삭제. 이미 삭제된 공간도 현재 주보호자만 재요청할 수 있다.
+@router.delete("/{family_room_id}")
+async def delete_family_room(
+    family_room_id: str = Path(min_length=1, max_length=50, pattern=r"^\S+$"),
+    current_user_id: str = Depends(get_current_user_id),
+) -> dict:
+    result = await run_in_threadpool(_soft_delete_family_room, family_room_id, current_user_id)
+    # DB 삭제가 확정된 이후에만 연결을 닫는다. 실패 시 연결을 건드리지 않는다.
+    await chat_manager.close_room(family_room_id, code=4403)
+    return result
+
+
 # 공간 생성 API
 @router.post("", status_code=201)
 def create_family_room_api(
@@ -353,3 +437,198 @@ current_user_id: str = Depends(get_current_user_id),
 
     finally:
         conn.close()
+
+# 현재 공간에 참여 중인 가족과 역할을 조회한다.
+@router.get("/{family_room_id}/members")
+def get_family_members(
+    family_room_id: str,
+    current_user_id: str = Depends(get_current_user_id),
+) -> dict:
+    conn = None
+
+    try:
+        conn = connect()
+
+        with conn.cursor() as cursor:
+            # 로그인한 사용자가 현재 공간에 참여 중인지 검사한다.
+            cursor.execute(
+                """
+                SELECT p.participate_seq
+                FROM participate AS p
+                JOIN family_room AS f
+                  ON f.family_room_id = p.family_room_id
+                JOIN `user` AS u
+                  ON u.user_id = p.user_id
+                WHERE p.family_room_id = %s
+                  AND p.user_id = %s
+                  AND p.left_at IS NULL
+                  AND f.family_room_deleted_at IS NULL
+                  AND u.withdrawn_at IS NULL
+                FOR SHARE
+                """,
+                (family_room_id, current_user_id),
+            )
+
+            if cursor.fetchone() is None:
+                raise HTTPException(
+                    status_code=403,
+                    detail="현재 참여 중인 가족 공간만 조회할 수 있습니다.",
+                )
+
+            # 현재 참여 가족만 조회하고 주보호자를 먼저 표시한다.
+            cursor.execute(
+                """
+                SELECT
+                    p.participate_seq,
+                    p.user_id,
+                    p.is_representative,
+                    p.joined_at,
+                    u.name,
+                    u.user_email
+                FROM participate AS p
+                JOIN `user` AS u
+                  ON u.user_id = p.user_id
+                WHERE p.family_room_id = %s
+                  AND p.left_at IS NULL
+                  AND u.withdrawn_at IS NULL
+                ORDER BY
+                    p.is_representative DESC,
+                    p.joined_at,
+                    p.participate_seq
+                """,
+                (family_room_id,),
+            )
+
+            members = cursor.fetchall()
+
+        return {"results": members}
+
+    except HTTPException:
+        raise
+
+    except (MySQLError, ValueError):
+        raise HTTPException(
+            status_code=503,
+            detail="가족 목록을 불러오지 못했습니다.",
+        ) from None
+
+    finally:
+        if conn is not None:
+            conn.close()
+
+# 현재 주보호자가 해당 공간의 대상자 정보를 수정한다.
+@router.put("/{family_room_id}/recipient")
+def update_family_recipient(
+    family_room_id: str,
+    data: FamilyRecipientUpdate,
+    current_user_id: str = Depends(get_current_user_id),
+) -> dict:
+    conn = None
+
+    try:
+        conn = connect()
+
+        with conn.cursor() as cursor:
+            # 공간을 잠그고 삭제 여부를 검사한다.
+            cursor.execute(
+                """
+                SELECT family_room_id
+                FROM family_room
+                WHERE family_room_id = %s
+                  AND family_room_deleted_at IS NULL
+                FOR UPDATE
+                """,
+                (family_room_id,),
+            )
+
+            if cursor.fetchone() is None:
+                raise HTTPException(
+                    status_code=403,
+                    detail="이용할 수 없는 가족 공간입니다.",
+                )
+
+            # 최초 작성자가 아니라 현재 주보호자 권한으로 검사한다.
+            cursor.execute(
+                """
+                SELECT p.is_representative
+                FROM participate AS p
+                JOIN `user` AS u
+                  ON u.user_id = p.user_id
+                WHERE p.family_room_id = %s
+                  AND p.user_id = %s
+                  AND p.left_at IS NULL
+                  AND u.withdrawn_at IS NULL
+                FOR UPDATE
+                """,
+                (family_room_id, current_user_id),
+            )
+
+            member = cursor.fetchone()
+
+            if member is None or member["is_representative"] != 1:
+                raise HTTPException(
+                    status_code=403,
+                    detail="현재 공간의 주보호자만 대상자 정보를 수정할 수 있습니다.",
+                )
+
+            # 선택 입력값은 공백만 있으면 NULL로 저장한다.
+            address = (data.care_address or "").strip() or None
+            notes = (data.special_notes or "").strip() or None
+
+            # 주소가 변경되면 이전 주소의 좌표는 비운다.
+            # 최초 생성자 정보는 유지하고 성별은 선택한 값으로 저장한다.
+            cursor.execute(
+                """
+                UPDATE family_room
+                SET care_recipient_name = %s,
+                    gender = %s,
+                    birth_date = %s,
+                    latitude = CASE
+                        WHEN care_address <=> %s THEN latitude
+                        ELSE NULL
+                    END,
+                    longitude = CASE
+                        WHEN care_address <=> %s THEN longitude
+                        ELSE NULL
+                    END,
+                    care_address = %s,
+                    special_notes = %s
+                WHERE family_room_id = %s
+                  AND family_room_deleted_at IS NULL
+                """,
+                (
+                    data.care_recipient_name,
+                    data.gender,
+                    data.birth_date,
+                    address,
+                    address,
+                    address,
+                    notes,
+                    family_room_id,
+                ),
+            )
+
+        conn.commit()
+
+        return {
+            "result": "OK",
+            "family_room_id": family_room_id,
+        }
+
+    except HTTPException:
+        if conn is not None:
+            conn.rollback()
+        raise
+
+    except (MySQLError, ValueError):
+        if conn is not None:
+            conn.rollback()
+
+        raise HTTPException(
+            status_code=503,
+            detail="대상자 정보를 수정하지 못했습니다.",
+        ) from None
+
+    finally:
+        if conn is not None:
+            conn.close()

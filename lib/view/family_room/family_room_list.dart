@@ -5,7 +5,6 @@ import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
 import 'package:ondolbom/view/family_room/family_room_home.dart';
 import 'package:ondolbom/view/family_room/family_room_create.dart';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:ondolbom/view/invites/received_invites.dart';
 import 'package:ondolbom/view/widgets/account_drawer.dart';
 
@@ -20,11 +19,6 @@ class _FamilyRoomListState extends ConsumerState<FamilyRoomList> {
   @override
   void initState() {
     super.initState();
-
-    // Swagger 테스트 후 삭제한다.
-    FirebaseAuth.instance.currentUser?.getIdToken().then((token) {
-      debugPrint('SWAGGER_TOKEN: $token');
-    });
 
     // 첫 화면이 만들어진 다음 한 번 조회한다.
     WidgetsBinding.instance.addPostFrameCallback((_) {

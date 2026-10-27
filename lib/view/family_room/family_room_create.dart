@@ -16,6 +16,8 @@ class _FamilyRoomCreateState extends ConsumerState<FamilyRoomCreate> {
   late TextEditingController addressController;
   late TextEditingController notesController;
 
+  int? selectedGender;
+
   @override
   void initState() {
     super.initState();
@@ -164,9 +166,51 @@ class _FamilyRoomCreateState extends ConsumerState<FamilyRoomCreate> {
             controller: nameController,
             enabled: !state.isLoading,
             maxLength: 30,
-            decoration: inputDecoration(
-              context,
-            ).copyWith(counterText: '', hintText: '이름을 입력해 주세요'),
+            decoration: inputDecoration(context).copyWith(
+              counterText: '',
+              hintText: '이름을 입력해 주세요',
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // 남성은 1, 여성은 2로 저장하며 반드시 하나를 선택한다.
+          inputTitle('성별', required: true),
+          SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<int>(
+              segments: const [
+                ButtonSegment<int>(value: 1, label: Text('남성')),
+                ButtonSegment<int>(value: 2, label: Text('여성')),
+              ],
+              selected: selectedGender == null ? <int>{} : {selectedGender!},
+              emptySelectionAllowed: selectedGender == null,
+              showSelectedIcon: false,
+              style: ButtonStyle(
+                backgroundColor: WidgetStateProperty.resolveWith<Color>(
+                  (states) => states.contains(WidgetState.selected)
+                      ? const Color(0xFFFFEBD9)
+                      : Colors.white,
+                ),
+                foregroundColor: WidgetStateProperty.resolveWith<Color>(
+                  (states) => states.contains(WidgetState.selected)
+                      ? const Color(0xFF99522F)
+                      : const Color(0xFF78716A),
+                ),
+                side: const WidgetStatePropertyAll(
+                  BorderSide(color: Color(0xFFE8DFD7)),
+                ),
+                padding: const WidgetStatePropertyAll(
+                  EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+              onSelectionChanged: state.isLoading
+                  ? null
+                  : (selection) {
+                      setState(() {
+                        selectedGender = selection.first;
+                      });
+                    },
+            ),
           ),
           const SizedBox(height: 24),
 
@@ -301,6 +345,15 @@ class _FamilyRoomCreateState extends ConsumerState<FamilyRoomCreate> {
       return;
     }
 
+    final gender = selectedGender;
+
+    if (gender == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('성별을 선택해 주세요.')));
+      return;
+    }
+
     final birth = birthController.text.trim();
     final address = addressController.text.trim();
     final notes = notesController.text.trim();
@@ -309,6 +362,7 @@ class _FamilyRoomCreateState extends ConsumerState<FamilyRoomCreate> {
         .read(familyRoomProvider.notifier)
         .createRoom(
           name: name,
+          gender: gender,
           birthDate: birth.isEmpty ? null : birth,
           address: address.isEmpty ? null : address,
           notes: notes.isEmpty ? null : notes,

@@ -4,11 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/view/medications/medication_list_view.dart';
 import 'package:ondolbom/view/chats/chat_view.dart';
 import 'package:ondolbom/view/memos/memo_list_view.dart';
+import 'package:ondolbom/view/exports/export_view.dart';
+import 'package:ondolbom/vm/family_room/family_context.dart';
 import 'package:ondolbom/view/recipient_detail.dart';
 import 'package:ondolbom/view/schedules/schedule_list.dart';
 import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
 import 'package:ondolbom/view/invites/invite_create.dart';
 import 'package:ondolbom/view/widgets/account_drawer.dart';
+
+import 'package:ondolbom/view/family_room/family_member_list.dart';
+import 'package:ondolbom/view/family_room/family_room_delete_dialog.dart';
 
 class FamilyRoomHome extends ConsumerWidget {
   const FamilyRoomHome({super.key});
@@ -37,6 +42,39 @@ class FamilyRoomHome extends ConsumerWidget {
         automaticallyImplyLeading: false,
         title: const Text('온돌봄'),
         leading: const AccountMenuButton(),
+        actions: [
+          if (state.selectedParticipation?.isRepresentative == true &&
+              state.selectedParticipation?.isActive == true)
+            PopupMenuButton<String>(
+              tooltip: '가족 공간 메뉴',
+              icon: const Icon(Icons.more_vert),
+              enabled: !state.isLoading,
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_outline, color: colors.error),
+                      const SizedBox(width: 8),
+                      Text('가족 공간 삭제', style: TextStyle(color: colors.error)),
+                    ],
+                  ),
+                ),
+              ],
+              onSelected: (_) async {
+                final navigator = Navigator.of(context);
+                final deleted = await showDialog<bool>(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) => FamilyRoomDeleteDialog(room: room),
+                );
+                if (!context.mounted || deleted != true) return;
+                final notifier = ref.read(familyRoomProvider.notifier);
+                navigator.popUntil((route) => route.isFirst);
+                await notifier.fetchRooms();
+              },
+            ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
@@ -139,6 +177,36 @@ class FamilyRoomHome extends ConsumerWidget {
           const SizedBox(height: 28),
 
           // 오늘의 일정
+          // 주보호자와 일반 가족 모두 가족 목록을 조회한다.
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        FamilyMemberList(familyRoomId: room.familyRoomId),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.groups_outlined),
+              label: const Text(
+                '함께하는 가족',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF99522F),
+                backgroundColor: const Color(0xFFFFF3E8),
+                side: const BorderSide(color: Color(0xFFE8DFD7)),
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 28),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -167,6 +235,20 @@ class FamilyRoomHome extends ConsumerWidget {
                   const Text('일정 조회 기능 연결 전입니다.'),
                 ],
               ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) =>
+                    ExportView(selected: ref.read(familyContextProvider)),
+              ),
+            ),
+            icon: const Icon(Icons.download_outlined),
+            label: const Text('메모·채팅 내보내기'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
             ),
           ),
         ],
