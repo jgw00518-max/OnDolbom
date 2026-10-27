@@ -1,7 +1,7 @@
 from datetime import date
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Path
 from pydantic import BaseModel, Field, field_validator
 
 from python.database import connect
@@ -12,9 +12,58 @@ from fastapi import Depends, Header, HTTPException
 
 from pymysql import MySQLError
 from python.features.auth.firebase_auth import require_firebase_user
+from python.features.chats.connection_manager import manager as chat_manager
+from starlette.concurrency import run_in_threadpool
 
 
 router = APIRouter()
+
+
+def _soft_delete_family_room(family_room_id: str, user_id: str) -> dict:
+    """공간과 권한을 잠근 뒤 공간 삭제 시각만 기록한다. 연결 데이터는 보존한다."""
+    connection = None
+    try:
+        connection = connect()
+        with connection.cursor() as cursor:
+            # 초대 수락·대상자 수정과 동일하게 공간부터 잠근다.
+            cursor.execute('''SELECT family_room_deleted_at FROM family_room
+                WHERE family_room_id = %s FOR UPDATE''', (family_room_id,))
+            room = cursor.fetchone()
+            if room is None:
+                raise HTTPException(404, "가족 공간을 찾을 수 없습니다.")
+            cursor.execute('''SELECT p.participate_seq, p.is_representative
+                FROM participate AS p JOIN `user` AS u ON u.user_id = p.user_id
+                WHERE p.family_room_id = %s AND p.user_id = %s
+                  AND p.is_active = 1 AND p.left_at IS NULL
+                  AND u.withdrawn_at IS NULL
+                LIMIT 1 FOR UPDATE''', (family_room_id, user_id))
+            member = cursor.fetchone()
+            if member is None or member["is_representative"] != 1:
+                raise HTTPException(403, "현재 공간의 주보호자만 가족 공간을 삭제할 수 있습니다.")
+            deleted_at = room["family_room_deleted_at"]
+            already_deleted = deleted_at is not None
+            if not already_deleted:
+                cursor.execute('''UPDATE family_room
+                    SET family_room_deleted_at = CURRENT_TIMESTAMP
+                    WHERE family_room_id = %s AND family_room_deleted_at IS NULL''',
+                               (family_room_id,))
+                cursor.execute('''SELECT family_room_deleted_at FROM family_room
+                    WHERE family_room_id = %s''', (family_room_id,))
+                deleted_at = cursor.fetchone()["family_room_deleted_at"]
+        connection.commit()
+        return {"result": "OK", "family_room_id": family_room_id,
+                "family_room_deleted_at": deleted_at, "already_deleted": already_deleted}
+    except HTTPException:
+        if connection is not None:
+            connection.rollback()
+        raise
+    except (MySQLError, ValueError):
+        if connection is not None:
+            connection.rollback()
+        raise HTTPException(503, "가족 공간을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.") from None
+    finally:
+        if connection is not None:
+            connection.close()
 
 
 # 화면에서 입력받는 대상자 정보
@@ -257,7 +306,18 @@ def get_current_user_id(
         if conn is not None:
             conn.close()
 
-# Depends(get_dev_user_id) 부분을 
+# 공간 소프트 삭제. 이미 삭제된 공간도 현재 주보호자만 재요청할 수 있다.
+@router.delete("/{family_room_id}")
+async def delete_family_room(
+    family_room_id: str = Path(min_length=1, max_length=50, pattern=r"^\S+$"),
+    current_user_id: str = Depends(get_current_user_id),
+) -> dict:
+    result = await run_in_threadpool(_soft_delete_family_room, family_room_id, current_user_id)
+    # DB 삭제가 확정된 이후에만 연결을 닫는다. 실패 시 연결을 건드리지 않는다.
+    await chat_manager.close_room(family_room_id, code=4403)
+    return result
+
+
 # 공간 생성 API
 @router.post("", status_code=201)
 def create_family_room_api(

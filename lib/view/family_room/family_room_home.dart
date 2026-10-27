@@ -13,6 +13,7 @@ import 'package:ondolbom/view/invites/invite_create.dart';
 import 'package:ondolbom/view/widgets/account_drawer.dart';
 
 import 'package:ondolbom/view/family_room/family_member_list.dart';
+import 'package:ondolbom/view/family_room/family_room_delete_dialog.dart';
 
 class FamilyRoomHome extends ConsumerWidget {
   const FamilyRoomHome({super.key});
@@ -41,6 +42,39 @@ class FamilyRoomHome extends ConsumerWidget {
         automaticallyImplyLeading: false,
         title: const Text('온돌봄'),
         leading: const AccountMenuButton(),
+        actions: [
+          if (state.selectedParticipation?.isRepresentative == true &&
+              state.selectedParticipation?.isActive == true)
+            PopupMenuButton<String>(
+              tooltip: '가족 공간 메뉴',
+              icon: const Icon(Icons.more_vert),
+              enabled: !state.isLoading,
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_outline, color: colors.error),
+                      const SizedBox(width: 8),
+                      Text('가족 공간 삭제', style: TextStyle(color: colors.error)),
+                    ],
+                  ),
+                ),
+              ],
+              onSelected: (_) async {
+                final navigator = Navigator.of(context);
+                final deleted = await showDialog<bool>(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) => FamilyRoomDeleteDialog(room: room),
+                );
+                if (!context.mounted || deleted != true) return;
+                final notifier = ref.read(familyRoomProvider.notifier);
+                navigator.popUntil((route) => route.isFirst);
+                await notifier.fetchRooms();
+              },
+            ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
