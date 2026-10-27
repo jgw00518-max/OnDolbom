@@ -1,3 +1,4 @@
+import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -205,7 +206,7 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                             children: [
                               CircleAvatar(
                                 radius: 21,
-                                backgroundColor: const Color(0xFFB7C8A1),
+                                backgroundColor: AppColors.sage,
                                 child: Text(
                                   personName.characters.take(2).toString(),
                                   style: const TextStyle(

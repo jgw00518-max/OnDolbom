@@ -1,6 +1,7 @@
 """프로젝트 루트에서 python -m python.main 으로 실행."""
 
 from fastapi import FastAPI
+from python.features.activity.router import router as activity_router
 
 from python.features.auth.router import router as auth_router
 from python.features.auth.kakao_auth import router as kakao_auth_router
@@ -20,6 +21,7 @@ from python.features.invites.router import router as invites_router
 
 
 app = FastAPI(title="온돌봄 사용자 API")
+app.include_router(activity_router)
 app.include_router(inquiries_router)
 app.include_router(notices_router)
 app.include_router(kakao_auth_router, prefix="/auth", tags=["auth"])

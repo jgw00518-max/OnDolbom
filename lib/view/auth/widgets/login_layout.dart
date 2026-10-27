@@ -1,3 +1,4 @@
+import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
 /// 첨부한 App.tsx/index.css의 표시만 담당한다. 인증 콜백·입력값은 LoginView가 관리한다.
@@ -33,10 +34,10 @@ class LoginLayout extends StatelessWidget {
       onSignup;
   final ValueChanged<bool> onRememberEmail, onAutoLogin;
 
-  static const _ink = Color(0xFF3E3A39);
-  static const _peach = Color(0xFFF6B08A);
-  static const _sage = Color(0xFFB7C8A1);
-  static const _paper = Color(0xFFFFFAF7);
+  static const _ink = AppColors.textPrimary;
+  static const _peach = AppColors.primary;
+  static const _sage = AppColors.sage;
+  static const _paper = AppColors.background;
   static const _muted = Color(0xFF716B68);
   static const _line = Color(0xFFE6DED9);
 
@@ -150,41 +151,40 @@ class LoginLayout extends StatelessWidget {
     );
   }
 
-  Widget _social(
-    String label,
-    Color background,
-    double assetSize,
-    VoidCallback callback,
-  ) => Tooltip(
-    message: label,
-    child: Semantics(
-      label: label,
-      button: true,
-      child: SizedBox(
-        width: 48,
-        height: 48,
-        child: OutlinedButton(
-          onPressed: busy ? null : callback,
-          style: OutlinedButton.styleFrom(
-            padding: EdgeInsets.zero,
-            minimumSize: const Size(48, 48),
-            backgroundColor: background,
-            disabledBackgroundColor: background.withValues(alpha: 0.45),
-            side: BorderSide(
-              color: background == Colors.white
-                  ? const Color(0xFFE9E2DE)
-                  : background,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+  Widget _social(String label, String assetPath, VoidCallback callback) =>
+      Tooltip(
+        message: label,
+        child: Semantics(
+          label: label,
+          button: true,
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            child: OutlinedButton(
+              onPressed: busy ? null : callback,
+              style: OutlinedButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(48, 48),
+                backgroundColor: Colors.transparent,
+                disabledBackgroundColor: Colors.transparent,
+                side: BorderSide.none,
+                shape: const CircleBorder(),
+              ),
+              // 배경을 포함한 공식 이미지를 버튼 전체에 표시하고 기존 인증 동작을 유지한다.
+              child: Opacity(
+                opacity: busy ? 0.45 : 1,
+                child: Image.asset(
+                  assetPath,
+                  width: 48,
+                  height: 48,
+                  fit: BoxFit.contain,
+                  excludeFromSemantics: true,
+                ),
+              ),
             ),
           ),
-          // 추후 Image.asset을 넣을 중앙 슬롯. 버튼 크기와 인증 동작은 별도로 유지한다.
-          child: SizedBox.square(dimension: assetSize),
         ),
-      ),
-    ),
-  );
+      );
 
   Widget _formPanel({
     required bool mobile,
@@ -331,7 +331,7 @@ class LoginLayout extends StatelessWidget {
                   ),
                 ),
                 child: Text(
-                  busy ? '처리 중…' : '로그인',
+                  busy ? '로그인 중' : '로그인',
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -383,11 +383,15 @@ class LoginLayout extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _social('Google로 계속하기', Colors.white, 20, onGoogle),
+                _social(
+                  'Google로 계속하기',
+                  'assets/images/auth/google.png',
+                  onGoogle,
+                ),
                 const SizedBox(width: 12),
-                _social('카카오로 계속하기', const Color(0xFFFEE500), 24, onKakao),
+                _social('카카오로 계속하기', 'assets/images/auth/kakao.png', onKakao),
                 const SizedBox(width: 12),
-                _social('네이버로 계속하기', const Color(0xFF03C75A), 20, onNaver),
+                _social('네이버로 계속하기', 'assets/images/auth/naver.png', onNaver),
               ],
             ),
             const SizedBox(height: 26),
@@ -455,7 +459,7 @@ class LoginLayout extends StatelessWidget {
           }
           final shellWidth = (constraints.maxWidth - 48).clamp(0.0, 980.0);
           return ColoredBox(
-            color: const Color(0xFFFCEEE3),
+            color: AppColors.peachSoft,
             child: Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(
@@ -511,7 +515,7 @@ class _WelcomePanel extends StatelessWidget {
   const _WelcomePanel();
   @override
   Widget build(BuildContext context) => ColoredBox(
-    color: const Color(0xFFF6B08A),
+    color: AppColors.primary,
     child: Stack(
       children: [
         const Padding(
@@ -522,7 +526,7 @@ class _WelcomePanel extends StatelessWidget {
               Text(
                 '온돌봄',
                 style: TextStyle(
-                  color: Color(0xFF3E3A39),
+                  color: AppColors.textPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
                 ),
@@ -541,7 +545,7 @@ class _WelcomePanel extends StatelessWidget {
               Text(
                 '오늘도,\n따뜻하게 시작해요.',
                 style: TextStyle(
-                  color: Color(0xFF3E3A39),
+                  color: AppColors.textPrimary,
                   fontSize: 34,
                   height: 1.28,
                   letterSpacing: -1.6,
@@ -567,7 +571,7 @@ class _WelcomePanel extends StatelessWidget {
             width: 74,
             height: 74,
             decoration: const BoxDecoration(
-              color: Color(0xFFFFD6B5),
+              color: AppColors.peachLight,
               shape: BoxShape.circle,
             ),
           ),
@@ -581,7 +585,7 @@ class _WelcomePanel extends StatelessWidget {
               width: 380,
               height: 230,
               decoration: const BoxDecoration(
-                color: Color(0xFFFFD6B5),
+                color: AppColors.peachLight,
                 borderRadius: BorderRadius.vertical(
                   top: Radius.elliptical(190, 115),
                 ),
@@ -598,7 +602,7 @@ class _WelcomePanel extends StatelessWidget {
               width: 360,
               height: 250,
               decoration: const BoxDecoration(
-                color: Color(0xFFB7C8A1),
+                color: AppColors.sage,
                 borderRadius: BorderRadius.vertical(
                   top: Radius.elliptical(180, 125),
                 ),

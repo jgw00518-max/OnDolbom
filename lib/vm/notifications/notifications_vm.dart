@@ -1,3 +1,4 @@
+import 'package:ondolbom/vm/activity/activity_vm.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -137,7 +138,12 @@ class NotificationsVm extends AsyncNotifier<NotificationList> {
     if (!ref.mounted || generation != _generation) {
       throw const NotificationsError('알림 목록이 변경되었습니다. 다시 열어 주세요.');
     }
-    if (ref.mounted) ref.invalidateSelf();
+    if (ref.mounted) {
+      if (ref.exists(activityProvider)) {
+        ref.read(activityProvider.notifier).refresh();
+      }
+      ref.invalidateSelf();
+    }
     return ScheduleNotification.fromJson(body);
   }
 }

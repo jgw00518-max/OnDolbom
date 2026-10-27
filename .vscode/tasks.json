@@ -1,0 +1,13 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "온돌봄 Android 서버 연결",
+      "type": "process",
+      "command": "python",
+      "args": ["-X", "utf8", "scripts/connect_android_server.py"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    }
+  ]
+}

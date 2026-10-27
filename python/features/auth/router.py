@@ -53,13 +53,13 @@ class ProfileRegistration(BaseModel):
         return f"{digits[:3]}-{digits[3:7]}-{digits[7:]}"
 
 
-def _find_profile(cursor, uid: str):
+def _find_profile(cursor, uid: str, *, lock=False):
     # 현재 DB collation은 대소문자를 구분하지 않아 BINARY로 UID 정확 비교를 보강한다.
     cursor.execute(
         """SELECT user_id, user_email, name, phone, withdrawn_at
            FROM `user`
            WHERE user_firebase_uid = %s AND BINARY user_firebase_uid = BINARY %s
-           LIMIT 1""", (uid, uid),
+           LIMIT 1""" + (" FOR UPDATE" if lock else ""), (uid, uid),
     )
     return cursor.fetchone()
 
@@ -130,6 +130,41 @@ def register_profile(payload: ProfileRegistration, claims: dict = Depends(requir
         raise HTTPException(503, "사용자 정보를 저장하지 못했습니다. 다시 시도해 주세요.") from None
     finally:
         # 성공·실패·조기 반환 모두에서 요청의 DB 연결을 정리한다.
+        if connection is not None:
+            connection.close()
+
+
+@router.put("/profile", response_model=CurrentUserResponse)
+def update_profile(payload: ProfileRegistration, claims: dict = Depends(require_firebase_user)):
+    """현재 계정의 이름·전화번호만 수정한다. 최초 등록 및 이메일 변경과 구분한다."""
+    connection = None
+    try:
+        connection = connect()
+        with connection.cursor() as cursor:
+            existing = _find_profile(cursor, claims['uid'], lock=True)
+            if existing is None:
+                raise HTTPException(404, '등록된 사용자 정보가 없습니다.')
+            _registered_response(existing)  # 탈퇴 계정은 수정할 수 없다.
+            cursor.execute('''UPDATE `user` SET name=%s, phone=%s
+                WHERE user_id=%s AND user_firebase_uid=%s
+                AND BINARY user_firebase_uid=BINARY %s AND withdrawn_at IS NULL''',
+                (payload.name, payload.phone, existing['user_id'], claims['uid'], claims['uid']))
+            # 값이 동일한 UPDATE도 정상 처리한다. 실제 저장된 행을 다시 읽어 응답한다.
+            row = _find_profile(cursor, claims['uid'])
+        if row is None:
+            raise RuntimeError('Updated profile not found')
+        response = _registered_response(row)
+        connection.commit()
+        return response
+    except HTTPException:
+        if connection is not None:
+            connection.rollback()
+        raise
+    except (MySQLError, ValueError, RuntimeError):
+        if connection is not None:
+            connection.rollback()
+        raise HTTPException(503, '저장 결과를 확인하지 못했습니다. 프로필을 다시 조회해 주세요.') from None
+    finally:
         if connection is not None:
             connection.close()
 
