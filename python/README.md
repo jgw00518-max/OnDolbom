@@ -14,6 +14,13 @@ python -m uvicorn python.main:app --reload
 - `main.py`: FastAPI 생성, 기능별 라우터 등록, `/health` 제공
 - `database.py`: `.env` 읽기, 필수 MySQL 설정 검사, DictCursor·수동 commit 연결 생성
 
+## 가족 공간 삭제
+
+`DELETE /family-room/{family_room_id}`로 현재 활성 주보호자가 가족 공간을 소프트 삭제합니다.
+`family_room_deleted_at`만 기록하고 모든 연결 데이터·이미지·참여·문의 이력을 보존합니다.
+삭제 확정 후 해당 공간의 현재 프로세스 채팅 연결을 종료합니다.
+권한·중복 요청·응답·제한은 [공간 삭제 API 안내](../docs/family-room-delete-api.md)를 참고합니다.
+
 ## 메모·채팅 내보내기
 
 `POST /exports/download`로 현재 참여 중인 가족 공간의 메모·채팅을 HTML·이미지 ZIP 또는 PDF로 받습니다.
