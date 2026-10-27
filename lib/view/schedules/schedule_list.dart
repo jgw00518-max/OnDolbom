@@ -485,12 +485,39 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
     );
   }
 
-  // 목록과 같은 월별 상태를 상세 화면에서도 사용한다.
-  void detailAction(Schedule item) {
-    showDialog<void>(
+  // 편집 결과를 받아 변경한 날짜의 최신 목록을 표시한다.
+  Future<void> detailAction(Schedule item) async {
+    final previousQuery = query;
+
+    final result = await showDialog<ScheduleEditResult>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => ScheduleDetail(item: item, query: query),
+      builder: (_) => ScheduleDetail(item: item, query: previousQuery),
+    );
+
+    if (!mounted || result == null) {
+      return;
+    }
+
+    if (ref.read(familyRoomProvider).selectedRoomId != widget.familyRoomId) {
+      return;
+    }
+
+    // 변경 전 월의 조회 결과를 갱신한다.
+    ref.invalidate(scheduleListProvider(previousQuery));
+
+    setState(() {
+      selectedDate = DateUtils.dateOnly(result.date);
+      displayedMonth = DateTime(result.date.year, result.date.month);
+    });
+
+    // 다른 달로 변경했다면 해당 월도 새로 조회한다.
+    if (query != previousQuery) {
+      ref.invalidate(scheduleListProvider(query));
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(result.changed ? '일정을 변경했습니다.' : '변경된 내용이 없습니다.')),
     );
   }
 }

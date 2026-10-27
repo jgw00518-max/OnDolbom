@@ -1,1 +1,41 @@
-﻿{"indexes":[{"collectionGroup":"schedule_notifications","queryScope":"COLLECTION","fields":[{"fieldPath":"recipient_ids","arrayConfig":"CONTAINS"},{"fieldPath":"status","order":"ASCENDING"},{"fieldPath":"schedule_seq","order":"DESCENDING"}]}],"fieldOverrides":[]}
+﻿{
+  "indexes": [
+    {
+      "collectionGroup": "schedule_notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "recipient_ids",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "schedule_seq",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "schedule_notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "recipient_ids",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

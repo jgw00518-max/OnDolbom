@@ -6,6 +6,7 @@ import 'package:ondolbom/vm/auth/auth_vm.dart';
 import 'package:ondolbom/vm/auth/user_profile_vm.dart';
 import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
 import 'package:ondolbom/vm/schedules/schedule_vm.dart';
+import 'package:ondolbom/view/schedules/schedule_create.dart';
 
 // 상세 표시와 버튼 처리 상태는 화면에서, API 요청은 기존 일정 VM에서 관리한다.
 class ScheduleDetail extends ConsumerStatefulWidget {
@@ -19,9 +20,14 @@ class ScheduleDetail extends ConsumerStatefulWidget {
 
 class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
   bool isAccepting = false;
+  bool isEditing = false;
+  bool isResponding = false;
+  bool isDeleting = false;
   bool accepted = false;
   String? errorMessage;
   late final String? loginUid;
+  // 처리 중에는 다른 버튼과 뒤로 가기를 막는다.
+  bool get isBusy => isAccepting || isEditing || isResponding || isDeleting;
 
   @override
   void initState() {
@@ -83,15 +89,31 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
         currentUserId != null &&
         item?.acceptedBy != null &&
         item!.acceptedBy == currentUserId;
-    final statusText = mine
+    final canRespond =
+        item != null &&
+        mine &&
+        item.reconfirmRequired &&
+        item.reconfirmUserId == currentUserId &&
+        item.historySeq != null &&
+        item.state == '미완료' &&
+        !schedules.isLoading &&
+        !schedules.hasError;
+    final statusText = item?.reconfirmRequired == true
+        ? '재수락 요청 중'
+        : mine
         ? '담당 중'
         : assigned
         ? '담당자 등록 완료'
         : '담당자 모집 중';
     final personName = item?.acceptedName ?? (accepted ? '나' : '가족');
+    // 재수락 대기 중에만 변경 전 내용을 비교한다.
+    final previous = item?.reconfirmRequired == true
+        ? item?.previousSchedule
+        : null;
+    final responseDueAt = item?.reconfirmResponseDueAt;
 
     return PopScope(
-      canPop: !isAccepting,
+      canPop: !isBusy,
       child: Dialog(
         backgroundColor: const Color(0xFFFFFCF8),
         surfaceTintColor: Colors.transparent,
@@ -121,9 +143,7 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                     IconButton(
                       key: const ValueKey('schedule-detail-close'),
                       tooltip: '닫기',
-                      onPressed: isAccepting
-                          ? null
-                          : () => Navigator.pop(context),
+                      onPressed: isBusy ? null : () => Navigator.pop(context),
                       icon: const Icon(Icons.close, color: Color(0xFF78716A)),
                     ),
                   ],
@@ -158,8 +178,9 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                           ),
                         ),
                         const SizedBox(height: 18),
-                        Text(
+                        changeText(
                           item.title,
+                          previousValue: previous?.title,
                           style: const TextStyle(
                             fontSize: 23,
                             fontWeight: FontWeight.bold,
@@ -168,23 +189,41 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                         ),
                         const SizedBox(height: 28),
                         infoRow(
-                          '날짜',
-                          '${item.date.year}-${item.date.month.toString().padLeft(2, '0')}-${item.date.day.toString().padLeft(2, '0')}',
+                          '시작시간',
+                          item.startTime,
+                          previousValue: previous?.startTime,
                         ),
-                        infoRow('시간', '${item.startTime} – ${item.endTime}'),
-                        infoRow('담당 인원', assigned ? '1명 · 등록 완료' : '1명 · 모집 중'),
+                        infoRow(
+                          '종료시간',
+                          item.endTime,
+                          previousValue: previous?.endTime,
+                        ),
+                        infoRow('담당자', assigned ? personName : '모집 중'),
                         infoRow('일정 상태', item.state),
+                        if (item.reconfirmRequired) ...[
+                          infoRow(
+                            '응답 기한',
+                            item.reconfirmIsUrgent
+                                ? '긴급 변경 · 전화 확인 필요'
+                                : responseDueAt == null
+                                ? '기한을 확인하지 못했습니다.'
+                                : '${dateText(responseDueAt)} '
+                                      '${responseDueAt.hour.toString().padLeft(2, '0')}:'
+                                      '${responseDueAt.minute.toString().padLeft(2, '0')}',
+                          ),
+                        ],
                         infoRow(
                           '메모',
-                          item.memo == null || item.memo!.isEmpty
-                              ? '등록된 메모가 없습니다.'
-                              : item.memo!,
+                          memoText(item.memo),
+                          previousValue: previous == null
+                              ? null
+                              : memoText(previous.memo),
+                          newLine: true,
                         ),
                         infoRow('등록자', item.creatorName ?? '가족'),
-                        infoRow('알림 대상', '가족 공간 전체'),
                         const SizedBox(height: 18),
                         Text(
-                          '담당 가족 ${assigned ? 1 : 0}명',
+                          '담당 가족',
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -247,6 +286,88 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                             ],
                           ),
                       ],
+                      if (item != null &&
+                          member.isRepresentative &&
+                          item.state == '미완료' &&
+                          !schedules.isLoading &&
+                          !schedules.hasError) ...[
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: isBusy ? null : () => editAction(item),
+                            icon: const Icon(Icons.edit_outlined, size: 20),
+                            label: Text(isEditing ? '편집 중…' : '일정 변경'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFFAC5D32),
+                              foregroundColor: Colors.white,
+                              disabledBackgroundColor: const Color(0xFFF0E8E0),
+                              disabledForegroundColor: const Color(0xFFAA9B8E),
+                              minimumSize: const Size.fromHeight(52),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              textStyle: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (item != null &&
+                          member.isRepresentative &&
+                          !schedules.isLoading &&
+                          !schedules.hasError) ...[
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: TextButton.icon(
+                            onPressed: isBusy ? null : () => deleteAction(item),
+                            icon: const Icon(Icons.delete_outline, size: 20),
+                            label: Text(isDeleting ? '삭제 중…' : '일정 삭제'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: const Color(0xFFA65F48),
+                              minimumSize: const Size.fromHeight(48),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              textStyle: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (canRespond) ...[
+                        const SizedBox(height: 24),
+                        const Text('변경된 일정 내용을 확인하고 재수락하거나 거절해 주세요.'),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: isBusy
+                                    ? null
+                                    : () => respondAction(item!, false),
+                                child: const Text('거절'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: FilledButton(
+                                onPressed: isBusy
+                                    ? null
+                                    : () => respondAction(item!, true),
+                                child: Text(isResponding ? '처리 중…' : '재수락'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                       if (errorMessage != null) ...[
                         const SizedBox(height: 18),
                         Text(
@@ -264,7 +385,7 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                               : '최신 일정 정보를 불러오지 못했습니다. 다시 조회해 주세요.',
                         ),
                         TextButton(
-                          onPressed: isAccepting
+                          onPressed: isBusy
                               ? null
                               : () => ref.invalidate(
                                   scheduleListProvider(widget.query),
@@ -278,7 +399,7 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                           width: double.infinity,
                           child: FilledButton(
                             key: const ValueKey('schedule-accept'),
-                            onPressed: isAccepting ? null : acceptAction,
+                            onPressed: isBusy ? null : acceptAction,
                             style: FilledButton.styleFrom(
                               backgroundColor: const Color(0xFFF7AC82),
                               foregroundColor: const Color(0xFF553724),
@@ -311,8 +432,12 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
     );
   }
 
-  // 목업처럼 왼쪽 항목명과 오른쪽 값을 일정한 간격으로 배치한다.
-  Widget infoRow(String label, String value) {
+  Widget infoRow(
+    String label,
+    String value, {
+    String? previousValue,
+    bool newLine = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 17),
       child: Row(
@@ -326,8 +451,10 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
             ),
           ),
           Expanded(
-            child: Text(
+            child: changeText(
               value,
+              previousValue: previousValue,
+              newLine: newLine,
               style: const TextStyle(
                 fontSize: 15,
                 height: 1.4,
@@ -340,9 +467,110 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
     );
   }
 
+  // 변경된 항목만 기존 값 → 빨간색 새 값으로 표시한다.
+  Widget changeText(
+    String value, {
+    String? previousValue,
+    bool newLine = false,
+    TextStyle? style,
+  }) {
+    if (previousValue == null || previousValue == value) {
+      return Text(value, style: style);
+    }
+
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: previousValue,
+            style: const TextStyle(color: Color(0xFF78716A)),
+          ),
+          TextSpan(
+            text: newLine ? '\n→ ' : ' → ',
+            style: const TextStyle(
+              color: Color(0xFFC62828),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          TextSpan(
+            text: value,
+            style: const TextStyle(
+              color: Color(0xFFC62828),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+      style: style,
+    );
+  }
+
+  String dateText(DateTime date) {
+    return '${date.year}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
+  }
+
+  String memoText(String? memo) {
+    return memo == null || memo.isEmpty ? '등록된 메모가 없습니다.' : memo;
+  }
+
+  // 기존 담당자가 재수락·거절하고 최신 일정으로 화면을 갱신한다.
+  Future<void> respondAction(Schedule item, bool acceptChange) async {
+    if (isBusy) return;
+
+    if (item.historySeq == null ||
+        ref.read(firebaseAuthProvider).currentUser?.uid != loginUid ||
+        ref.read(familyRoomProvider).selectedRoomId !=
+            widget.query.familyRoomId) {
+      setState(() {
+        errorMessage = '로그인 상태와 선택한 일정을 다시 확인해 주세요.';
+      });
+      return;
+    }
+
+    setState(() {
+      isResponding = true;
+      errorMessage = null;
+    });
+
+    try {
+      await ref
+          .read(scheduleVmProvider)
+          .respondScheduleChange(
+            scheduleSeq: item.seq,
+            historySeq: item.historySeq!,
+            accepted: acceptChange,
+          );
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        errorMessage = error.toString().replaceFirst('Exception: ', '');
+      });
+    }
+
+    if (!mounted) return;
+
+    // 응답이 끊겨도 서버에서 처리됐을 수 있으므로 다시 조회한다.
+    ref.invalidate(scheduleListProvider(widget.query));
+
+    try {
+      await ref.read(scheduleListProvider(widget.query).future);
+    } catch (_) {
+      // 조회 실패 안내는 기존 화면의 다시 조회 영역에서 표시한다.
+    } finally {
+      if (mounted) {
+        setState(() {
+          isResponding = false;
+        });
+      }
+    }
+  }
+
   // 반복 클릭을 막고 서버 확인 후 목록과 상세를 같은 조회 결과로 갱신한다.
   Future<void> acceptAction() async {
-    if (isAccepting || accepted) return;
+    if (isBusy || accepted) return;
     setState(() {
       isAccepting = true;
       errorMessage = null;
@@ -366,6 +594,332 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
       // 조회 실패는 화면에 별도로 표시하고 이미 성공한 수락과 구분한다.
     } finally {
       if (mounted) setState(() => isAccepting = false);
+    }
+  }
+
+  // 현재 일정의 최신 내용을 편집 화면에 전달한다.
+  Future<void> editAction(Schedule? item) async {
+    if (item == null || isBusy) {
+      return;
+    }
+
+    final rooms = ref.read(familyRoomProvider);
+    final room = rooms.selectedRoom;
+
+    if (room == null ||
+        room.familyRoomId != widget.query.familyRoomId ||
+        rooms.selectedParticipation?.isRepresentative != true) {
+      setState(() {
+        errorMessage = '공간 선택과 주보호자 권한을 다시 확인해 주세요.';
+      });
+      return;
+    }
+
+    setState(() {
+      isEditing = true;
+      errorMessage = null;
+    });
+
+    try {
+      final result = await Navigator.push<ScheduleEditResult>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ScheduleCreate(
+            familyRoomId: room.familyRoomId,
+            recipientName: room.careRecipientName,
+            initialSchedule: item,
+          ),
+        ),
+      );
+
+      if (!mounted || result == null) {
+        return;
+      }
+
+      if (ref.read(firebaseAuthProvider).currentUser?.uid != loginUid ||
+          ref.read(familyRoomProvider).selectedRoomId != room.familyRoomId) {
+        setState(() {
+          errorMessage = '로그인 상태와 선택한 공간을 다시 확인해 주세요.';
+        });
+        return;
+      }
+
+      // 이동 제한을 해제하고 목록 화면에 저장 결과를 전달한다.
+      setState(() {
+        isEditing = false;
+      });
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.pop<ScheduleEditResult>(context, result);
+        }
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        errorMessage = error.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      if (mounted && isEditing) {
+        setState(() {
+          isEditing = false;
+        });
+      }
+    }
+  }
+
+  // 삭제 확인 후 요청하고 목록을 갱신한다.
+  Future<void> deleteAction(Schedule? item) async {
+    if (item == null || isBusy) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: const Color(0x66000000),
+      builder: (dialogContext) => Dialog(
+        backgroundColor: const Color(0xFFFFFCF8),
+        surfaceTintColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(color: Color(0xFFE8DFD7)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFEBD9),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Icon(
+                        Icons.delete_outline,
+                        color: Color(0xFFA65F48),
+                        size: 25,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '일정을 삭제할까요?',
+                            style: TextStyle(
+                              fontSize: 21,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF403C39),
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            '삭제할 일정을 확인해 주세요.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF78716A),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 22),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF1E5),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFF0DDCC)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.event_outlined,
+                        size: 22,
+                        color: Color(0xFF99522F),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.title,
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF554B43),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              dateText(item.date),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF756B60),
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              '${item.startTime} – ${item.endTime}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF756B60),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  item.acceptedBy == null
+                      ? '현재 가족 모두에게 삭제 알림이 전달됩니다.'
+                      : '담당 배정이 해제되고, 현재 가족 모두에게 '
+                            '삭제 알림이 전달됩니다.',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.55,
+                    color: Color(0xFF756B60),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(dialogContext, false),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF756B60),
+                          side: const BorderSide(color: Color(0xFFE8DFD7)),
+                          minimumSize: const Size.fromHeight(52),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          textStyle: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        child: const Text('취소'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () => Navigator.pop(dialogContext, true),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFA65F48),
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size.fromHeight(52),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          textStyle: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        child: const Text('삭제하기'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    if (!mounted || confirmed != true || isBusy) return;
+
+    final rooms = ref.read(familyRoomProvider);
+    if (ref.read(firebaseAuthProvider).currentUser?.uid != loginUid ||
+        rooms.selectedRoomId != widget.query.familyRoomId ||
+        rooms.selectedParticipation?.isRepresentative != true) {
+      setState(() {
+        errorMessage = '로그인 상태와 주보호자 권한을 다시 확인해 주세요.';
+      });
+      return;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+
+    setState(() {
+      isDeleting = true;
+      errorMessage = null;
+    });
+
+    try {
+      final published = await ref
+          .read(scheduleVmProvider)
+          .deleteSchedule(
+            scheduleSeq: item.seq,
+            familyRoomId: widget.query.familyRoomId,
+          );
+
+      if (!mounted) return;
+
+      ref.invalidate(scheduleListProvider(widget.query));
+
+      if (ref.read(firebaseAuthProvider).currentUser?.uid != loginUid ||
+          ref.read(familyRoomProvider).selectedRoomId !=
+              widget.query.familyRoomId) {
+        return;
+      }
+
+      // 뒤로 가기 제한을 해제한 다음 상세창을 닫는다.
+      setState(() => isDeleting = false);
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+
+        Navigator.pop(context);
+
+        if (messenger.mounted) {
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(
+                published ? '일정을 삭제했습니다.' : '일정을 삭제했습니다. 가족 알림은 전송 대기 중입니다.',
+              ),
+            ),
+          );
+        }
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        errorMessage = error.toString().replaceFirst('Exception: ', '');
+      });
+
+      // 응답이 끊겨도 서버에서는 삭제됐을 수 있어 다시 조회한다.
+      ref.invalidate(scheduleListProvider(widget.query));
+    } finally {
+      if (mounted && isDeleting) {
+        setState(() => isDeleting = false);
+      }
     }
   }
 }

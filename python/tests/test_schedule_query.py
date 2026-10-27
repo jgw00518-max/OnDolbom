@@ -21,6 +21,7 @@ class ScheduleQueryTests(unittest.TestCase):
         self.cursor.fetchall.return_value = [{
             'schedule_seq': 1, 'schedule_date': date(2026, 10, 25),
             'start_time': '09:00:00', 'end_time': '10:00:00',
+            'reconfirm_required': 0,
         }]
         self.connect = self.enterContext(patch('python.features.schedules.router.connect', return_value=self.conn))
 
@@ -63,7 +64,8 @@ class ScheduleQueryTests(unittest.TestCase):
     def test_database_failure_hides_details_and_closes(self):
         from pymysql import OperationalError
         self.cursor.execute.side_effect = OperationalError(2006, 'private')
-        response = self.get()
+        with self.assertLogs('python.features.schedules.router', level='ERROR'):
+            response = self.get()
         self.assertEqual(response.status_code, 503)
         self.assertNotIn('private', response.text)
         self.conn.close.assert_called_once()
