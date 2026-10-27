@@ -76,7 +76,13 @@ void main() {
       await tester.pumpAndSettle();
       expect(vm.opened, 1);
       expect(find.byType(AlertDialog), findsOneWidget);
-      expect(find.textContaining('메모'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.textContaining('메모'),
+        ),
+        findsOneWidget,
+      );
       await tester.tap(find.text('닫기'));
       await tester.pumpAndSettle();
     },

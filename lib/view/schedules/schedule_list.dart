@@ -1,3 +1,4 @@
+import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/view/schedules/schedule_detail.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -119,7 +120,7 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
     }
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: const Color(0xFFE8DFD7)),
       ),
@@ -226,7 +227,7 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
                     margin: const EdgeInsets.all(1),
                     decoration: BoxDecoration(
                       color: selected
-                          ? const Color(0xFFFFD6B5)
+                          ? AppColors.peachLight
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(13),
                       border: selected
@@ -316,7 +317,7 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
           (item) => Container(
             margin: const EdgeInsets.only(bottom: 14),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: const Color(0xFFE8DFD7)),
             ),

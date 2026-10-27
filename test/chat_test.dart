@@ -11,6 +11,7 @@ import 'package:ondolbom/model/chats/chat_message.dart';
 import 'package:ondolbom/view/chats/chat_view.dart';
 import 'package:ondolbom/view/family_room/family_room_home.dart';
 import 'package:ondolbom/vm/chats/chat_vm.dart';
+import 'package:ondolbom/vm/auth/auth_vm.dart';
 import 'package:ondolbom/vm/family_room/family_context.dart';
 import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
 import 'family_care_connection_test.dart' show CareRooms;
@@ -381,6 +382,8 @@ void main() {
         overrides: [
           familyContextProvider.overrideWithValue(room),
           familyRoomProvider.overrideWith(CareRooms.new),
+          // 공통 메뉴의 새 소식 조회는 이 채팅 UI 테스트에서 로그인 세션 없이 둔다.
+          authUserProvider.overrideWith((ref) => Stream.value(null)),
           apiTokenLoaderProvider.overrideWithValue(() async => 'id-token'),
           chatHttpClientProvider.overrideWithValue(
             MockClient((_) async => page([])),

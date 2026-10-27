@@ -118,8 +118,8 @@ void main() {
     expect(find.text('1/2 완료'), findsOneWidget);
     expect(find.text('테스트 약 A 0.5정'), findsOneWidget);
     final card = tester.element(find.byType(Card).last);
-    expect(Theme.of(card).cardTheme.color, const Color(0xFFFFF3E9));
-    expect(Theme.of(card).colorScheme.primary, const Color(0xFFAD5B32));
+    expect(Theme.of(card).cardTheme.color, Colors.white);
+    expect(Theme.of(card).colorScheme.primary, const Color(0xFFF6B08A));
 
     await tester.tap(find.text('테스트 약 A 0.5정'));
     await tester.pumpAndSettle();

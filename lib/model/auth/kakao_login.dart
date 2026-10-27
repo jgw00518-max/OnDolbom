@@ -144,10 +144,11 @@ class KakaoLogin {
       throw const KakaoLoginFailure('실행 설정에 KAKAO_NATIVE_APP_KEY를 입력해 주세요.');
     }
     try {
-      // 카카오톡 설치 여부와 관계없이 계정 로그인 화면에서 본인이 인증한다.
-      final token = await UserApi.instance.loginWithKakaoAccount(
-        prompts: [Prompt.login],
-      );
+      // 설치된 카카오톡의 로그인 상태를 이용하고, 미설치 기기만 웹으로 연결한다.
+      // 카카오톡에서 취소하거나 오류가 나면 아래 예외 처리로 전달한다.
+      final token = await isKakaoTalkInstalled()
+          ? await UserApi.instance.loginWithKakaoTalk()
+          : await UserApi.instance.loginWithKakaoAccount();
       return token.accessToken;
     } on PlatformException catch (error) {
       if (error.code == 'CANCELED') throw KakaoLoginCancelled();
