@@ -4,4 +4,6 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- 개발용 로컬 FastAPI HTTP 연결. 릴리스에서는 HTTPS를 사용한다. -->
+    <application android:usesCleartextTraffic="true" />
 </manifest>

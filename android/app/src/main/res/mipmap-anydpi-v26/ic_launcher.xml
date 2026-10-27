@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 아이콘 배경색 -->
+    <background android:drawable="@android:color/white" />
+
+    <!-- 복사한 전경 이미지 -->
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>

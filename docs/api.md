@@ -1,0 +1,93 @@
+# 구현된 사용자 인증 API
+
+비밀번호 재설정은 `/auth/password-reset/request` → `/verify` → `/confirm`의 이메일 인증번호 방식이다. [API·SMTP 설정·검증 안내](account-recovery.md)
+
+이메일 회원가입도 `/auth/signup/request` → `/verify` → `/confirm` 인증번호 확인 후 진행한다. [가입 API·설정 안내](email-signup.md)
+
+사용자 문의는 `/inquiries`에서 본인 문의 작성·목록·상세 및 관리자 답변을 조회한다. [문의 API·DB 계약·검증 안내](inquiries.md)
+
+사용자 공지는 `/notices` 목록과 `/notices/{admin_id}/{notice_id}` 상세에서 조회한다. [공지사항 연동 안내](notices.md)
+
+소셜 로그인·로컬 서버 설정은 [팀원 로컬 설정 안내](team-local-setup.md)를 참고한다.
+
+| 소셜 인증 API | 동작 |
+| --- | --- |
+| POST /auth/kakao | 카카오 토큰 앱 소속·이메일 검증 후 Firebase Custom Token 발급 |
+| POST /auth/naver/start | 앱의 challenge와 서버 state를 연결하고 네이버 인증 URL 반환 |
+| GET /auth/naver/callback | 등록된 서버 Callback, 인가 코드와 state만 앱 스킴으로 전달 |
+| POST /auth/naver/exchange | state·앱 verifier·코드를 일회 검증하고 서버에서 교환 후 Firebase Custom Token 발급 |
+
+Custom Token은 Flutter Firebase SDK에서 로그인하는 용도이며 /auth/me에 직접 전달하지 않는다.
+실제 API에는 Firebase 로그인 후 발급된 ID 토큰을 사용한다. 네이버 임시 인증 상태는 각 로컬 서버 메모리에 5분 저장된다.
+
+일정 앱 내 알림 API는 [일정 알림 안내](schedule-notifications.md)를 참고한다.
+알림은 Firestore에 저장한다. Firestore 생성·색인 적용·일정 등록 API 연결 후 실제 연동 검증이 필요하다.
+
+## GET /auth/me
+
+`Authorization: Bearer <Firebase ID token>`이 필요하다. 커스텀 토큰이나
+소셜 서비스의 access token을 직접 전달하는 API가 아니다.
+
+인증된 UID에 연결된 프로필을 조회하며 계정을 생성하지 않는다.
+
+미등록 응답 (200):
+
+```json
+{"registered": false, "user": null}
+```
+
+등록 응답 (200, 값은 설명용 예시):
+
+```json
+{
+  "registered": true,
+  "user": {
+    "user_id": "내부사용자ID",
+    "user_email": "family@example.com",
+    "name": "가족",
+    "phone": null
+  }
+}
+```
+
+`user_email`, `name`, `phone`은 현재 DB에서 NULL을 허용한다.
+검증된 UID는 `user.user_firebase_uid`와 정확히 비교한다.
+이름·전화번호가 비어 있어도 UID 연결 행이 존재하면 registered는 true다.
+프로필 필수 정보 완료 여부는 다음 등록 단계에서 별도로 처리한다.
+
+| 코드 | 의미 |
+| --- | --- |
+| 401 | 토큰 없음·형식 오류·만료·유효하지 않음·철회·Firebase 계정 사용 불가 |
+| 403 | MySQL 사용자 withdrawn_at 존재 |
+| 503 | Firebase 자격증명·인증 서버·DB 설정 또는 연결 오류 |
+
+오류 본문은 FastAPI 기본 `{"detail": "안내 메시지"}` 형식이다.
+401은 재로그인 또는 토큰 갱신 대상이며 503을 프로필 미등록으로 해석하지 않는다.
+
+## GET /health
+
+인증 없이 `{"status": "ok"}`를 반환한다. 서버 프로세스만 확인한다.
+
+## POST /auth/profile
+
+Firebase ID 토큰 인증 후 가족 사용자 정보를 최초 등록한다.
+
+```json
+{"name": "가족", "phone": "01012345678"}
+```
+
+- 이름: 앞뒤 공백 제거 후 필수, 1~20자(현재 name 컬럼 길이).
+- 전화번호: 필수. `01012345678`과 `010-1234-5678` 두 형식을 허용하며
+  저장은 `010-1234-5678`로 통일한다. 현재 구현은 010 번호 기준이다.
+- 클라이언트 UID·이메일·user_id 필드는 받지 않는다. 추가 필드는 422로 거절한다.
+- user_id는 서버 UUID, user_firebase_uid와 user_email은 검증된 토큰에서 얻는다.
+- INSERT에서 user_password는 제외하여 NULL로 둔다. 등록 시각은 DB 기본값을 사용한다.
+- 성공은 200이며 GET /auth/me의 등록 응답과 같은 형식이다.
+- 같은 UID의 재요청은 기존 정보를 반환하며 이름·전화번호를 수정하지 않는다.
+  동시 INSERT의 UNIQUE 충돌은 rollback 후 같은 UID의 기존 행을 다시 조회한다.
+- UID 대소문자 collation 충돌 등 다른 행과의 충돌은 409이며 자동 연결하지 않는다.
+- 탈퇴 행은 403, 입력 오류·토큰 이메일 없음 또는 길이 초과는 422,
+  저장 실패는 rollback 후 503이다. 실패 후 재요청할 수 있다.
+
+등록 완료 후 Flutter가 GET /auth/me를 다시 조회하여 입력 폼 대신 연결된 사용자 정보를 표시한다.
+DB 스키마는 변경하지 않으며 사용자 저장은 앱에서 등록 버튼을 누를 때 수행한다.

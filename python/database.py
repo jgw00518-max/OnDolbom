@@ -9,6 +9,7 @@ from pymysql.connections import Connection
 
 def connect() -> Connection:
     """.env보다 환경변수를 우선하며, 연결 종료·commit은 호출자가 담당한다."""
+    # 터미널 실행 위치와 관계없이 python/.env를 읽으며, 환경변수를 우선한다.
     env_file = Path(__file__).resolve().parent / ".env"
     settings = {**dotenv_values(env_file), **os.environ}
     required = ("MYSQL_HOST", "MYSQL_USER", "MYSQL_PASSWORD", "MYSQL_DATABASE")
@@ -20,6 +21,7 @@ def connect() -> Connection:
         raise ValueError("MYSQL_PORT는 정수여야 합니다.") from None
     if not 1 <= port <= 65535:
         raise ValueError("MYSQL_PORT 범위를 확인해 주세요.")
+    # DictCursor는 컬럼명으로 결과를 읽게 한다. commit은 호출한 업무 함수가 결정한다.
     return pymysql.connect(
         host=settings["MYSQL_HOST"],
         port=port,

@@ -1,0 +1,23 @@
+﻿rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 이 파일은 알림 전용 예시. 기존 규칙이 있다면 아래 match만 병합한다.
+    // Admin SDK는 IAM 권한으로 접근하며 앱의 직접 접근은 허용하지 않는다.
+    match /schedule_notifications/{document=**} {
+      allow read, write: if false;
+    }
+    // 인증번호·재설정 토큰은 서버 Admin SDK만 접근한다.
+    match /password_reset_challenges/{document=**} {
+      allow read, write: if false;
+    }
+    match /password_reset_limits/{document=**} {
+      allow read, write: if false;
+    }
+    match /signup_challenges/{document=**} {
+      allow read, write: if false;
+    }
+    match /signup_limits/{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
