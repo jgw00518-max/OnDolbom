@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/view/inquiries/inquiries_view.dart';
+import 'package:ondolbom/view/notices/notices_view.dart';
 import 'package:ondolbom/view/invites/received_invites.dart';
 import 'package:ondolbom/view/notifications/notifications_view.dart';
 import 'package:ondolbom/view/auth/personal_settings_view.dart';
@@ -88,6 +89,11 @@ class AccountDrawer extends ConsumerWidget {
               leading: const Icon(Icons.notifications_outlined),
               title: const Text('알림'),
               onTap: () => open(const NotificationsView()),
+            ),
+            ListTile(
+              leading: const Icon(Icons.campaign_outlined),
+              title: const Text('공지사항'),
+              onTap: () => open(const NoticesView()),
             ),
             ListTile(
               leading: const Icon(Icons.help_outline),

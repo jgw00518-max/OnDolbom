@@ -4,6 +4,7 @@ import 'package:ondolbom/vm/auth/auth_vm.dart';
 import 'package:ondolbom/model/auth/login_preferences.dart';
 import 'package:ondolbom/view/auth/password_reset_view.dart';
 import 'package:ondolbom/view/auth/signup_view.dart';
+import 'package:ondolbom/view/auth/widgets/login_layout.dart';
 
 /// 이메일 인증 화면. 로그인 후 Home의 별도 폼에서 MySQL 가족 프로필을 등록한다.
 class LoginView extends ConsumerStatefulWidget {
@@ -93,164 +94,50 @@ class _LoginViewState extends ConsumerState<LoginView> {
   Widget build(BuildContext context) {
     final operation = ref.watch(authVmProvider);
     final busy = operation.isLoading || _preferencesBusy;
-    return Scaffold(
-      appBar: AppBar(title: const Text('온돌봄 로그인')),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440),
-              child: AutofillGroup(
-                child: Form(
-                  key: _form,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      TextFormField(
-                        controller: _email,
-                        enabled: !busy,
-                        decoration: const InputDecoration(labelText: '이메일'),
-                        keyboardType: TextInputType.emailAddress,
-                        autofillHints: const [AutofillHints.email],
-                        autocorrect: false,
-                        validator: (value) {
-                          final email = value?.trim() ?? '';
-                          if (email.isEmpty) return '이메일을 입력해 주세요.';
-                          if (!RegExp(
-                            r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
-                          ).hasMatch(email)) {
-                            return '이메일 형식을 확인해 주세요.';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _password,
-                        enabled: !busy,
-                        obscureText: true,
-                        decoration: const InputDecoration(labelText: '비밀번호'),
-                        autofillHints: const [AutofillHints.password],
-                        enableSuggestions: false,
-                        autocorrect: false,
-                        validator: (value) => value == null || value.isEmpty
-                            ? '비밀번호를 입력해 주세요.'
-                            : null,
-                        onFieldSubmitted: (_) {
-                          if (!busy) _submit();
-                        },
-                      ),
-                      CheckboxListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('아이디 저장'),
-                        value: _rememberEmail,
-                        controlAffinity: ListTileControlAffinity.leading,
-                        onChanged: busy
-                            ? null
-                            : (value) => _changeRememberEmail(value ?? false),
-                      ),
-                      CheckboxListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('자동 로그인'),
-                        value: _autoLogin,
-                        controlAffinity: ListTileControlAffinity.leading,
-                        onChanged: busy
-                            ? null
-                            : (value) =>
-                                  setState(() => _autoLogin = value ?? false),
-                      ),
-                      if (_preferencesError != null) Text(_preferencesError!),
-                      if (operation.hasError)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 16),
-                          child: Text(
-                            authErrorMessage(operation.error!),
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
-                            ),
-                          ),
-                        ),
-                      const SizedBox(height: 24),
-                      FilledButton(
-                        onPressed: busy ? null : _submit,
-                        child: Text(busy ? '처리 중…' : '로그인'),
-                      ),
-                      ...[
-                        TextButton(
-                          onPressed: busy
-                              ? null
-                              : () => Navigator.of(context).push(
-                                  MaterialPageRoute<void>(
-                                    builder: (_) => PasswordResetView(
-                                      initialEmail: _email.text.trim(),
-                                    ),
-                                  ),
-                                ),
-                          child: const Text('비밀번호 찾기'),
-                        ),
-                        const SizedBox(height: 12),
-                        OutlinedButton(
-                          onPressed: busy
-                              ? null
-                              : () => ref
-                                    .read(authVmProvider.notifier)
-                                    .signInWithGoogle(
-                                      autoLogin: _autoLogin,
-                                      rememberEmail: _rememberEmail,
-                                    ),
-                          child: const Text('Google로 계속하기'),
-                        ),
-                        const SizedBox(height: 8),
-                        OutlinedButton(
-                          onPressed: busy
-                              ? null
-                              : () => ref
-                                    .read(authVmProvider.notifier)
-                                    .signInWithKakao(
-                                      autoLogin: _autoLogin,
-                                      rememberEmail: _rememberEmail,
-                                    ),
-                          child: const Text('카카오로 계속하기'),
-                        ),
-                        const SizedBox(height: 8),
-                        OutlinedButton(
-                          onPressed: busy
-                              ? null
-                              : () => ref
-                                    .read(authVmProvider.notifier)
-                                    .signInWithNaver(
-                                      autoLogin: _autoLogin,
-                                      rememberEmail: _rememberEmail,
-                                    ),
-                          child: const Text('네이버로 계속하기'),
-                        ),
-                      ],
-                      TextButton(
-                        onPressed: busy
-                            ? null
-                            : () {
-                                ref.read(authVmProvider.notifier).clearError();
-                                // 가입은 별도 인증 단계에서 진행하고 로그인 입력의 비밀번호는 지운다.
-                                _password.clear();
-                                Navigator.of(context).push(
-                                  MaterialPageRoute<void>(
-                                    builder: (_) => SignupView(
-                                      initialEmail: _email.text.trim(),
-                                    ),
-                                  ),
-                                );
-                              },
-                        child: const Text('이메일로 회원가입'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
+    return LoginLayout(
+      formKey: _form,
+      email: _email,
+      password: _password,
+      busy: busy,
+      rememberEmail: _rememberEmail,
+      autoLogin: _autoLogin,
+      preferencesError: _preferencesError,
+      authError: operation.hasError ? authErrorMessage(operation.error!) : null,
+      onSubmit: _submit,
+      onRememberEmail: _changeRememberEmail,
+      onAutoLogin: (value) => setState(() => _autoLogin = value),
+      onPasswordReset: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => PasswordResetView(initialEmail: _email.text.trim()),
         ),
       ),
+      onGoogle: () => ref
+          .read(authVmProvider.notifier)
+          .signInWithGoogle(
+            autoLogin: _autoLogin,
+            rememberEmail: _rememberEmail,
+          ),
+      onKakao: () => ref
+          .read(authVmProvider.notifier)
+          .signInWithKakao(
+            autoLogin: _autoLogin,
+            rememberEmail: _rememberEmail,
+          ),
+      onNaver: () => ref
+          .read(authVmProvider.notifier)
+          .signInWithNaver(
+            autoLogin: _autoLogin,
+            rememberEmail: _rememberEmail,
+          ),
+      onSignup: () {
+        ref.read(authVmProvider.notifier).clearError();
+        _password.clear();
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => SignupView(initialEmail: _email.text.trim()),
+          ),
+        );
+      },
     );
   }
 }

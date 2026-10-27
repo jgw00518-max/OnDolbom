@@ -6,6 +6,8 @@
 
 사용자 문의는 `/inquiries`에서 본인 문의 작성·목록·상세 및 관리자 답변을 조회한다. [문의 API·DB 계약·검증 안내](inquiries.md)
 
+사용자 공지는 `/notices` 목록과 `/notices/{admin_id}/{notice_id}` 상세에서 조회한다. [공지사항 연동 안내](notices.md)
+
 소셜 로그인·로컬 서버 설정은 [팀원 로컬 설정 안내](team-local-setup.md)를 참고한다.
 
 | 소셜 인증 API | 동작 |

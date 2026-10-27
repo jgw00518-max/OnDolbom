@@ -70,6 +70,6 @@ void main() {
     expect(auth.logouts, 1);
     controller.add(null);
     await tester.pumpAndSettle();
-    expect(find.text('온돌봄 로그인'), findsOneWidget);
+    expect(find.text('온돌봄'), findsOneWidget);
   });
 }

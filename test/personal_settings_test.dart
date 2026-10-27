@@ -54,10 +54,26 @@ void main() {
     await tester.tap(find.byTooltip('계정 메뉴'));
     await tester.pumpAndSettle();
     expect(tester.getRect(find.byType(Drawer)).left, closeTo(0, 1));
-    for (final title in ['초대', '알림', '문의', '개인 설정', '로그아웃']) {
+    for (final title in ['초대', '알림', '공지사항', '문의']) {
       expect(find.text(title), findsOneWidget);
     }
-    await tester.ensureVisible(find.text('로그아웃'));
+    expect(
+      tester.getTopLeft(find.text('알림')).dy,
+      lessThan(tester.getTopLeft(find.text('공지사항')).dy),
+    );
+    expect(
+      tester.getTopLeft(find.text('공지사항')).dy,
+      lessThan(tester.getTopLeft(find.text('문의')).dy),
+    );
+    await tester.scrollUntilVisible(
+      find.text('로그아웃'),
+      150,
+      scrollable: find.descendant(
+        of: find.byType(Drawer),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('로그아웃'));
     await tester.pumpAndSettle();
     expect(auth.logouts, 1);
