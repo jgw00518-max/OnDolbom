@@ -169,4 +169,204 @@ class ScheduleVm {
       throw Exception(message);
     }
   }
-}
+
+  // 수락자가 없는 일정의 변경 내용을 저장한다.
+  // 실제 변경이 있으면 true, 기존 내용과 같으면 false를 반환한다.
+  Future<bool> updateSchedule({
+    required int scheduleSeq,
+    required String familyRoomId,
+    required String scheduleDate,
+    required String startTime,
+    required String endTime,
+    required String name,
+    required String memo,
+  }) async {
+    final auth = ref.read(firebaseAuthProvider);
+    final user = auth.currentUser;
+
+    if (user == null) {
+      throw Exception('로그인이 필요합니다.');
+    }
+
+    final token = await user.getIdToken();
+
+    if (!ref.mounted || auth.currentUser?.uid != user.uid) {
+      throw Exception('로그인 상태가 변경되었습니다.');
+    }
+
+    if (token == null || token.isEmpty) {
+      throw Exception('로그인 정보를 가져오지 못했습니다.');
+    }
+
+    final baseUrl = ref.read(apiBaseUrlProvider).replaceAll(RegExp(r'/+$'), '');
+
+    final response = await ref
+        .read(scheduleHttpClientProvider)
+        .put(
+          Uri.parse('$baseUrl/schedules/$scheduleSeq'),
+          headers: {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({
+            'family_room_id': familyRoomId,
+            'schedule_date': scheduleDate,
+            'start_time': startTime,
+            'end_time': endTime,
+            'schedule_name': name.trim().isEmpty ? null : name.trim(),
+            'schedule_memo': memo.trim().isEmpty ? null : memo.trim(),
+          }),
+        )
+        .timeout(const Duration(seconds: 15));
+
+    if (!ref.mounted || auth.currentUser?.uid != user.uid) {
+      throw Exception('로그인 상태가 변경되었습니다.');
+    }
+
+    if (response.statusCode != 200) {
+      String message = '일정을 변경하지 못했습니다. 다시 시도해 주세요.';
+
+      try {
+        final body = jsonDecode(utf8.decode(response.bodyBytes));
+
+        if (body is Map && body['detail'] is String) {
+          message = body['detail'] as String;
+        }
+      } catch (_) {
+        // JSON이 아닌 오류 응답에는 기본 안내를 사용한다.
+      }
+
+      throw Exception(message);
+    }
+
+    final body =
+        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+
+    return body['changed'] == true;
+  }
+
+  // 기존 담당자가 변경된 일정을 재수락하거나 거절한다.
+  Future<void> respondScheduleChange({
+    required int scheduleSeq,
+    required int historySeq,
+    required bool accepted,
+  }) async {
+    final auth = ref.read(firebaseAuthProvider);
+    final user = auth.currentUser;
+
+    if (user == null) {
+      throw Exception('로그인이 필요합니다.');
+    }
+
+    final token = await user.getIdToken();
+
+    if (!ref.mounted || auth.currentUser?.uid != user.uid) {
+      throw Exception('로그인 상태가 변경되었습니다.');
+    }
+
+    if (token == null || token.isEmpty) {
+      throw Exception('로그인 정보를 가져오지 못했습니다.');
+    }
+
+    final baseUrl = ref.read(apiBaseUrlProvider).replaceAll(RegExp(r'/+$'), '');
+
+    final response = await ref
+        .read(scheduleHttpClientProvider)
+        .post(
+          Uri.parse(
+            '$baseUrl/schedules/$scheduleSeq'
+            '/changes/$historySeq/respond',
+          ),
+          headers: {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({'accepted': accepted}),
+        )
+        .timeout(const Duration(seconds: 15));
+
+    if (!ref.mounted || auth.currentUser?.uid != user.uid) {
+      throw Exception('로그인 상태가 변경되었습니다.');
+    }
+
+    if (response.statusCode != 200) {
+      String message = '재수락 요청에 응답하지 못했습니다. 다시 조회해 주세요.';
+
+      try {
+        final body = jsonDecode(utf8.decode(response.bodyBytes));
+
+        if (body is Map && body['detail'] is String) {
+          message = body['detail'] as String;
+        }
+      } catch (_) {
+        // JSON이 아닌 오류 응답에는 기본 안내를 사용한다.
+      }
+
+      throw Exception(message);
+    }
+  }
+  // 주보호자가 일정을 삭제하고 알림 발행 여부를 반환한다.
+  Future<bool> deleteSchedule({
+    required int scheduleSeq,
+    required String familyRoomId,
+  }) async {
+    final auth = ref.read(firebaseAuthProvider);
+    final user = auth.currentUser;
+    if (user == null) throw Exception('로그인이 필요합니다.');
+
+    final baseUrl = ref.read(apiBaseUrlProvider).replaceAll(RegExp(r'/+$'), '');
+    final uri = Uri.parse('$baseUrl/schedules/$scheduleSeq').replace(
+      queryParameters: {'family_room_id': familyRoomId},
+    );
+
+    for (var attempt = 0; attempt < 2; attempt++) {
+      if (!ref.mounted || auth.currentUser?.uid != user.uid) {
+        throw Exception('로그인 상태가 변경되었습니다.');
+      }
+
+      final token = await user.getIdToken(attempt == 1);
+
+      if (!ref.mounted || auth.currentUser?.uid != user.uid) {
+        throw Exception('로그인 상태가 변경되었습니다.');
+      }
+      if (token == null || token.isEmpty) {
+        throw Exception('로그인 정보를 가져오지 못했습니다.');
+      }
+
+      final response = await ref
+          .read(scheduleHttpClientProvider)
+          .delete(
+            uri,
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Accept': 'application/json',
+            },
+          )
+          .timeout(const Duration(seconds: 45));
+
+      if (!ref.mounted || auth.currentUser?.uid != user.uid) {
+        throw Exception('로그인 상태가 변경되었습니다.');
+      }
+      if (response.statusCode == 401 && attempt == 0) continue;
+
+      if (response.statusCode == 403) {
+        throw Exception('현재 공간의 주보호자만 일정을 삭제할 수 있습니다.');
+      }
+      if (response.statusCode != 200) {
+        throw Exception(getServerError(response));
+      }
+
+      final body = jsonDecode(utf8.decode(response.bodyBytes));
+      if (body is! Map ||
+          body['deleted'] != true ||
+          body['schedule_seq'] != scheduleSeq) {
+        throw Exception('삭제 결과를 확인하지 못했습니다. 목록을 다시 조회해 주세요.');
+      }
+
+      return body['notification_published'] == true;
+    }
+
+    throw Exception('다시 로그인해 주세요.');
+  }
+
+} // class
