@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/view/medications/medication_list_view.dart';
 import 'package:ondolbom/view/chats/chat_view.dart';
 import 'package:ondolbom/view/memos/memo_list_view.dart';
+import 'package:ondolbom/view/exports/export_view.dart';
+import 'package:ondolbom/vm/family_room/family_context.dart';
 import 'package:ondolbom/view/recipient_detail.dart';
 import 'package:ondolbom/view/schedules/schedule_list.dart';
 import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
@@ -199,6 +201,20 @@ class FamilyRoomHome extends ConsumerWidget {
                   const Text('일정 조회 기능 연결 전입니다.'),
                 ],
               ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) =>
+                    ExportView(selected: ref.read(familyContextProvider)),
+              ),
+            ),
+            icon: const Icon(Icons.download_outlined),
+            label: const Text('메모·채팅 내보내기'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
             ),
           ),
         ],
