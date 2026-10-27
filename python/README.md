@@ -14,6 +14,14 @@ python -m uvicorn python.main:app --reload
 - `main.py`: FastAPI 생성, 기능별 라우터 등록, `/health` 제공
 - `database.py`: `.env` 읽기, 필수 MySQL 설정 검사, DictCursor·수동 commit 연결 생성
 
+## 메모·채팅 내보내기
+
+`POST /exports/download`로 현재 참여 중인 가족 공간의 메모·채팅을 HTML·이미지 ZIP 또는 PDF로 받습니다.
+`format`은 기본 `html_zip`이며 `pdf`를 지정하면 한글 폰트와 선택 이미지를 포함한 PDF를 반환합니다.
+`requirements.txt` 설치와 `features/exports/fonts/`의 폰트·라이선스 동봉이 필요합니다.
+새 DB 테이블·컬럼·마이그레이션은 필요하지 않으며 투약 정보·투약일지는 조회하지 않습니다.
+기간·범위·이미지 옵션, 권한, 오류·재요청과 제한은 [내보내기 API 안내](../docs/exports-api.md)를 참고합니다.
+
 ## 메모 API와 인증 연결
 
 `POST /memos/insert`에 아래 JSON을 보내 텍스트 메모를 작성합니다.

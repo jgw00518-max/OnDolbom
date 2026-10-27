@@ -6,3 +6,4 @@ firebase-admin==7.7.0
 python-multipart==0.0.32
 Pillow==13.0.0
 requests==2.34.2
+reportlab==5.1.0
