@@ -1,3 +1,4 @@
+from python.features.schedules.response_notifications import prepare_response_notification, publish_response_notification
 from datetime import date, time
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
@@ -887,10 +888,22 @@ def accept_schedule(
                     detail="일정 상태가 변경되었습니다. 다시 조회해 주세요.",
                 )
 
+        try:
+            response_notice = prepare_response_notification(conn, schedule_seq, current_user_id)
+        except Exception:
+            logger.exception("수락 결과 알림 준비 실패")
+            raise HTTPException(503, "알림을 준비하지 못해 수락을 취소했습니다.") from None
         conn.commit()
+        # 발행 실패로 이미 확정된 수락을 되돌리지 않는다.
+        response_published = False
+        try:
+            response_published = bool(publish_response_notification(response_notice))
+        except Exception:
+            logger.exception("수락 완료, 주보호자 알림 발행 확인 필요")
 
         return {
             "result": "OK",
+            "response_notification_published": response_published,
             "schedule_seq": schedule_seq,
             "accepted_by": current_user_id,
             "schedule_state": "미완료",
@@ -1181,6 +1194,14 @@ def respond_schedule_change(
             confirmed=data.accepted,
         )
 
+        response_notice = None
+        if data.accepted:
+            try:
+                response_notice = prepare_response_notification(conn, schedule_seq, current_user_id, answer_history_seq)
+            except Exception:
+                logger.exception("재수락 결과 알림 준비 실패")
+                raise HTTPException(503, "알림을 준비하지 못해 재수락을 취소했습니다.") from None
+
         recruitment_notification_published = False
 
         # 거절한 경우에만 전체 가족 재모집 알림을 준비한다.
@@ -1200,6 +1221,13 @@ def respond_schedule_change(
 
         # 배정 해제·응답 이력 저장이 모두 성공해야 확정한다.
         conn.commit()
+
+        response_published = False
+        if response_notice is not None:
+            try:
+                response_published = bool(publish_response_notification(response_notice))
+            except Exception:
+                logger.exception("재수락 완료, 주보호자 알림 발행 확인 필요")
 
         # 거절 처리가 DB에 확정된 후 알림을 발행한다.
         if not data.accepted:
@@ -1227,6 +1255,7 @@ def respond_schedule_change(
         return {
             "result": "OK",
             "schedule_seq": schedule_seq,
+            "response_notification_published": response_published,
             "request_history_seq": pending_request["request_history_seq"],
             "history_seq": answer_history_seq,
             "accepted": data.accepted,

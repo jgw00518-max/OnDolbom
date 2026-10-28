@@ -1,3 +1,6 @@
+import 'package:ondolbom/view/schedules/schedule_detail.dart';
+import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
+import 'package:ondolbom/vm/schedules/schedule_vm.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/model/notifications/schedule_notification.dart';
 import 'package:flutter/material.dart';
@@ -35,24 +38,79 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
 
   // 조회 권한 재검사·읽음 처리·현재 일정 상세 표시는 기존 VM 흐름을 유지한다.
   void _open(ScheduleNotification item) => _perform(() async {
+    final uid = ref.read(authUserProvider).asData?.value?.uid;
     final schedule = await ref
         .read(notificationsVmProvider.notifier)
-        .open(item.id);
+        .open(item.id, deleted: item.type == 'schedule_deleted' ? item : null);
     if (!mounted) return;
+    if (schedule.type == 'schedule_deleted') {
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('일정 삭제 안내'),
+          content: Text(
+            '${schedule.scheduleName ?? '돌봄 일정'} 일정이 삭제되었습니다.\n${schedule.date} ${schedule.startTime} ~ ${schedule.endTime}',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('닫기'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+    // 최신 참여 목록으로 공간 권한을 확인한 뒤 기존 일정 상세를 재사용한다.
+    if (ref.read(authUserProvider).asData?.value?.uid != uid) return;
+    final roomsVm = ref.read(familyRoomProvider.notifier);
+    await roomsVm.fetchRooms();
+    if (!mounted || ref.read(authUserProvider).asData?.value?.uid != uid) {
+      return;
+    }
+    final rooms = ref.read(familyRoomProvider);
+    if (!rooms.rooms.any((room) => room.familyRoomId == schedule.spaceId) ||
+        rooms.participations[schedule.spaceId]?.isActive != true) {
+      throw const NotificationsError('가족 공간 참여 상태를 확인해 주세요.');
+    }
+    if (rooms.selectedRoomId != schedule.spaceId) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('가족 공간 전환'),
+          content: Text('${schedule.recipientName} 님의 돌봄 공간으로 이동할까요?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('취소'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('이동'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted ||
+          confirmed != true ||
+          ref.read(authUserProvider).asData?.value?.uid != uid) {
+        return;
+      }
+      roomsVm.selectRoom(schedule.spaceId);
+    }
+    final detail = await ref
+        .read(notificationsVmProvider.notifier)
+        .detail(schedule);
+    if (!mounted || ref.read(authUserProvider).asData?.value?.uid != uid) {
+      return;
+    }
+    if (ref.read(familyRoomProvider).selectedRoomId != schedule.spaceId) {
+      throw const NotificationsError('선택한 가족 공간이 변경되었습니다. 다시 열어 주세요.');
+    }
+    ref.invalidate(scheduleListProvider(detail.query));
     await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(schedule.scheduleName ?? '돌봄 일정'),
-        content: Text(
-          '${schedule.recipientName}\n${schedule.date}\n${schedule.startTime} ~ ${schedule.endTime}\n${schedule.memo ?? ''}',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('닫기'),
-          ),
-        ],
-      ),
+      builder: (_) => ScheduleDetail(item: detail.item, query: detail.query),
     );
   });
 
@@ -91,7 +149,13 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(
-                    Icons.calendar_month_outlined,
+                    item.type == 'schedule_reconfirm'
+                        ? Icons.event_repeat_outlined
+                        : item.type == 'schedule_recruitment'
+                        ? Icons.group_add_outlined
+                        : item.type == 'schedule_changed'
+                        ? Icons.edit_calendar_outlined
+                        : Icons.calendar_month_outlined,
                     color: unread
                         ? AppColors.sageDark
                         : const Color(0xFF929D85),
@@ -145,7 +209,7 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        '새로운 돌봄 일정이 등록되었어요',
+                        item.title,
                         style: TextStyle(
                           color: textColor,
                           fontSize: 16,

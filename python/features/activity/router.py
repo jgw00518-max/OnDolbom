@@ -8,8 +8,8 @@ from python.database import connect
 from python.features.auth.firebase_auth import require_firebase_user
 from python.features.inquiries.router import current_user, inquiry_detail
 from python.features.notices.router import read_notices
-from python.features.notifications.router import _visible
-from python.features.notifications import store
+from python.features.schedules.notification_router import visible_v2 as _visible
+from python.features.schedules.change_notifications import list_notification_events
 from python.features.activity import receipts
 
 router = APIRouter(prefix='/activity', tags=['activity'])
@@ -55,14 +55,14 @@ def inquiry_count(connection, user_id, uid):
 def notification_count(connection, user_id):
     count, before = 0, None
     while True:
-        events = store.list_events(user_id, before, 100)
+        events = list_notification_events(user_id, before, 100)
         for event in events:
             row = _visible(connection, user_id, event)
             if row is not None and row['read_at'] is None:
                 count += 1
         if len(events) < 100:
             return count
-        before = events[-1]['schedule_seq']
+        before = str(events[-1]['notification_id'])
 
 
 @router.get('/badges')
