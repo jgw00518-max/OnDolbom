@@ -87,13 +87,13 @@ void main() {
         ]),
       ),
     );
-    expect(find.textContaining('김본인 ·'), findsOneWidget);
-    expect(find.textContaining('이가족 ·'), findsOneWidget);
+    expect(find.text('김본인'), findsOneWidget);
+    expect(find.text('이가족'), findsOneWidget);
     expect(find.textContaining('other-user-id'), findsNothing);
     await tester.tap(find.text('가족 메모'));
     await tester.pumpAndSettle();
     expect(find.text('메모 상세'), findsOneWidget);
-    expect(find.textContaining('이가족 ·'), findsOneWidget);
+    expect(find.text('이가족'), findsOneWidget);
     expect(find.textContaining('other-user-id'), findsNothing);
   });
 

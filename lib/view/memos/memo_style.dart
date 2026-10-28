@@ -1,4 +1,6 @@
+import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:flutter/material.dart';
+import 'package:ondolbom/theme/app_colors.dart';
 
 String memoDate(DateTime? value) {
   if (value == null) return '작성 시간 없음';
@@ -15,16 +17,34 @@ class MemoLayout extends StatelessWidget {
     required this.title,
     required this.child,
     this.action,
+    this.footer,
     this.onBack,
   });
   final String roomName;
   final String title;
   final Widget child;
   final Widget? action;
+  final Widget? footer;
   final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) => Scaffold(
+    backgroundColor: AppColors.background,
+    bottomNavigationBar: footer == null
+        ? null
+        : SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+              child: Center(
+                heightFactor: 1,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: footer,
+                ),
+              ),
+            ),
+          ),
     body: SafeArea(
       child: Center(
         child: ConstrainedBox(
@@ -32,81 +52,49 @@ class MemoLayout extends StatelessWidget {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
-                child: Row(
-                  children: [
-                    Text(
-                      '온돌봄',
-                      style:
-                          Theme.of(context).appBarTheme.titleTextStyle ??
-                          Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(width: 12),
-                    Flexible(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.secondaryContainer,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: Theme.of(context).colorScheme.outline,
-                          ),
-                        ),
-                        child: Text(
-                          roomName,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSecondaryContainer,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 8,
-                ),
+                padding: const EdgeInsets.fromLTRB(14, 12, 20, 8),
                 child: Row(
                   children: [
                     if (onBack != null) ...[
-                      IconButton.outlined(
-                        onPressed: onBack,
-                        tooltip: '이전 화면',
-                        icon: const Icon(Icons.chevron_left),
-                      ),
-                      const SizedBox(width: 10),
-                    ],
+                      AppBackButton(onPressed: onBack),
+                      const SizedBox(width: 12),
+                    ] else
+                      const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         title,
-                        style:
-                            Theme.of(context).appBarTheme.titleTextStyle ??
-                            Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                     ),
                     ?action,
                   ],
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Divider(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.home_outlined,
+                      size: 16,
+                      color: AppColors.sageDark,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        roomName,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.sageDark,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               Expanded(child: child),
             ],
@@ -133,30 +121,61 @@ class MemoMetadata extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(
-        '$author · ${memoDate(date)}',
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-          fontSize: 12,
-        ),
+      Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+              color: AppColors.peachSoft,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.person_outline_rounded,
+              size: 24,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  author,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  memoDate(date),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
-      const SizedBox(height: 12),
+      const SizedBox(height: 8),
       likeButton ??
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
+              const Icon(
                 Icons.favorite_border,
                 size: 16,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: AppColors.sageDark,
               ),
               const SizedBox(width: 5),
               Text(
                 '좋아요 $likes',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontSize: 12,
-                ),
+                style: const TextStyle(fontSize: 12, color: AppColors.sageDark),
               ),
             ],
           ),

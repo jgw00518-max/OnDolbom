@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/vm/schedules/schedule_vm.dart';
@@ -82,6 +83,8 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leadingWidth: 62,
+        leading: const AppBackLeading(),
         title: Text(widget.initialSchedule == null ? '일정 등록' : '일정 변경'),
       ),
       body: Form(
@@ -387,11 +390,9 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
       }
     }
   } // build
-    // 저장 성공 후 서버가 긴급 요청으로 판단한 경우 안내창을 표시한다.
-  Future<void> showUrgentChangeNotice(
-    int scheduleSeq,
-    DateTime date,
-  ) async {
+
+  // 저장 성공 후 서버가 긴급 요청으로 판단한 경우 안내창을 표시한다.
+  Future<void> showUrgentChangeNotice(int scheduleSeq, DateTime date) async {
     final rooms = ref.read(familyRoomProvider);
 
     if (rooms.selectedRoomId != widget.familyRoomId ||
@@ -402,13 +403,11 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
     Schedule? saved;
 
     try {
-      final schedules = await ref
-          .read(scheduleVmProvider)
-          .fetchSchedules((
-            familyRoomId: widget.familyRoomId,
-            year: date.year,
-            month: date.month,
-          ));
+      final schedules = await ref.read(scheduleVmProvider).fetchSchedules((
+        familyRoomId: widget.familyRoomId,
+        year: date.year,
+        month: date.month,
+      ));
 
       for (final schedule in schedules) {
         if (schedule.seq == scheduleSeq) {
@@ -421,11 +420,7 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            '일정은 저장됐습니다. 최신 내용을 다시 확인해 주세요.',
-          ),
-        ),
+        const SnackBar(content: Text('일정은 저장됐습니다. 최신 내용을 다시 확인해 주세요.')),
       );
       return;
     }
@@ -444,16 +439,13 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
       return;
     }
 
-        await showDialog<void>(
+    await showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => Dialog(
         backgroundColor: const Color(0xFFFFFCF8),
         surfaceTintColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(
-          horizontal: 24,
-          vertical: 24,
-        ),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
           side: const BorderSide(color: Color(0xFFE8DFD7)),
@@ -515,9 +507,7 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFF1E5),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: const Color(0xFFF0DDCC),
-                    ),
+                    border: Border.all(color: const Color(0xFFF0DDCC)),
                   ),
                   child: const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

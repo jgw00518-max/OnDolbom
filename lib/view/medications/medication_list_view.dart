@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/model/medications/medication.dart';
@@ -115,6 +116,8 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
     final canCreate = ref.watch(medicationCreateAllowedProvider(selected));
     return Scaffold(
       appBar: AppBar(
+        leadingWidth: 62,
+        leading: const AppBackLeading(),
         title: Text(
           '투약일지',
           style: Theme.of(context).appBarTheme.titleTextStyle?.copyWith(

@@ -431,7 +431,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('전송 중…'), findsNothing);
     expect(find.text('오늘도 함께 돌봐요'), findsOneWidget);
-    await tester.pageBack();
+    await tester.tap(find.byTooltip('이전 화면'));
     await tester.pumpAndSettle();
     expect(socket.closed, isTrue);
     expect(tester.takeException(), isNull);

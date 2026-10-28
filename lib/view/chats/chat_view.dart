@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -197,7 +198,11 @@ class _ChatViewState extends ConsumerState<ChatView>
     }
     if (selected.userId.isEmpty || selected.familyRoomId.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: const Text('가족 채팅')),
+        appBar: AppBar(
+          leadingWidth: 62,
+          leading: const AppBackLeading(),
+          title: const Text('가족 채팅'),
+        ),
         body: const Center(child: Text('로그인 후 가족 공간을 선택해 주세요.')),
       );
     }
@@ -216,7 +221,11 @@ class _ChatViewState extends ConsumerState<ChatView>
     final messages = state.messages.reversed.toList();
     final pending = state.pending.reversed.toList();
     return Scaffold(
-      appBar: AppBar(title: const Text('가족 채팅')),
+      appBar: AppBar(
+        leadingWidth: 62,
+        leading: const AppBackLeading(),
+        title: const Text('가족 채팅'),
+      ),
       body: SafeArea(
         top: false,
         child: Center(

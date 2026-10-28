@@ -44,14 +44,14 @@ class MemoCreate(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     family_room_id: str = Field(min_length=1, max_length=50)
-    memo_content: str = Field(min_length=1, max_length=10000)
+    memo_content: str = Field(min_length=1, max_length=2000)
 
 
 class MemoUpdate(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
     family_room_id: str = Field(min_length=1, max_length=50)
-    memo_content: str = Field(min_length=1, max_length=10000)
+    memo_content: str = Field(min_length=1, max_length=2000)
 
 
 class MemoLikeCreate(BaseModel):
@@ -320,8 +320,8 @@ def _insert_memo(memo: MemoCreate, current_user_id: str, image_data: bytes | Non
 
 def _form_content(family_room_id: str, memo_content: str) -> dict:
     room, content = family_room_id.strip(), memo_content.strip()
-    if not 1 <= len(room) <= 50 or not 1 <= len(content) <= 10000:
-        raise HTTPException(422, "공간 ID와 1~10,000자의 메모 내용을 입력해 주세요.")
+    if not 1 <= len(room) <= 50 or not 1 <= len(content) <= 2000:
+        raise HTTPException(422, "공간 ID와 1~2,000자의 메모 내용을 입력해 주세요.")
     return {"family_room_id": room, "memo_content": content}
 
 
@@ -344,7 +344,7 @@ async def _single_memo_image(
 @router.post("/insert-with-image", status_code=201)
 def insert_memo_with_image(
     family_room_id: str = Form(min_length=1, max_length=50),
-    memo_content: str = Form(min_length=1, max_length=10000),
+    memo_content: str = Form(min_length=1, max_length=2000),
     image: UploadFile | None = Depends(_single_memo_image),
     current_user_id: str = Depends(get_current_user_id),
 ):
@@ -357,7 +357,7 @@ def insert_memo_with_image(
 def update_memo_with_image(
     memo_id: str = Path(min_length=1, max_length=50, pattern=r"\S"),
     family_room_id: str = Form(min_length=1, max_length=50),
-    memo_content: str = Form(min_length=1, max_length=10000),
+    memo_content: str = Form(min_length=1, max_length=2000),
     image: UploadFile | None = Depends(_single_memo_image),
     remove_image: bool = Form(default=False),
     current_user_id: str = Depends(get_current_user_id),

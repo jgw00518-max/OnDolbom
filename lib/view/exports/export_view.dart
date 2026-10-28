@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/model/exports/export_options.dart';
@@ -65,7 +66,11 @@ class _ExportViewState extends ConsumerState<ExportView> {
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('메모·채팅 내보내기')),
+      appBar: AppBar(
+        leadingWidth: 62,
+        leading: const AppBackLeading(),
+        title: const Text('메모·채팅 내보내기'),
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(20),

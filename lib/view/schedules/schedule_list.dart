@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/view/schedules/schedule_detail.dart';
 import 'package:flutter/material.dart';
@@ -40,7 +41,11 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
     final room = rooms.selectedRoom;
     if (room == null || room.familyRoomId != widget.familyRoomId) {
       return Scaffold(
-        appBar: AppBar(title: const Text('돌봄 일정')),
+        appBar: AppBar(
+          leadingWidth: 62,
+          leading: const AppBackLeading(),
+          title: const Text('돌봄 일정'),
+        ),
         body: const Center(child: Text('가족 공간을 다시 선택해 주세요.')),
       );
     }
@@ -48,6 +53,8 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
     return Scaffold(
       backgroundColor: const Color(0xFFFFFBF7),
       appBar: AppBar(
+        leadingWidth: 62,
+        leading: const AppBackLeading(),
         backgroundColor: const Color(0xFFFFFBF7),
         foregroundColor: const Color(0xFF403C39),
         titleTextStyle: const TextStyle(
