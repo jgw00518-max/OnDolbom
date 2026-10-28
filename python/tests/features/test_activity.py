@@ -58,11 +58,19 @@ class ActivityTests(unittest.TestCase):
             self.assertNotEqual(next(iter(items.values())), receipts.answer_token(rows[:1]))
 
     def test_notification_count_scans_all_pages_and_excludes_read_and_inaccessible(self):
-        first = [{'schedule_seq': i} for i in range(200, 100, -1)]
-        with patch.object(store := activity.store, 'list_events', side_effect=[first, [{'schedule_seq': 100}]]), \
+        first = [{'schedule_seq': i, 'notification_id': str(i)} for i in range(200, 100, -1)]
+        with patch.object(activity, 'list_notification_events', side_effect=[first, [{'schedule_seq': 100, 'notification_id': '100'}]]), \
              patch.object(activity, '_visible', side_effect=lambda c, u, e: None if e['schedule_seq'] == 100 else {'read_at': None if e['schedule_seq'] % 2 else 'read'}):
             self.assertEqual(activity.notification_count(MagicMock(), 'mysql-a'), 50)
-            self.assertEqual(store.list_events.call_args_list[1].args[1], 101)
+            self.assertEqual(activity.list_notification_events.call_args_list[1].args[1], '101')
+
+    def test_same_schedule_events_have_independent_unread_receipts(self):
+        events = [{'notification_id': '7', 'schedule_seq': 7},
+                  {'notification_id': 'schedule_changed_7_9', 'schedule_seq': 7},
+                  {'notification_id': 'schedule_reconfirm_7_10', 'schedule_seq': 7}]
+        with patch.object(activity, 'list_notification_events', return_value=events), \
+             patch.object(activity, '_visible', side_effect=[{'read_at': 'read'}, {'read_at': None}, {'read_at': None}]):
+            self.assertEqual(activity.notification_count(MagicMock(), 'mysql-a'), 2)
 
     def test_notice_read_uses_composite_key_and_only_displayed_version(self):
         row = {'admin_id': 'admin', 'notice_id': 'n', 'notice_content': 'shown'}

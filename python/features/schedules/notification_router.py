@@ -1,4 +1,5 @@
 """일정 담당 B의 알림 조회 API. A의 공통 저장 함수를 재사용한다."""
+from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, Path
 from google.api_core.exceptions import GoogleAPICallError
 from pymysql import MySQLError
@@ -129,12 +130,32 @@ def _visible(connection, user_id, event):
         row = cursor.fetchone()
     if row is None or str(row['created_at']) != event['schedule_created_at']:
         return None
+    kind = event.get('notification_type', 'schedule_created')
+    # 한 재모집 이벤트라도 현재 역할에 맞는 안내를 반환한다.
+    if kind == 'schedule_recruitment' and event.get('request_history_seq') is None:
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT is_representative FROM participate WHERE family_room_id=%s AND user_id=%s AND left_at IS NULL', (event['family_room_id'], user_id))
+            member = cursor.fetchone()
+        if member and member['is_representative'] == 1:
+            kind = 'schedule_declined'
     identifier = event.get('notification_id', event['schedule_seq'])
     return {**row, 'notification_id': str(identifier),
-            'notification_type': event.get('notification_type', 'schedule_created'),
+            'notification_type': kind,
+            'actor_name': event.get('actor_name'),
             'history_seq': event.get('history_seq'),
             'created_at': event['created_at'],
             'read_at': store.read_at(identifier, user_id)}
+
+
+def visible_v2(connection, user_id, event):
+    """V2 알림함과 배지가 동일한 유형·권한 기준을 사용한다."""
+    kind = event.get('notification_type', 'schedule_created')
+    if kind not in {'schedule_created', 'schedule_changed', 'schedule_reconfirm', 'schedule_recruitment', 'schedule_accepted', 'schedule_reconfirmed', 'schedule_deleted'}:
+        return None
+    # 자동 만료에 따른 재모집은 V2의 거절 후 재모집과 구분한다.
+    if kind == 'schedule_recruitment' and event.get('request_history_seq') is not None:
+        return None
+    return _visible(connection, user_id, event)
 
 
 def _run(claims, action):
@@ -150,13 +171,14 @@ def _run(claims, action):
 
 
 @router.get('')
-def list_notifications(before_id: str | None = Query(default=None, min_length=1, max_length=200),
+def list_notifications(scope: Literal["all", "v2"] = Query(default="all"), before_id: str | None = Query(default=None, min_length=1, max_length=200),
                        limit: int = Query(default=30, ge=1, le=100),
                        claims: dict = Depends(require_firebase_user)):
     def action(connection, user_id):
         events = list_notification_events(user_id, before_id, limit + 1)
         scanned = events[:limit]
-        rows = [row for event in scanned if (row := _visible(connection, user_id, event)) is not None]
+        visible = visible_v2 if scope == 'v2' else _visible
+        rows = [row for event in scanned if (row := visible(connection, user_id, event)) is not None]
         # 권한 때문에 숨긴 항목도 커서를 전진시켜 다음 페이지를 조회할 수 있게 한다.
         return dict(results=rows, next_before_id=str(scanned[-1]['notification_id']) if len(events) > limit else None)
     return _run(claims, action)
