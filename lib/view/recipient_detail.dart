@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -33,6 +34,8 @@ class RecipientDetail extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        leadingWidth: 62,
+        leading: const AppBackLeading(),
         title: const Text('온돌봄'),
         actions: [
           IconButton(
@@ -53,11 +56,6 @@ class RecipientDetail extends ConsumerWidget {
           // 제목과 수정 버튼
           Row(
             children: [
-              OutlinedButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Icon(Icons.chevron_left),
-              ),
-              const SizedBox(width: 12),
               const Expanded(
                 child: Text(
                   '대상자 정보',

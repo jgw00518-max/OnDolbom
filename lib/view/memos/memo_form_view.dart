@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/model/memos/memo.dart';
 import 'package:ondolbom/view/memos/memo_style.dart';
@@ -173,6 +174,28 @@ class _MemoFormViewState extends ConsumerState<MemoFormView> {
         roomName: widget.selected.roomName,
         title: _editing ? '메모 수정' : '메모 쓰기',
         onBack: _busy ? null : _leave,
+        footer: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _busy ? null : _leave,
+                child: const Text('취소'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 2,
+              child: FilledButton(
+                onPressed: _busy || !_allowed ? null : _save,
+                child: Text(
+                  _saving
+                      ? (_editing ? '저장 중…' : '등록 중…')
+                      : (_editing ? '수정 저장' : '메모 등록'),
+                ),
+              ),
+            ),
+          ],
+        ),
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Form(
@@ -180,6 +203,19 @@ class _MemoFormViewState extends ConsumerState<MemoFormView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: AppColors.peachSoft,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    '작은 돌봄 기록도 가족에게 큰 도움이 돼요.',
+                    style: TextStyle(fontSize: 13, height: 1.6),
+                  ),
+                ),
+                const SizedBox(height: 24),
                 const Text(
                   '메모 내용',
                   style: TextStyle(fontWeight: FontWeight.w700),
@@ -191,22 +227,26 @@ class _MemoFormViewState extends ConsumerState<MemoFormView> {
                   enabled: !_busy,
                   minLines: 7,
                   maxLines: 14,
-                  maxLength: 10000,
+                  maxLength: 2000,
                   onChanged: (_) => setState(() {}),
-                  decoration: const InputDecoration(
-                    hintText: '가족에게 전하고 싶은 이야기를 남겨 주세요.',
+                  style: const TextStyle(fontSize: 15, height: 1.8),
+                  decoration: InputDecoration(
+                    hintText: '오늘은 어떤 하루였나요?\n가족에게 전하고 싶은 이야기를 남겨 주세요.',
+                    filled: true,
+                    contentPadding: const EdgeInsets.all(20),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
                   ),
                   validator: (value) =>
                       (value ?? '').trim().isEmpty ? '메모 내용을 입력해 주세요.' : null,
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  '작은 돌봄 기록도 가족에게 큰 도움이 돼요.',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    fontSize: 12,
-                  ),
-                ),
+
                 const SizedBox(height: 16),
                 const Text(
                   '사진 첨부 (선택 · 한 장)',
@@ -266,31 +306,6 @@ class _MemoFormViewState extends ConsumerState<MemoFormView> {
                     padding: EdgeInsets.only(top: 12),
                     child: Text('선택한 공간이 변경됐어요. 목록으로 돌아가 다시 작성해 주세요.'),
                   ),
-                const SizedBox(height: 24),
-                const Divider(),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: _busy ? null : _leave,
-                        child: const Text('취소'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 2,
-                      child: FilledButton(
-                        onPressed: _busy || !_allowed ? null : _save,
-                        child: Text(
-                          _saving
-                              ? (_editing ? '저장 중…' : '등록 중…')
-                              : (_editing ? '수정 저장' : '메모 등록'),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),

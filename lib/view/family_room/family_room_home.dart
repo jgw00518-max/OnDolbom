@@ -49,13 +49,23 @@ class FamilyRoomHome extends ConsumerWidget {
         ),
         leading: const AccountMenuButton(),
         actions: [
-          if (state.selectedParticipation?.isRepresentative == true &&
-              state.selectedParticipation?.isActive == true)
-            PopupMenuButton<String>(
-              tooltip: '가족 공간 메뉴',
-              icon: const Icon(Icons.more_vert),
-              enabled: !state.isLoading,
-              itemBuilder: (_) => [
+          PopupMenuButton<String>(
+            tooltip: '가족 공간 메뉴',
+            icon: const Icon(Icons.more_vert),
+            enabled: !state.isLoading,
+            itemBuilder: (_) => [
+              const PopupMenuItem(
+                value: 'export',
+                child: Row(
+                  children: [
+                    Icon(Icons.download_outlined),
+                    SizedBox(width: 8),
+                    Text('메모·채팅 내보내기'),
+                  ],
+                ),
+              ),
+              if (state.selectedParticipation?.isRepresentative == true &&
+                  state.selectedParticipation?.isActive == true)
                 PopupMenuItem(
                   value: 'delete',
                   child: Row(
@@ -66,20 +76,31 @@ class FamilyRoomHome extends ConsumerWidget {
                     ],
                   ),
                 ),
-              ],
-              onSelected: (_) async {
-                final navigator = Navigator.of(context);
-                final deleted = await showDialog<bool>(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (_) => FamilyRoomDeleteDialog(room: room),
+            ],
+            onSelected: (action) async {
+              final navigator = Navigator.of(context);
+              if (action == 'export') {
+                final selected = ref.read(familyContextProvider);
+                if (selected.familyRoomId != room.familyRoomId) return;
+                await navigator.push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => ExportView(selected: selected),
+                  ),
                 );
-                if (!context.mounted || deleted != true) return;
-                final notifier = ref.read(familyRoomProvider.notifier);
-                navigator.popUntil((route) => route.isFirst);
-                await notifier.fetchRooms();
-              },
-            ),
+                return;
+              }
+              if (action != 'delete') return;
+              final deleted = await showDialog<bool>(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => FamilyRoomDeleteDialog(room: room),
+              );
+              if (!context.mounted || deleted != true) return;
+              final notifier = ref.read(familyRoomProvider.notifier);
+              navigator.popUntil((route) => route.isFirst);
+              await notifier.fetchRooms();
+            },
+          ),
         ],
       ),
       body: ListView(
@@ -323,20 +344,6 @@ class FamilyRoomHome extends ConsumerWidget {
                   ),
                 ],
               ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          OutlinedButton.icon(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) =>
-                    ExportView(selected: ref.read(familyContextProvider)),
-              ),
-            ),
-            icon: const Icon(Icons.download_outlined),
-            label: const Text('메모·채팅 내보내기'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
             ),
           ),
         ],

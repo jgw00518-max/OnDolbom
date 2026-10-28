@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,6 +26,8 @@ class ProfileEditView extends ConsumerWidget {
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
+          leadingWidth: 62,
+          leading: AppBackLeading(enabled: !operation.isLoading),
           backgroundColor: AppColors.background,
           surfaceTintColor: Colors.transparent,
           title: const Text(

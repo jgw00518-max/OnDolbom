@@ -252,7 +252,10 @@ void main() {
       MockClient((_) async => deletedResponse()),
       guardian: false,
     );
-    expect(find.byTooltip('가족 공간 메뉴'), findsNothing);
+    await tester.tap(find.byTooltip('가족 공간 메뉴'));
+    await tester.pumpAndSettle();
+    expect(find.text('메모·채팅 내보내기'), findsOneWidget);
+    expect(find.text('가족 공간 삭제'), findsNothing);
   });
 
   testWidgets('대상자 이름이 일치해야 활성화되고 취소하면 요청하지 않는다', (tester) async {
