@@ -1,3 +1,5 @@
+import 'package:ondolbom/theme/app_colors.dart';
+import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +15,11 @@ class FamilyMemberList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final members = ref.watch(familyMembersProvider(familyRoomId));
+    final state = ref.watch(familyRoomProvider);
+    final canManage =
+        state.selectedRoomId == familyRoomId &&
+        state.selectedParticipation?.isRepresentative == true &&
+        state.selectedParticipation?.isActive == true;
 
     return Scaffold(
       appBar: AppBar(
@@ -78,11 +85,152 @@ class FamilyMemberList extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              for (final member in items)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 14),
-                  child: memberCard(member),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  border: Border.all(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(24),
                 ),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    for (var i = 0; i < items.length; i++) ...[
+                      if (i > 0)
+                        const Divider(
+                          height: 1,
+                          indent: 20,
+                          endIndent: 20,
+                          color: AppColors.border,
+                        ),
+                      FamilyMemberCard(member: items[i], canManage: canManage),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// 이름·역할과 관리 버튼을 분리해 가족별 작업 대상을 명확히 보여 준다.
+class FamilyMemberCard extends StatelessWidget {
+  const FamilyMemberCard({
+    super.key,
+    required this.member,
+    this.canManage = false,
+  });
+  final FamilyMember member;
+  final bool canManage;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = member.name?.trim();
+    final displayName = name == null || name.isEmpty ? '가족' : name;
+    final email = member.email?.trim();
+    final owner = member.isRepresentative;
+    final actions = Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _button(
+          context,
+          '이전',
+          '주보호자 이전',
+          Icons.workspace_premium_outlined,
+          AppColors.sageDark,
+        ),
+        _button(
+          context,
+          '강퇴',
+          '가족 강퇴',
+          Icons.person_remove_outlined,
+          Theme.of(context).colorScheme.error,
+        ),
+      ],
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // 작은 화면·큰 글씨에서는 버튼을 다음 줄로 내려 이름과 겹치지 않게 한다.
+          final stacked =
+              constraints.maxWidth < 300 ||
+              MediaQuery.textScalerOf(context).scale(14) > 18;
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              CircleAvatar(
+                radius: 25,
+                backgroundColor: owner
+                    ? AppColors.peachLight
+                    : AppColors.sageLight,
+                child: Text(
+                  displayName.characters.first,
+                  style: const TextStyle(
+                    color: AppColors.sageDark,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 5,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          displayName,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.peachSoft,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            member.roleName,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      email == null || email.isEmpty ? '등록된 이메일이 없습니다.' : email,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    if (canManage && !owner && stacked) ...[
+                      const SizedBox(height: 12),
+                      actions,
+                    ],
+                  ],
+                ),
+              ),
+              if (canManage && !owner && !stacked) ...[
+                const SizedBox(width: 12),
+                actions,
+              ],
             ],
           );
         },
@@ -90,91 +238,29 @@ class FamilyMemberList extends ConsumerWidget {
     );
   }
 
-  // 가족 이름·이메일과 현재 공간의 역할을 표시한다.
-  Widget memberCard(FamilyMember member) {
-    final name = member.name?.trim();
-    final displayName = name == null || name.isEmpty ? '가족' : name;
-
-    final email = member.email?.trim();
-    final displayEmail = email == null || email.isEmpty
-        ? '등록된 이메일이 없습니다.'
-        : email;
-
-    final badgeColor = member.isRepresentative
-        ? const Color(0xFFFFEBD9)
-        : const Color(0xFFF0F4E9);
-
-    final roleColor = member.isRepresentative
-        ? const Color(0xFF99522F)
-        : const Color(0xFF526345);
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE8DFD7)),
+  Widget _button(
+    BuildContext context,
+    String label,
+    String feature,
+    IconData icon,
+    Color color,
+  ) => Tooltip(
+    message: feature,
+    child: OutlinedButton.icon(
+      // 이전·강퇴 API는 미구현이므로 서버 요청 없이 준비 중 안내만 표시한다.
+      onPressed: () => ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$feature 기능은 준비 중이에요.'))),
+      icon: Icon(icon, size: 16),
+      label: Text(label),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: color,
+        backgroundColor: AppColors.surface,
+        minimumSize: const Size(64, 44),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        side: const BorderSide(color: AppColors.border),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-            radius: 25,
-            backgroundColor: badgeColor,
-            child: Icon(
-              member.isRepresentative
-                  ? Icons.home_outlined
-                  : Icons.person_outline_rounded,
-              color: roleColor,
-              size: 28,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  displayName,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF403C39),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  displayEmail,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    height: 1.6,
-                    color: Color(0xFF78716A),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: badgeColor,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    member.roleName,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: roleColor,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+    ),
+  );
 }
