@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/family_room_label.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:ondolbom/theme/app_colors.dart';
@@ -76,25 +77,7 @@ class MemoLayout extends StatelessWidget {
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.home_outlined,
-                      size: 16,
-                      color: AppColors.sageDark,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        roomName,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.sageDark,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                child: FamilyRoomLabel(name: roomName),
               ),
               Expanded(child: child),
             ],

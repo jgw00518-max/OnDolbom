@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/family_room_label.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -75,10 +76,7 @@ class _ExportViewState extends ConsumerState<ExportView> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            Text(
-              widget.selected.roomName,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            FamilyRoomLabel(name: widget.selected.roomName),
             const SizedBox(height: 24),
             const Text('내보낼 기간', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),

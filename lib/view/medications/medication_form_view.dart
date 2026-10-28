@@ -1,3 +1,5 @@
+import 'package:ondolbom/theme/app_colors.dart';
+import 'package:ondolbom/view/medications/medication_style.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -107,24 +109,19 @@ class _MedicationFormDialogState extends ConsumerState<MedicationFormDialog> {
     final allowed = ref.watch(
       medicationCreateAllowedProvider(widget.query.context),
     );
-    final border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(color: colors.outline),
-    );
-    InputDecoration field(String label, {String? hint}) => InputDecoration(
-      labelText: label,
-      hintText: hint,
-      errorMaxLines: 3,
-      border: border,
-      alignLabelWithHint: true,
-      contentPadding: const EdgeInsets.all(12),
-    );
+    InputDecoration field(String label, {String? hint}) =>
+        MedicationStyle.field(label, hint: hint);
     return PopScope(
       canPop: _finished || (!_dirty && !_saving),
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _cancel();
       },
       child: Dialog(
+        backgroundColor: AppColors.background,
+        surfaceTintColor: Colors.transparent,
+        shape: MedicationStyle.shape,
+        clipBehavior: Clip.antiAlias,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         child: ConstrainedBox(
           constraints: BoxConstraints(
             maxWidth: 440,
@@ -133,25 +130,9 @@ class _MedicationFormDialogState extends ConsumerState<MedicationFormDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 8, 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '약 추가',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.titleLarge?.copyWith(color: colors.primary),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: _saving ? null : _cancel,
-                      tooltip: '닫기',
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
+              MedicationHeading(
+                title: '약 추가',
+                onClose: _saving ? null : _cancel,
               ),
               const Divider(height: 1),
               Flexible(
@@ -168,15 +149,7 @@ class _MedicationFormDialogState extends ConsumerState<MedicationFormDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          widget.query.context.roomName,
-                          style: TextStyle(color: colors.onSurfaceVariant),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          widget.query.date,
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
+                        MedicationDateLabel(date: widget.query.date),
                         const SizedBox(height: 20),
                         const Text(
                           '복약 시간과 약',
@@ -338,12 +311,16 @@ class _MedicationFormDialogState extends ConsumerState<MedicationFormDialog> {
                 ),
               ),
               const Divider(height: 1),
-              Padding(
+              Container(
+                color: AppColors.surface,
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
                     OutlinedButton(
                       onPressed: _saving ? null : _cancel,
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(80, 48),
+                      ),
                       child: const Text('취소'),
                     ),
                     const Spacer(),
@@ -351,6 +328,9 @@ class _MedicationFormDialogState extends ConsumerState<MedicationFormDialog> {
                       onPressed: _saving || !sameSpace || !allowed
                           ? null
                           : _save,
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(110, 48),
+                      ),
                       child: Text(_saving ? '등록 중…' : '추가'),
                     ),
                   ],

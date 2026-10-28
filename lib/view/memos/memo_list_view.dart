@@ -184,12 +184,7 @@ class _MemoCard extends StatelessWidget {
               likeButton: MemoLikeButton(memo: memo, selected: selected),
             ),
             const SizedBox(height: 12),
-            Text(
-              memo.memoContent ?? '',
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 15, height: 1.65),
-            ),
+            _MemoPreview(content: memo.memoContent ?? ''),
             const SizedBox(height: 12),
             if (memo.hasImage) ...[
               MemoImageView(
@@ -215,6 +210,57 @@ class _MemoCard extends StatelessWidget {
         ),
       ),
     ),
+  );
+}
+
+class _MemoPreview extends StatelessWidget {
+  const _MemoPreview({required this.content});
+
+  final String content;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final style = DefaultTextStyle.of(
+        context,
+      ).style.merge(const TextStyle(fontSize: 15, height: 1.65));
+      final painter = TextPainter(
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+        locale: Localizations.maybeLocaleOf(context),
+        maxLines: 3,
+      );
+      bool fits(String text) {
+        painter.text = TextSpan(text: text, style: style);
+        painter.layout(maxWidth: constraints.maxWidth);
+        return !painter.didExceedMaxLines;
+      }
+
+      var preview = content;
+      // 명시적 줄바꿈에서도 생략 표시를 보장하고 이모지 결합 문자는 보존한다.
+      if (!fits(content)) {
+        final characters = content.characters.toList();
+        var lower = 0;
+        var upper = characters.length;
+        while (lower < upper) {
+          final middle = (lower + upper + 1) ~/ 2;
+          if (fits('${characters.take(middle).join()}…')) {
+            lower = middle;
+          } else {
+            upper = middle - 1;
+          }
+        }
+        preview = '${characters.take(lower).join().trimRight()}…';
+      }
+      painter.dispose();
+      return Text(
+        preview,
+        style: style,
+        maxLines: 3,
+        overflow: TextOverflow.ellipsis,
+        semanticsLabel: content,
+      );
+    },
   );
 }
 
