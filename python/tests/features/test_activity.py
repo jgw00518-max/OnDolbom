@@ -9,10 +9,33 @@ from python.features.auth.firebase_auth import require_firebase_user
 
 class ActivityTests(unittest.TestCase):
     def setUp(self):
+        activity.badge_cache.invalidate('firebase-a')
         app = FastAPI()
         app.include_router(activity.router)
         app.dependency_overrides[require_firebase_user] = lambda: {'uid': 'firebase-a'}
         self.client = TestClient(app)
+
+    def test_badges_cache_and_force_still_verify_identity(self):
+        with patch.object(activity, 'connect'), \
+             patch.object(activity, 'current_user', return_value='mysql-a') as identity, \
+             patch.object(activity, 'invite_count', return_value=1), \
+             patch.object(activity, 'notification_count', return_value=2) as count, \
+             patch.object(activity, 'notice_count', return_value=3), \
+             patch.object(activity, 'inquiry_count', return_value=4):
+            self.assertEqual(self.client.get('/activity/badges').status_code, 200)
+            self.client.get('/activity/badges')
+            self.assertEqual(count.call_count, 1)
+            self.assertEqual(identity.call_count, 2)
+            self.client.get('/activity/badges?force=true')
+            self.assertEqual(count.call_count, 2)
+
+    def test_successful_read_invalidates_cache(self):
+        loader = MagicMock(return_value={'notifications': 1})
+        activity.badge_cache.load('firebase-a', loader)
+        with patch.object(receipts, 'mark_read'):
+            activity.save_receipt({'uid': 'firebase-a'}, 'notice', ['a', 'b'], 'token')
+        activity.badge_cache.load('firebase-a', loader)
+        self.assertEqual(loader.call_count, 2)
 
     def test_requires_auth_before_database(self):
         self.client.app.dependency_overrides.clear()

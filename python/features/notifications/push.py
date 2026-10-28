@@ -26,6 +26,7 @@ def digest(value):
     return sha256(value.encode()).hexdigest()
 
 
+# 설치 식별자는 계정과 별개이며, 세대 번호로 늦게 도착한 이전 연결 요청을 차단한다.
 class Installation(BaseModel):
     model_config = ConfigDict(extra='forbid')
     installation_id: str = Field(pattern=r'^[a-f0-9]{32}$')
@@ -45,9 +46,11 @@ def validate_secret(payload):
 def _bind(transaction, ref, payload, uid, user_id, enabled):
     old = ref.get(transaction=transaction, timeout=10)
     previous = old.to_dict() if old.exists else {}
+    # 서버에는 연결 비밀값의 원문 대신 해시만 보관한다.
     secret_hash = digest(payload.secret.get_secret_value())
     if previous and not compare_digest(previous.get('secret_hash', ''), secret_hash):
         raise HTTPException(409, '기기 등록 정보를 확인해 주세요.')
+    # 계정 전환 뒤 이전 요청이 새 연결을 덮어쓰지 못하도록 순서를 검사한다.
     generation = previous.get('generation', 0)
     if payload.generation < generation or (payload.generation == generation and previous.get('user_uid') != uid):
         raise HTTPException(409, '이미 변경된 기기 연결입니다.')
@@ -66,6 +69,7 @@ def bind(payload, claims, enabled):
     connection = None
     try:
         connection = connect()
+        # 요청 본문의 사용자 정보가 아니라 검증된 Firebase 계정으로 MySQL 사용자를 찾는다.
         user_id = _user_id(connection, claims)
         ref = db().collection('push_devices').document(digest(payload.installation_id))
         firestore.transactional(_bind)(ref._client.transaction(), ref, payload, claims['uid'], user_id, enabled)
@@ -90,12 +94,14 @@ def unregister(payload: Installation, claims: dict = Depends(require_firebase_us
 
 
 def _claim(transaction, ref, now):
+    # 이벤트·기기별 처리권을 2분 동안 확보해 여러 worker의 동시 발송을 줄인다.
     snapshot = ref.get(transaction=transaction, timeout=10)
     old = snapshot.to_dict() if snapshot.exists else {}
     if old.get('status') in {'sent', 'skipped', 'failed'}:
         return False
     if old.get('lease_until', now) > now or old.get('next_attempt_at', now) > now:
         return False
+    # 영구 장애가 반복되어도 무한 재시도하지 않는다.
     if old.get('attempts', 0) >= 5:
         transaction.update(ref, {'status': 'failed', 'lease_until': now})
         return False
@@ -105,11 +111,20 @@ def _claim(transaction, ref, now):
     return attempts
 
 
-def send_message(fid, uid, identifier, test=False):
+def send_message(fid, uid, identifier, test=False, notification_type='schedule_created'):
     # 잠금 화면에는 대상자 건강정보나 메모를 노출하지 않는다.
     return messaging.send(messaging.Message(fid=fid,
-        notification=messaging.Notification(title='온돌봄', body='푸시 연결 테스트입니다.' if test else '새 돌봄 일정이 등록되었습니다. 앱에서 확인해 주세요.'),
-        data={'notification_id': str(identifier), 'user_uid': uid, 'type': 'test' if test else 'schedule_created'},
+        notification=messaging.Notification(title='온돌봄', body='푸시 연결 테스트입니다.' if test else {
+            'schedule_created': '새 돌봄 일정이 등록되었습니다. 앱에서 확인해 주세요.',
+            'schedule_changed': '돌봄 일정이 변경되었습니다. 앱에서 확인해 주세요.',
+            'schedule_deleted': '돌봄 일정이 삭제되었습니다. 앱에서 확인해 주세요.',
+            'schedule_accepted': '돌봄 일정이 수락되었습니다. 앱에서 확인해 주세요.',
+            'schedule_reconfirmed': '변경된 돌봄 일정이 재수락되었습니다. 앱에서 확인해 주세요.',
+            'schedule_declined': '변경된 돌봄 일정의 재수락이 거절되었습니다. 앱에서 확인해 주세요.',
+            'schedule_recruitment': '돌봄 일정의 담당자를 다시 모집합니다. 앱에서 확인해 주세요.',
+            'schedule_reconfirm': '돌봄 일정의 날짜 또는 시간이 변경되었습니다. 앱에서 재수락 여부를 확인해 주세요.',
+        }[notification_type]),
+        data={'notification_id': str(identifier), 'user_uid': uid, 'type': 'test' if test else notification_type},
         android=messaging.AndroidConfig(priority='high', ttl=timedelta(hours=24),
             notification=messaging.AndroidNotification(channel_id='ondolbom_updates',
                 icon='ic_stat_notification', tag=digest(str(identifier))))), app=get_firebase_app())
@@ -148,7 +163,7 @@ def _disable_device(transaction, ref, generation):
 
 
 def dispatch_event(identifier, event):
-    """등록 알림 한 종류부터 연결한다. 앱 내 알림 저장과 푸시 실패는 분리한다."""
+    """등록·변경·삭제를 전달한다. 앱 내 알림 저장과 푸시 실패는 분리한다."""
     database = db()
     terminal = True
     connection = connect()
@@ -160,6 +175,7 @@ def dispatch_event(identifier, event):
                 now = datetime.now(timezone.utc)
                 if not device.get('enabled') or device.get('expires_at', now) <= now:
                     continue
+                # 같은 알림과 설치 기기 조합은 같은 발송 기록을 사용한다.
                 delivery = database.collection('push_deliveries').document(digest(str(identifier) + '|' + snapshot.id))
                 attempts = firestore.transactional(_claim)(database.transaction(), delivery, now)
                 if not attempts:
@@ -176,19 +192,24 @@ def dispatch_event(identifier, event):
                         cursor.execute('''SELECT user_id FROM `user` WHERE user_id=%s
                             AND BINARY user_firebase_uid=BINARY %s AND withdrawn_at IS NULL''', (user_id, device['user_uid']))
                         user = cursor.fetchone()
-                    if user is None or _visible(connection, user_id, event) is None:
+                    visible = None if user is None else _visible(connection, user_id, event)
+                    if visible is None:
                         delivery.update({'status': 'skipped', 'lease_until': now}, timeout=10)
                         continue
-                    send_message(current['fid'], device['user_uid'], identifier)
+                    send_message(current['fid'], device['user_uid'], identifier,
+                                 # 주보호자는 거절 결과, 다른 가족은 재모집 안내를 받는다.
+                                 notification_type=visible.get('notification_type', event.get('notification_type', 'schedule_created')))
                     delivery.update({'status': 'sent', 'sent_at': now, 'lease_until': now}, timeout=10)
                 except (messaging.UnregisteredError, messaging.SenderIdMismatchError):
                     delivery.update({'status': 'failed', 'error_code': 'invalid_token', 'lease_until': now}, timeout=10)
                     firestore.transactional(_disable_device)(database.transaction(), snapshot.reference, device['generation'])
                 except Exception as error:
+                    # 일시적 오류는 간격을 늘려 재시도하며, 예외 원문에 포함될 수 있는 키는 저장하지 않는다.
                     delivery.update({'status': 'failed' if attempts >= 5 else 'pending',
                         'next_attempt_at': now + timedelta(seconds=min(30 * 2 ** (attempts - 1), 600)),
                         'lease_until': now, 'error_code': type(error).__name__}, timeout=10)
                     terminal &= attempts >= 5
+        # 모든 기기가 성공·건너뜀·최종 실패 상태일 때만 큐에서 제거한다.
         if terminal:
             store.collection().document(str(identifier)).update({'push_pending': False}, timeout=10)
     finally:
@@ -196,13 +217,18 @@ def dispatch_event(identifier, event):
 
 
 def check_push_notifications():
+    # 첫 발행 시 표시된 작업만 읽어 과거 알림을 소급 발송하지 않는다.
     events = store.collection().where(filter=FieldFilter('push_pending', '==', True)).limit(30).stream(timeout=10)
+    pending = 0
     for snapshot in events:
         event = snapshot.to_dict()
-        if event.get('status') != 'published' or event.get('notification_type', 'schedule_created') != 'schedule_created':
+        if event.get('status') != 'published' or not store.supports_push(event):
             continue
+        pending += 1
         try:
             dispatch_event(snapshot.id, event)
         except Exception:
             # 토큰·본문을 로그에 남기지 않고 다음 검사에서 같은 작업을 재시도한다.
             logger.error('푸시 작업 처리 실패; 다음 검사에서 재시도')
+
+    return pending

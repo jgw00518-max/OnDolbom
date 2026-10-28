@@ -25,6 +25,7 @@ class PushEvent {
   final String? body;
 }
 
+// 네이티브 SDK를 분리해 실제 Firebase 연결 없이 계정 전환 등을 테스트한다.
 abstract class PushPlatform {
   Stream<PushEvent> get messages;
   Stream<PushEvent> get taps;
@@ -58,6 +59,7 @@ class AndroidPushPlatform implements PushPlatform {
   @override
   Stream<String> get tokenChanges => _registrations.stream;
   @override
+  // 채널과 구독을 준비하고 앱 종료 상태에서 누른 알림도 복원한다.
   Future<void> initialize() async {
     await _local.initialize(
       const InitializationSettings(
@@ -176,6 +178,7 @@ class PushPreferences {
     bytes,
     (_) => Random.secure().nextInt(256).toRadixString(16).padLeft(2, '0'),
   ).join();
+  // 계정이 바뀌어도 설치 식별자를 유지해 서버의 연결 계정을 교체한다.
   Future<Map<String, dynamic>> installation() async {
     var id = await _prefs.getString('push.installation');
     var secret = await _prefs.getString('push.secret');
@@ -188,6 +191,7 @@ class PushPreferences {
     return {'installation_id': id, 'secret': secret};
   }
 
+  // 등록·해제 순서를 앱 재실행 후에도 유지한다.
   Future<int> nextGeneration() async {
     final value = (await _prefs.getInt('push.generation') ?? 0) + 1;
     await _prefs.setInt('push.generation', value);
@@ -250,6 +254,7 @@ class PushService {
     await platform.initialize();
   }
 
+  // 등록과 로그아웃 해제를 직렬 처리해 이전 요청이 새 연결을 덮어쓰지 않게 한다.
   Future<void> _serial(Future<void> Function() action) {
     final operation = _queue.then((_) => action());
     _queue = operation.catchError((Object error) {
@@ -268,6 +273,7 @@ class PushService {
     return _queue;
   }
 
+  // 인증과 MySQL 프로필 등록이 준비된 계정만 기기에 연결한다.
   void setSession(String? uid, bool ready) {
     final key = '$uid:$ready';
     if (_sessionKey == key) return;
@@ -326,6 +332,7 @@ class PushService {
     throw StateError('인증 실패');
   }
 
+  // 비동기 등록 중 계정이 바뀌면 이전 계정으로 연결하지 않는다.
   Future<void> reconnect() {
     final revision = _revision;
     return _serial(() async {
@@ -353,6 +360,7 @@ class PushService {
     });
   }
 
+  // 로그아웃 전에 현재 계정 인증으로 서버 연결 해제를 시도한다.
   Future<void> detach() {
     _revision++;
     return _serial(() async {

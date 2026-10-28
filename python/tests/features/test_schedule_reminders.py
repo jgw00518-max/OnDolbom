@@ -14,6 +14,11 @@ def schedule(**changes):
 
 
 class ScheduleReminderTests(unittest.TestCase):
+    def setUp(self):
+        replacement = patch.object(api, 'completed_reminders', api.completed_reminders.__class__())
+        replacement.start()
+        self.addCleanup(replacement.stop)
+
     def test_72_hour_boundary_and_started_completed_assigned_deleted_exclusions(self):
         row = schedule()
         self.assertTrue(api.is_due(row))

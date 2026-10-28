@@ -29,20 +29,23 @@ final activityProvider =
 class ActivityVm extends Notifier<ActivityCounts> {
   int _generation = 0;
   bool _loading = false;
+  bool _forcePending = false;
   String? _uid;
   @override
   ActivityCounts build() {
     final generation = ++_generation;
     _loading = false;
+    _forcePending = false;
     _uid = ref.watch(authUserProvider).asData?.value?.uid;
     final registered = ref.watch(userProfileProvider).asData?.value != null;
     if (_uid != null && registered) {
       Future.microtask(() {
-        if (ref.mounted && generation == _generation) refresh();
+        if (ref.mounted && generation == _generation) refresh(force: true);
       });
-      final observer = _ActivityObserver(() => refresh());
+      final observer = _ActivityObserver(() => refresh(force: true));
       WidgetsBinding.instance.addObserver(observer);
-      final timer = Timer.periodic(const Duration(seconds: 30), (_) {
+      // 푸시·사용자 동작을 우선하고 놓친 변경만 5분마다 보완한다.
+      final timer = Timer.periodic(const Duration(minutes: 5), (_) {
         if (WidgetsBinding.instance.lifecycleState == null ||
             WidgetsBinding.instance.lifecycleState ==
                 AppLifecycleState.resumed) {
@@ -97,17 +100,29 @@ class ActivityVm extends Notifier<ActivityCounts> {
     return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
   }
 
-  Future<void> refresh() async {
-    if (_loading || _uid == null) return;
+  // 일반 조회는 캐시를 사용하고 푸시·명시적 조작은 최신 값을 요청한다.
+  Future<void> refresh({bool force = false}) async {
+    if (_uid == null) return;
+    if (_loading) {
+      _forcePending |= force;
+      return;
+    }
     _loading = true;
     final generation = _generation;
     try {
-      final result = await _request('/badges');
+      final result = await _request(force ? '/badges?force=true' : '/badges');
       if (ref.mounted && generation == _generation) state = state.merge(result);
     } catch (_) {
       // 일시적 장애를 0건으로 취급하지 않고 마지막 확인 숫자를 유지한다.
     } finally {
-      if (ref.mounted && generation == _generation) _loading = false;
+      if (ref.mounted && generation == _generation) {
+        _loading = false;
+        // 조회 중 들어온 푸시를 놓치지 않도록 최신 조회를 한 번 더 예약한다.
+        if (_forcePending) {
+          _forcePending = false;
+          unawaited(refresh(force: true));
+        }
+      }
     }
   }
 
@@ -119,7 +134,7 @@ class ActivityVm extends Notifier<ActivityCounts> {
     while (_loading && ref.mounted && generation == _generation) {
       await Future<void>.delayed(const Duration(milliseconds: 50));
     }
-    if (ref.mounted && generation == _generation) await refresh();
+    if (ref.mounted && generation == _generation) await refresh(force: true);
   }
 }
 

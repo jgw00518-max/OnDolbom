@@ -5,6 +5,7 @@ import logging
 
 from firebase_admin import firestore
 from python.database import connect
+from python.features.schedules.reminder_cache import completed_reminders
 from python.features.notifications.store import collection
 
 logger = logging.getLogger(__name__)
@@ -98,13 +99,19 @@ def process_reminder(schedule_seq):
         if not recipients:
             return False
         identifier = f'schedule_reminder_{schedule_seq}_{fingerprint}'
+        # 일정 번호와 시작 시간 변경 버전이 모두 같을 때만 Firestore 조회를 생략한다.
+        if completed_reminders.contains(identifier):
+            return False
         ref = collection().document(identifier)
         # 실제 발행까지 DB 잠금을 유지한다. 발송 직전에 바뀐 배정·시간을 놓치지 않는다.
-        return firestore.transactional(_publish_once)(ref._client.transaction(), ref, dict(
+        published = firestore.transactional(_publish_once)(ref._client.transaction(), ref, dict(
             notification_id=identifier, notification_type='schedule_reminder',
             schedule_seq=schedule_seq, family_room_id=current['family_room_id'],
             schedule_created_at=str(current['created_at']), reminder_key=fingerprint,
             recipient_ids=recipients))
+        # 정상 반환은 신규 발행 또는 기존 published 확인을 뜻한다. 예외는 기억하지 않는다.
+        completed_reminders.remember(identifier)
+        return published
     finally:
         # DB 변경은 없으며 읽기 트랜잭션의 잠금만 해제한다.
         try:
