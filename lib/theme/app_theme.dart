@@ -27,6 +27,109 @@ abstract final class AppTheme {
           outlineVariant: AppColors.border,
         ),
     scaffoldBackgroundColor: AppColors.background,
+    datePickerTheme: DatePickerThemeData(
+      backgroundColor: AppColors.background,
+      surfaceTintColor: Colors.transparent,
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      headerBackgroundColor: AppColors.peachSoft,
+      headerForegroundColor: AppColors.textPrimary,
+      headerHeadlineStyle: const TextStyle(
+        fontFamily: fontFamily,
+        fontSize: 26,
+        fontWeight: FontWeight.w800,
+      ),
+      headerHelpStyle: const TextStyle(
+        fontFamily: fontFamily,
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+      ),
+      weekdayStyle: const TextStyle(
+        fontFamily: fontFamily,
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: AppColors.sageDark,
+      ),
+      dayStyle: const TextStyle(
+        fontFamily: fontFamily,
+        fontSize: 15,
+        fontWeight: FontWeight.w500,
+      ),
+      dayForegroundColor: WidgetStateProperty.resolveWith(_dateForeground),
+      dayBackgroundColor: WidgetStateProperty.resolveWith(_dateBackground),
+      todayForegroundColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.disabled)
+            ? AppColors.textSecondary
+            : states.contains(WidgetState.selected)
+            ? AppColors.surface
+            : AppColors.sageDark,
+      ),
+      todayBackgroundColor: WidgetStateProperty.resolveWith(_dateBackground),
+      todayBorder: const BorderSide(color: AppColors.sageDark, width: 1.5),
+      dayOverlayColor: WidgetStatePropertyAll(
+        AppColors.sageDark.withValues(alpha: 0.12),
+      ),
+      yearStyle: const TextStyle(
+        fontFamily: fontFamily,
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+      ),
+      yearForegroundColor: WidgetStateProperty.resolveWith(_dateForeground),
+      yearBackgroundColor: WidgetStateProperty.resolveWith(_dateBackground),
+      dividerColor: AppColors.border,
+      subHeaderForegroundColor: AppColors.textPrimary,
+      cancelButtonStyle: TextButton.styleFrom(
+        foregroundColor: AppColors.textPrimary,
+        minimumSize: const Size(64, 44),
+        backgroundBuilder: (context, states, child) =>
+            Padding(padding: const EdgeInsets.only(bottom: 12), child: child),
+        textStyle: const TextStyle(
+          fontFamily: fontFamily,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      confirmButtonStyle: TextButton.styleFrom(
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppColors.textPrimary,
+        minimumSize: const Size(64, 44),
+        // 기본 달력의 고정된 actions 여백 안에서 버튼 배경도 함께 안쪽으로 옮긴다.
+        backgroundBuilder: (context, states, child) => Padding(
+          padding: const EdgeInsets.only(right: 8, bottom: 12),
+          child: DecoratedBox(
+            key: const ValueKey('date-picker-confirm-background'),
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: child,
+          ),
+        ),
+        textStyle: const TextStyle(
+          fontFamily: fontFamily,
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      inputDecorationTheme: InputDecorationThemeData(
+        filled: true,
+        fillColor: AppColors.surface,
+        labelStyle: const TextStyle(color: AppColors.textPrimary),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.sageDark, width: 1.5),
+        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    ),
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.background,
       foregroundColor: AppColors.textPrimary,
@@ -74,4 +177,19 @@ abstract final class AppTheme {
       hintStyle: TextStyle(color: AppColors.textSecondary),
     ),
   );
+
+  static Color _dateForeground(Set<WidgetState> states) {
+    if (states.contains(WidgetState.disabled)) {
+      return AppColors.textSecondary.withValues(alpha: 0.55);
+    }
+    return states.contains(WidgetState.selected)
+        ? AppColors.surface
+        : AppColors.textPrimary;
+  }
+
+  static Color _dateBackground(Set<WidgetState> states) =>
+      !states.contains(WidgetState.disabled) &&
+          states.contains(WidgetState.selected)
+      ? AppColors.sageDark
+      : Colors.transparent;
 }

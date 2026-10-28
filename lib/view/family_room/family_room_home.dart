@@ -338,8 +338,8 @@ class FamilyRoomHome extends ConsumerWidget {
   // 반복되는 메뉴 모양을 만든다.
   Widget menuButton(String title, IconData icon, VoidCallback action) {
     return Expanded(
-      child: SizedBox(
-        height: 106,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 106),
         child: OutlinedButton(
           onPressed: action,
           style: OutlinedButton.styleFrom(
@@ -352,6 +352,7 @@ class FamilyRoomHome extends ConsumerWidget {
             ),
           ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
@@ -370,7 +371,7 @@ class FamilyRoomHome extends ConsumerWidget {
                 title,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontSize: 12,
+                  fontSize: 14,
                   fontWeight: FontWeight.w700,
                 ),
               ),
