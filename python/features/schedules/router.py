@@ -1,3 +1,4 @@
+from python.features.schedules.reminders import try_remind
 from python.features.schedules.response_notifications import prepare_response_notification, publish_response_notification
 from datetime import date, time
 
@@ -330,11 +331,14 @@ def create_schedule(
             schedule_seq,
         )
 
+    reminder_published = try_remind(schedule_seq)
+
     return {
         "result": "OK",
         "schedule_seq": schedule_seq,
         "schedule_state": "미완료",
         "notification_published": notification_published,
+        "reminder_published": reminder_published,
     }
 
 # 주보호자가 변경 내용을 새 이력으로 저장한다.
@@ -548,11 +552,14 @@ def update_schedule(
                     schedule_seq,
                 )
 
+        reminder_published = try_remind(schedule_seq)
+
         return {
             "result": "OK",
             "schedule_seq": schedule_seq,
             "history_seq": history_seq,
             "changed": True,
+            "reminder_published": reminder_published,
             "reconfirm_required": reconfirm_required,
             "reconfirm_user_id": (
                 schedule["accepted_by"] if reconfirm_required else None

@@ -1,3 +1,4 @@
+from python.features.schedules.reminders import reminder_is_current
 """일정 담당 B의 알림 조회 API. A의 공통 저장 함수를 재사용한다."""
 from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, Path
@@ -108,6 +109,8 @@ def _visible_deleted(connection, user_id, event):
 def _visible(connection, user_id, event):
     if not event or event.get('status') != 'published' or user_id not in event.get('recipient_ids', []):
         return None
+    if event.get('notification_type') == 'schedule_reminder' and not reminder_is_current(connection, event):
+        return None
     if event.get('notification_type') == 'schedule_deleted':
         return _visible_deleted(connection, user_id, event)
     with connection.cursor() as cursor:
@@ -150,7 +153,7 @@ def _visible(connection, user_id, event):
 def visible_v2(connection, user_id, event):
     """V2 알림함과 배지가 동일한 유형·권한 기준을 사용한다."""
     kind = event.get('notification_type', 'schedule_created')
-    if kind not in {'schedule_created', 'schedule_changed', 'schedule_reconfirm', 'schedule_recruitment', 'schedule_accepted', 'schedule_reconfirmed', 'schedule_deleted'}:
+    if kind not in {'schedule_created', 'schedule_changed', 'schedule_reconfirm', 'schedule_recruitment', 'schedule_accepted', 'schedule_reconfirmed', 'schedule_deleted', 'schedule_reminder'}:
         return None
     # 자동 만료에 따른 재모집은 V2의 거절 후 재모집과 구분한다.
     if kind == 'schedule_recruitment' and event.get('request_history_seq') is not None:

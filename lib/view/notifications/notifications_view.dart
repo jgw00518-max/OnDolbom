@@ -149,7 +149,9 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(
-                    item.type == 'schedule_reconfirm'
+                    item.type == 'schedule_reminder'
+                        ? Icons.alarm_outlined
+                        : item.type == 'schedule_reconfirm'
                         ? Icons.event_repeat_outlined
                         : item.type == 'schedule_recruitment'
                         ? Icons.group_add_outlined
