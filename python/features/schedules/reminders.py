@@ -66,7 +66,8 @@ def _publish_once(transaction, ref, payload):
     if snapshot.exists and snapshot.to_dict().get('status') == 'published':
         return False
     # 원자적 문서 생성으로 여러 worker·API가 동시에 검사해도 한 번만 발행한다.
-    transaction.set(ref, {**payload, 'status': 'published',
+    # 앱 내 재알림과 같은 트랜잭션에서 푸시를 예약한다. 기존 발행 건은 재예약하지 않는다.
+    transaction.set(ref, {**payload, 'status': 'published', 'push_pending': True,
                           'created_at': firestore.SERVER_TIMESTAMP,
                           'published_at': firestore.SERVER_TIMESTAMP})
     return True

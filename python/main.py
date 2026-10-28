@@ -22,7 +22,7 @@ from python.features.schedules.router import router as schedules_router
 from python.features.invites.router import router as invites_router
 
 
-# 실제 서버 프로세스의 생명주기에만 worker를 연결한다. import만 할 때는 실행하지 않는다.
+# 기본 실행은 API만 제공한다. worker는 담당자 터미널에서 별도로 실행한다.
 app = FastAPI(title="온돌봄 사용자 API", lifespan=reminder_lifespan)
 app.include_router(push_router)
 app.include_router(activity_router)

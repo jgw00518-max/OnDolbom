@@ -24,6 +24,13 @@ class ReminderLifecycleTests(unittest.TestCase):
                 stop.assert_not_called()
             stop.assert_called_once_with(process)
 
+    def test_default_api_start_does_not_spawn_worker(self):
+        # 이전 터미널의 설정과 무관하게 환경 변수가 없는 기본 실행을 검사한다.
+        with patch.dict(os.environ), patch.object(lifecycle, 'start_worker') as start:
+            os.environ.pop('ONDOLBOM_REMINDER_WORKER', None)
+            with TestClient(FastAPI(lifespan=lifecycle.reminder_lifespan)):
+                start.assert_not_called()
+
     def test_test_environment_can_disable_real_notifications(self):
         with patch.dict(os.environ, {'ONDOLBOM_REMINDER_WORKER': '0'}), \
              patch.object(lifecycle, 'start_worker') as start:

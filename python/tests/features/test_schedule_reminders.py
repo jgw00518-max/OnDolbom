@@ -48,6 +48,7 @@ class ScheduleReminderTests(unittest.TestCase):
         ref.get.return_value.exists = False
         self.assertTrue(api._publish_once(transaction, ref, {'notification_id': 'stable'}))
         transaction.set.assert_called_once()
+        self.assertTrue(transaction.set.call_args.args[1]['push_pending'])
         ref.get.return_value.exists = True
         ref.get.return_value.to_dict.return_value = {'status': 'published'}
         self.assertFalse(api._publish_once(transaction, ref, {'notification_id': 'stable'}))

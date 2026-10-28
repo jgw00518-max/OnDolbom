@@ -105,13 +105,13 @@ class PushTests(unittest.TestCase):
                 values = transaction.update.call_args.args[1]
                 self.assertEqual(values.get('push_pending', False),
                                  kind in {'schedule_created', 'schedule_changed', 'schedule_deleted', 'schedule_reconfirm',
-                                          'schedule_accepted', 'schedule_reconfirmed', 'schedule_recruitment'})
+                                          'schedule_accepted', 'schedule_reconfirmed', 'schedule_recruitment', 'schedule_reminder'})
 
     def test_change_and_delete_messages_keep_private_details_out(self):
         for kind, word in [('schedule_changed', '변경'), ('schedule_deleted', '삭제'),
                            ('schedule_reconfirm', '재수락'), ('schedule_accepted', '수락'),
                            ('schedule_reconfirmed', '재수락'), ('schedule_declined', '거절'),
-                           ('schedule_recruitment', '모집')]:
+                           ('schedule_recruitment', '모집'), ('schedule_reminder', '72시간')]:
             with self.subTest(kind=kind), patch.object(push, 'get_firebase_app'), \
                  patch.object(push.messaging, 'send') as send:
                 push.send_message('fid', 'uid', 'event', notification_type=kind)
@@ -123,7 +123,7 @@ class PushTests(unittest.TestCase):
     def test_automatic_recruitment_is_not_pushed(self):
         self.assertFalse(store.supports_push(dict(notification_type='schedule_recruitment', request_history_seq=1)))
         self.assertTrue(store.supports_push(dict(notification_type='schedule_recruitment')))
-        self.assertFalse(store.supports_push(dict(notification_type='schedule_reminder')))
+        self.assertTrue(store.supports_push(dict(notification_type='schedule_reminder')))
 
     def test_self_test_rejects_other_accounts_expired_and_stale_bindings(self):
         now = datetime.now(timezone.utc)

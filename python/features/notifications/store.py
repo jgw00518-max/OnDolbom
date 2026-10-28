@@ -1,4 +1,4 @@
-﻿"""Firestore 알림 저장. 클라이언트는 API를 통해서만 접근한다."""
+"""Firestore 알림 저장. 클라이언트는 API를 통해서만 접근한다."""
 from hashlib import sha256
 
 from firebase_admin import firestore
@@ -7,7 +7,7 @@ from python.features.auth.firebase_auth import get_firebase_app
 
 
 PUSH_TYPES = frozenset({'schedule_created', 'schedule_changed', 'schedule_deleted', 'schedule_reconfirm',
-                        'schedule_accepted', 'schedule_reconfirmed', 'schedule_recruitment'})
+                        'schedule_accepted', 'schedule_reconfirmed', 'schedule_recruitment', 'schedule_reminder'})
 
 
 def supports_push(event):

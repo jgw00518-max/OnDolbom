@@ -10,55 +10,31 @@
 - 날짜·시작시간을 변경했다가 원래 시각으로 되돌려도 새 변경 버전으로 처리한다.
 - 이미 발행한 버전이 수락 후 다시 미배정 상태가 되더라도 같은 재알림을 반복 발행하지 않는다.
 
-## 실행: 서버만 켜면 자동으로 시작
+## 실행: API와 worker 분리
 
-프로젝트 루트에서 기존 서버 명령 하나만 실행한다.
+API는 기본적으로 worker를 시작하지 않는다. 팀원 모두 프로젝트 루트에서 실행한다.
 
 ```powershell
 python -m uvicorn python.main:app --host 0.0.0.0 --port 8000 --reload --no-access-log
 ```
 
-`python -m python.main`으로 실행해도 동일하게 연결된다.
-FastAPI `lifespan`이 시작될 때 72시간 재알림 worker를 자식 프로세스로 실행하고,
-서버 종료 또는 `--reload` 시 해당 자식도 종료·회수한다. 이미 서버가 실행 중이면 재시작한다.
-**기존에 따로 켜둔 reminder_worker 터미널은 Ctrl+C로 종료한다.**
-
-worker는 시작 직후 한 번 검사하고 이후 1분마다 검사한다.
-이전 worker가 비정상 종료되면 서버가 5초 간격으로 확인해 다시 실행한다.
-별도 터미널이나 명령은 필요 없으며, 서버를 끄면 자동 재알림도 멈춘다.
-앱을 종료해도 서버가 켜져 있으면 알림은 저장되지만 OS 푸시 알림은 아니다.
-
-### 별도 프로세스로 유지하는 이유
-
-실행 명령은 하나지만 MySQL·Firestore 조회는 worker 프로세스가 처리한다.
-따라서 재알림 검사 때문에 API의 요청 처리 루프가 직접 차단되지 않는다.
-서버가 종료되면 worker의 진행 중 검사도 종료한다. DB 연결 잠금은 해제되며,
-Firestore 발행 중 종료되어 성공 여부가 불확실해도 재실행 시 같은 문서 ID로 중복을 막는다.
-
-서버 재시작 동안 검사는 잠시 멈춘다. 여러 서버 프로세스 또는 여러 팀원의 서버를 켜면
-각각 worker가 실행되어 조회가 중복될 수 있지만 알림 발행은 Firestore 트랜잭션으로 한 번만 처리한다.
-배포 규모가 커지면 worker 한 곳을 따로 운영하고 API 내 자동 실행을 끄는 구성이 권장된다.
-재수락 만료용 `reconfirm_expiry_worker`는 이번 자동 실행에 포함하지 않았다.
-
-### 테스트·별도 운영 시 자동 실행 끄기
-
-환경변수 `ONDOLBOM_REMINDER_WORKER=0`이면 서버 내 자동 실행을 끈다.
-자동 테스트에서는 실제 공유 DB·Firebase로 알림이 발행되지 않도록 반드시 이 설정을 사용한다.
-
-```powershell
-$env:ONDOLBOM_REMINDER_WORKER = '0'
-python -B -m unittest discover -s python/tests -p "test_*.py"
-$env:ONDOLBOM_REMINDER_WORKER = '1'
-```
-
-이 값은 `python/.env`가 아닌 실행 터미널의 환경변수다. 기본값은 켜짐(`1`)이다.
-별도 운영이 필요한 경우 자동 실행을 끄고 다음 명령으로 worker만 실행할 수 있다.
+알림 담당자만 별도 터미널에서 실행한다.
 
 ```powershell
 python -m python.features.schedules.reminder_worker
-# 한 번만 확인하고 종료 (실제 조건에 맞는 가족에게 발행)
-python -m python.features.schedules.reminder_worker --once
 ```
+
+동일한 MySQL·Firebase 프로젝트를 사용하면 하나의 worker가 모든 팀원의 푸시·72시간 재알림을 처리한다. 담당자 PC와 worker 터미널을 켜 두어야 한다. API 재시작과 별개로 동작하며 worker 종료는 해당 터미널에서 Ctrl+C로 한다. 종료되면 담당자가 다시 실행한다.
+
+기존 터미널에 통합 실행을 설정했다면 서버를 종료하고 다음으로 해제한 뒤 재실행한다.
+
+```powershell
+Remove-Item Env:ONDOLBOM_REMINDER_WORKER -ErrorAction SilentlyContinue
+```
+
+이 설정은 `python/.env`가 아닌 실행 터미널의 환경 변수다. 기본값은 `0`이다. 기존 통합 실행은 `1`·`true`·`on`을 명시할 때만 활성화된다. 별도 worker와 통합 실행을 동시에 켜지 않는다. 테스트 후에도 `1`로 설정하지 않는다.
+
+worker는 시작 직후 검사하고 재알림은 60초, 푸시는 작업이 있으면 5초·비어 있으면 최대 15초 간격으로 검사한다. `--once`는 한 번만 실제 검사하고 종료한다.
 
 ## 변경·수락·삭제 처리
 
