@@ -5,6 +5,7 @@ from firebase_admin import firestore
 from python.database import connect
 from python.features.notifications.store import (
     collection,
+    exclude_actor,
     get_event,
     publish,
 )
@@ -14,6 +15,7 @@ from python.features.schedules.reconfirm_policy import get_reconfirm_deadline
 
 # 일정 변경 이력별 알림을 준비한다.
 def _prepare_change(transaction, ref, payload):
+    payload = exclude_actor(payload)
     snapshot = ref.get(transaction=transaction)
 
     if snapshot.exists:
@@ -69,7 +71,8 @@ def prepare_reconfirm_notification(conn, schedule_seq: int, history_seq: int):
                 s.family_room_id,
                 s.created_at,
                 s.accepted_by,
-                h.updated_at
+                h.updated_at,
+                h.changed_by
             FROM create_schedule AS s
             JOIN family_room AS f
               ON f.family_room_id = s.family_room_id
@@ -114,6 +117,7 @@ def prepare_reconfirm_notification(conn, schedule_seq: int, history_seq: int):
             "family_room_id": schedule["family_room_id"],
             "schedule_created_at": str(schedule["created_at"]),
             "history_updated_at": str(schedule["updated_at"]),
+            "actor_id": schedule.get("changed_by"),
             "recipient_ids": [schedule["accepted_by"]],
         }
     )
@@ -239,7 +243,8 @@ def prepare_schedule_change_notification(
                 s.family_room_id,
                 s.created_at,
                 s.accepted_by,
-                h.updated_at
+                h.updated_at,
+                h.changed_by
             FROM create_schedule AS s
             JOIN family_room AS f
               ON f.family_room_id = s.family_room_id
@@ -282,6 +287,7 @@ def prepare_schedule_change_notification(
             "family_room_id": schedule["family_room_id"],
             "schedule_created_at": str(schedule["created_at"]),
             "history_updated_at": str(schedule["updated_at"]),
+            "actor_id": schedule.get("changed_by"),
             "recipient_ids": [schedule["accepted_by"]],
         }
     )
@@ -372,7 +378,8 @@ def prepare_recruitment_notification(
             SELECT
                 s.family_room_id,
                 s.created_at,
-                h.updated_at
+                h.updated_at,
+                h.changed_by
             FROM create_schedule AS s
             JOIN family_room AS f
               ON f.family_room_id = s.family_room_id
@@ -429,6 +436,7 @@ def prepare_recruitment_notification(
             "family_room_id": schedule["family_room_id"],
             "schedule_created_at": str(schedule["created_at"]),
             "history_updated_at": str(schedule["updated_at"]),
+            "actor_id": schedule.get("changed_by"),
             "recipient_ids": recipients,
         }
     )

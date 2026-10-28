@@ -1,0 +1,96 @@
+# Android 기기 푸시 알림 (FCM)
+
+## 구현 범위
+
+현재는 **일정 등록** 한 종류를 기기 푸시에 연결했다.
+변경·삭제·수락·재수락·72시간 재알림은 기존 앱 내 알림을 유지하며 아직 푸시 대상은 아니다.
+공통 발송 코드에 새 유형을 연결할 수 있도록 앱 내 알림 저장과 푸시 발송을 분리했다.
+MySQL 테이블은 변경하지 않았으며 iOS·웹 푸시 설정은 이번 범위에 포함하지 않는다.
+
+## 흐름
+
+1. Firebase 로그인과 MySQL 프로필 등록이 완료되면 알림 권한을 요청한다.
+2. Android 기기의 FCM 발송 주소를 인증된 `/push/devices` API에 등록한다.
+3. 일정 등록 알림이 `published`로 바뀔 때 해당 문서에 `push_pending=true`를 함께 기록한다.
+4. 서버가 관리하는 worker가 약 5초 간격으로 큐를 확인한다. 72시간 재알림 검사는 기존처럼 1분 간격이다.
+5. 현재 회원·공간 참여·일정 상태·기기 계정 연결을 확인하고 FCM으로 발송한다.
+6. 알림을 누르면 로그인·프로필이 준비된 후 알림함을 연다. 다른 계정의 푸시는 화면 이동하지 않는다.
+
+Firebase Messaging **17.0.1**은 `register()`·`onRegistered`에서 얻는 **FID**를 발송 주소로 사용한다.
+서버 Admin SDK도 `Message(fid=...)`를 사용한다. 이전 SDK의 토큰 API와 혼용하지 않는다.
+AndroidManifest의 `<application>` 안에 `firebase_messaging_installation_id_enabled=true`가 필요하다.
+이 설정을 빠뜨리면 기기 등록 단계에서 `firebase_messaging/unknown`으로 실패할 수 있다.
+Manifest 변경은 Hot Reload/Hot Restart로 적용되지 않으므로 앱 실행을 종료한 뒤 다시 빌드·설치한다.
+`firebase_messaging_auto_init_enabled=false`는 로그인 후 코드가 등록을 시작하도록 유지한다.
+
+FCM 주소나 인증 토큰을 콘솔·채팅에 복사할 필요가 없도록 개인 설정에 본인 기기 테스트 버튼을 제공한다.
+
+## 기기 등록과 계정 전환
+
+Firestore `push_devices`는 앱 설치별 임의 식별자·연결 비밀값의 해시·사용자·FID·세대 번호·만료 시각을 저장한다.
+기기 식별자와 연결 비밀값은 앱 전용 SharedPreferences에 보관하며 회원 비밀번호와는 별개다.
+API는 Firebase 토큰으로 사용자를 확인하고 클라이언트가 보낸 사용자 ID는 신뢰하지 않는다.
+연속 등록·해제는 직렬 처리하고 세대 번호가 낮은 요청이 새 계정 연결을 덮어쓰지 못하게 한다.
+
+로그아웃 전 서버 연결 해제와 FCM unregister·기기 알림 제거를 시도한다.
+오프라인에서는 해제가 실패할 수 있으므로 완전한 즉시 폐기를 보장하지는 않는다.
+잠금 화면에는 대상자 이름·건강정보·일정 메모 대신 일반 안내 문구만 표시하고,
+푸시 클릭·앱 실행 중 수신은 현재 로그인 UID를 비교한다. 계정 전환 테스트를 반드시 진행한다.
+앱 복귀 시 기기 등록을 갱신하고 등록 유효 기간은 30일이다. 유효하지 않은 FID는 비활성화한다.
+
+## 발송 기록과 장애 처리
+
+Firestore `push_deliveries`에 이벤트·기기별 발송 상태, 시도 횟수, 작업 기한, 다음 시도 시각을 보관한다.
+처리 중 임대 시간은 2분이며 실패 시 지수 간격으로 최대 5회 시도한다.
+성공·건너뜀·최종 실패가 완료되면 이벤트의 `push_pending`을 끈다.
+푸시 실패로 이미 저장된 일정이나 앱 내 알림을 되돌리지 않는다.
+기기가 등록되지 않았으면 과거 알림을 나중에 푸시로 소급 발송하지 않는다.
+
+네트워크 응답 유실·FCM 자체 재전송 때문에 기기 전달을 정확히 한 번 보장하지는 않는다.
+서버의 발송 기록과 Android notification tag, 앱 실행 중 고정 알림 ID로 중복 표시를 줄인다.
+FCM 발송 성공은 사용자의 확인·읽음을 뜻하지 않으며 앱 내 읽음 처리는 기존 API를 사용한다.
+
+## 실행·실제 확인
+
+1. `flutter pub get` 후 기존 앱 실행을 완전히 중지하고 새로 실행한다. Hot Reload만으로 플러그인이 추가되지 않는다.
+2. 기존 Python 서버를 실행한다. 서버가 시작하는 worker가 푸시도 처리하므로 별도 명령은 필요 없다.
+3. Android 실기기로 로그인하고 프로필 등록을 완료한 뒤 **알림 권한을 허용**한다.
+4. Drawer → 개인 설정 → 기기 푸시 알림에서 **푸시 알림 연결됨**을 확인한다.
+5. **테스트 알림 보내기**를 누른다. 테스트 요청 성공은 FCM 접수이며 실제 수신은 기기에서 확인한다.
+6. 앱 실행 중에는 로컬 배너, 앱을 홈으로 내린 상태에서는 시스템 알림, 알림 클릭 시 알림함 이동을 확인한다.
+7. 두 계정을 같은 기기에서 바꿔 로그인해 이전 계정의 푸시가 노출·이동하지 않는지 확인한다.
+8. 두 계정으로 같은 공간에 참여한 후 새 일정을 등록해 전체 현재 가족의 등록 기기로 발송되는지 확인한다.
+
+서버의 서비스 계정은 기존 Firebase 프로젝트와 같아야 하며 Firebase Cloud Messaging API와 발송 IAM 권한이 필요하다.
+`FCM 권한·API 활성화...` 오류가 표시되면 Google Cloud의 Firebase Cloud Messaging API와 서비스 계정 권한을 확인한다.
+Android 시스템에서 알림·채널·방해 금지가 꺼져 있으면 배너가 표시되지 않을 수 있다.
+설정에서 앱을 강제 중지한 경우 다시 앱을 열어야 수신이 재개될 수 있다.
+개발 서버는 푸시 발송 시 켜져 있어야 하며, 푸시 클릭 후 API 조회에는 기존 USB/네트워크 연결도 필요하다.
+
+## 컬렉션·규칙
+
+- `schedule_notifications`: 기존 알림 및 일정 등록의 `push_pending`.
+- `push_devices`: 기기 연결 정보. 앱 직접 읽기·쓰기는 금지한다.
+- `push_deliveries`: 발송 기록. 앱 직접 읽기·쓰기는 금지한다.
+
+`firestore.rules`의 새 컬렉션 규칙을 Firebase에도 반영한다. Admin SDK는 IAM 권한으로 접근한다.
+현재 큐는 단일 필드 조회여서 새 복합 색인은 요구하지 않는다.
+
+## 자동 테스트
+
+실제 공유 DB·Firebase 발송을 막기 위해 worker를 끄고 실행한다.
+
+```powershell
+$env:ONDOLBOM_REMINDER_WORKER = '0'
+python -B -m unittest python.tests.features.test_push
+flutter test test/push_service_test.dart test/push_bridge_test.dart
+$env:ONDOLBOM_REMINDER_WORKER = '1'
+```
+
+참고: [Firebase Flutter 수신 처리](https://firebase.google.com/docs/cloud-messaging/flutter/receive-messages),
+[FCM 발송](https://firebase.google.com/docs/cloud-messaging/send/admin-sdk),
+[로컬 알림 19.5.0 설정](https://pub.dev/packages/flutter_local_notifications/versions/19.5.0).
+
+## 본인 작업 알림 제외
+
+새로 생성하는 일정 등록·변경·삭제·수락·재수락·거절 관련 알림은 DB에서 확인한 실제 작업자(`actor_id`)를 수신 대상에서 제외한다. 앱 내 알림과 푸시는 동일한 수신자 목록을 사용한다. 72시간 자동 재알림과 시스템 자동 처리는 기존 대상을 유지한다. 기존에 저장된 알림은 소급 삭제하지 않는다. 수신자가 없는 내부 이벤트는 사용자에게 표시되거나 푸시되지 않는다.

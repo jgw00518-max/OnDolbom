@@ -236,6 +236,7 @@ def prepare_schedule_delete_notification(conn, deleted: dict):
         "history_updated_at": str(schedule["updated_at"]),
         "deleted_at": str(schedule["deleted_at"]),
         "deleted_by": deleted["deleted_by"],
+        "actor_id": deleted["deleted_by"],
         "former_assignee_id": deleted["former_assignee_id"],
         "schedule_name": deleted["schedule_name"],
         "schedule_date": str(deleted["schedule_date"]),
