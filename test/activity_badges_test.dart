@@ -23,7 +23,7 @@ class VisibleActivity extends ActivityVm {
     inquiries: 1,
   );
   @override
-  Future<void> refresh() async {}
+  Future<void> refresh({bool force = false}) async {}
   void clear() => state = const ActivityCounts();
 }
 
@@ -151,8 +151,10 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 5));
     }
     expect(container.read(activityProvider).notifications, 3);
+    expect(requests.last.url.queryParameters['force'], 'true');
     fail = true;
     await container.read(activityProvider.notifier).refresh();
+    expect(requests.last.url.queryParameters['force'], isNull);
     expect(container.read(activityProvider).notifications, 3);
     fail = false;
     body = {'invites': null, 'notifications': 0, 'notices': 0, 'inquiries': 0};
@@ -161,6 +163,7 @@ void main() {
         .markRead('/notices/a/n', 'a' * 64);
     expect(container.read(activityProvider).invites, 2);
     expect(container.read(activityProvider).notices, 0);
+    expect(requests.last.url.queryParameters['force'], 'true');
     expect(
       requests.where((r) => r.method == 'POST').single.url.path,
       '/activity/notices/a/n/read',

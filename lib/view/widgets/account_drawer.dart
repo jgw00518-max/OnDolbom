@@ -41,7 +41,7 @@ class AccountDrawer extends ConsumerWidget {
       final activity = ref.read(activityProvider.notifier);
       navigator.pop();
       await navigator.push(MaterialPageRoute<void>(builder: (_) => page));
-      activity.refresh();
+      activity.refresh(force: true);
     }
 
     final name = (data?.name?.trim().isNotEmpty ?? false)
@@ -220,7 +220,7 @@ class AccountDrawer extends ConsumerWidget {
                                 if (navigator.mounted && accepted == true) {
                                   await rooms.fetchRooms();
                                 }
-                                activity.refresh();
+                                activity.refresh(force: true);
                               },
                             ),
                             ListTile(

@@ -1,3 +1,4 @@
+import 'package:ondolbom/vm/activity/activity_vm.dart';
 import 'package:ondolbom/view/schedules/schedule_detail.dart';
 import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
 import 'package:ondolbom/vm/schedules/schedule_vm.dart';
@@ -389,7 +390,11 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
             tooltip: '새로고침',
             onPressed: _busy
                 ? null
-                : () => ref.invalidate(notificationsVmProvider),
+                : () {
+                    ref.invalidate(notificationsVmProvider);
+                    // 사용자가 직접 새로고침하면 배지 캐시도 우회한다.
+                    ref.read(activityProvider.notifier).refresh(force: true);
+                  },
             icon: const Icon(Icons.refresh, size: 21),
           ),
         ],
@@ -406,7 +411,11 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
               children: [
                 Text(error.toString(), textAlign: TextAlign.center),
                 TextButton(
-                  onPressed: () => ref.invalidate(notificationsVmProvider),
+                  onPressed: () {
+                    ref.invalidate(notificationsVmProvider);
+                    // 사용자가 직접 새로고침하면 배지 캐시도 우회한다.
+                    ref.read(activityProvider.notifier).refresh(force: true);
+                  },
                   child: const Text('다시 시도'),
                 ),
               ],

@@ -6,6 +6,17 @@ from google.cloud.firestore_v1.base_query import FieldFilter
 from python.features.auth.firebase_auth import get_firebase_app
 
 
+PUSH_TYPES = frozenset({'schedule_created', 'schedule_changed', 'schedule_deleted', 'schedule_reconfirm',
+                        'schedule_accepted', 'schedule_reconfirmed', 'schedule_recruitment'})
+
+
+def supports_push(event):
+    """자동 만료에 따른 재모집은 제외하고 거절 후 재모집만 연결한다."""
+    return (event.get('notification_type', 'schedule_created') in PUSH_TYPES
+            and not (event.get('notification_type') == 'schedule_recruitment'
+                     and event.get('request_history_seq') is not None))
+
+
 def collection():
     return firestore.client(app=get_firebase_app()).collection('schedule_notifications')
 
@@ -47,6 +58,7 @@ def mark_read(identifier, user_id):
 
 def exclude_actor(payload):
     """직접 작업한 사용자는 제외하고 자동 재알림 대상은 유지한다."""
+    # 앱 내 알림과 푸시가 같은 수신자 목록을 사용하도록 저장 전에 작업자를 제외한다.
     actor = payload.get('actor_id')
     if actor and payload.get('notification_type') != 'schedule_reminder':
         return {**payload, 'recipient_ids': [
@@ -79,8 +91,8 @@ def _publish(transaction, ref, fingerprint):
         return False
     if event['status'] == 'pending':
         values = {'status': 'published', 'published_at': firestore.SERVER_TIMESTAMP}
-        # 신규 일정 등록만 푸시 큐에 넣는다. 재발행·읽음 갱신은 재발송하지 않는다.
-        if event.get('notification_type', 'schedule_created') == 'schedule_created':
+        # 일정 안내·재수락 요청이 처음 발행될 때만 큐에 넣어 중복을 막는다.
+        if supports_push(event):
             values['push_pending'] = True
         transaction.update(ref, values)
     return True

@@ -11,6 +11,7 @@ from python.features.notices.router import read_notices
 from python.features.schedules.notification_router import visible_v2 as _visible
 from python.features.schedules.change_notifications import list_notification_events
 from python.features.activity import receipts
+from python.features.activity.cache import badge_cache
 
 router = APIRouter(prefix='/activity', tags=['activity'])
 
@@ -66,25 +67,29 @@ def notification_count(connection, user_id):
 
 
 @router.get('/badges')
-def badges(claims: dict = Depends(require_firebase_user)):
+def badges(claims: dict = Depends(require_firebase_user), force: bool = False):
     connection = None
     try:
         connection = connect()
         with connection.cursor() as cursor:
             user_id = current_user(cursor, claims)
-        result = {}
-        # 한 기능의 Firestore 장애가 다른 메뉴의 정상적인 배지를 지우지 않도록 분리한다.
-        for key, action in {
-            'invites': lambda: invite_count(connection, user_id),
-            'notifications': lambda: notification_count(connection, user_id),
-            'notices': lambda: notice_count(connection, claims['uid']),
-            'inquiries': lambda: inquiry_count(connection, user_id, claims['uid']),
-        }.items():
-            try:
-                result[key] = action()
-            except (MySQLError, GoogleAPICallError, ValueError):
-                result[key] = None
-        return result
+        # 캐시를 반환할 때도 인증과 현재 사용자 확인은 매번 수행한다.
+        def calculate():
+            result = {}
+            # 한 기능의 Firestore 장애가 다른 메뉴의 정상적인 배지를 지우지 않도록 분리한다.
+            for key, action in {
+                'invites': lambda: invite_count(connection, user_id),
+                'notifications': lambda: notification_count(connection, user_id),
+                'notices': lambda: notice_count(connection, claims['uid']),
+                'inquiries': lambda: inquiry_count(connection, user_id, claims['uid']),
+            }.items():
+                try:
+                    result[key] = action()
+                except (MySQLError, GoogleAPICallError, ValueError):
+                    result[key] = None
+            return result
+        return badge_cache.load(claims['uid'], calculate, force=force)
+
     except (MySQLError, GoogleAPICallError, ValueError):
         raise HTTPException(503, '새 소식을 확인하지 못했습니다.') from None
     finally:
@@ -100,6 +105,7 @@ class ReadReceipt(BaseModel):
 def save_receipt(claims, kind, identity, token):
     try:
         receipts.mark_read(claims['uid'], receipts.receipt_key(kind, identity), token)
+        badge_cache.invalidate(claims['uid'])
         return {'read': True}
     except (GoogleAPICallError, ValueError):
         raise HTTPException(503, '읽음 상태를 저장하지 못했습니다.') from None

@@ -35,10 +35,11 @@ class _PushBridgeState extends ConsumerState<PushBridge>
       _taps = service.taps.stream.listen((event) {
         if (mounted) setState(() => _pending = event);
       });
+      // 앱 실행 중 푸시를 수신하면 배지와 알림 목록을 즉시 갱신한다.
       _received = service.received.stream.listen((_) {
         if (!mounted) return;
         if (ref.exists(activityProvider)) {
-          ref.read(activityProvider.notifier).refresh();
+          ref.read(activityProvider.notifier).refresh(force: true);
         }
         ref.invalidate(notificationsVmProvider);
       });
@@ -53,6 +54,7 @@ class _PushBridgeState extends ConsumerState<PushBridge>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      // 앱 복귀 시 기기 연결의 유효 기간과 계정 연결을 갱신한다.
       ref.read(pushServiceProvider)?.reconnect();
       if (ref.exists(notificationsVmProvider)) {
         ref.invalidate(notificationsVmProvider);

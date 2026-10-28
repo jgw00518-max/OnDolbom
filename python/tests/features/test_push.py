@@ -70,11 +70,13 @@ class PushTests(unittest.TestCase):
             connection.cursor.return_value.__enter__.return_value.fetchone.return_value = {'user_id': 'mysql'}
             with patch.object(push, 'db', return_value=database), patch.object(push, 'connect', return_value=connection), \
                  patch.object(push.firestore, 'transactional', return_value=lambda *args: 1), \
-                 patch.object(push, '_visible', return_value={} if visible else None), \
+                 patch.object(push, '_visible', return_value={'notification_type': 'schedule_declined'} if visible else None), \
                  patch.object(push, 'send_message', side_effect=ValueError('offline') if failed else None) as send, \
                  patch.object(push.store, 'collection') as events:
-                push.dispatch_event('7', {'recipient_ids': ['mysql']})
+                push.dispatch_event('7', {'recipient_ids': ['mysql'], 'notification_type': 'schedule_recruitment'})
             self.assertEqual(send.call_count, int(visible))
+            if visible:
+                self.assertEqual(send.call_args.kwargs['notification_type'], 'schedule_declined')
             status = delivery.update.call_args.args[0]['status']
             self.assertEqual(status, 'pending' if failed else 'sent' if visible else 'skipped')
             if failed:
@@ -89,6 +91,39 @@ class PushTests(unittest.TestCase):
         self.assertEqual(message.android.notification.channel_id, 'ondolbom_updates')
         self.assertEqual(message.data['user_uid'], 'uid')
         self.assertNotIn('schedule_memo', message.data)
+
+    def test_only_enabled_types_enqueue_on_first_publication(self):
+        for kind in ('schedule_created', 'schedule_changed', 'schedule_deleted',
+                     'schedule_reconfirm', 'schedule_accepted', 'schedule_reconfirmed',
+                     'schedule_recruitment', 'schedule_reminder'):
+            with self.subTest(kind=kind):
+                ref, transaction = MagicMock(), MagicMock()
+                ref.get.return_value.exists = True
+                ref.get.return_value.to_dict.return_value = dict(
+                    status='pending', schedule_created_at='stamp', notification_type=kind)
+                store._publish(transaction, ref, 'stamp')
+                values = transaction.update.call_args.args[1]
+                self.assertEqual(values.get('push_pending', False),
+                                 kind in {'schedule_created', 'schedule_changed', 'schedule_deleted', 'schedule_reconfirm',
+                                          'schedule_accepted', 'schedule_reconfirmed', 'schedule_recruitment'})
+
+    def test_change_and_delete_messages_keep_private_details_out(self):
+        for kind, word in [('schedule_changed', '변경'), ('schedule_deleted', '삭제'),
+                           ('schedule_reconfirm', '재수락'), ('schedule_accepted', '수락'),
+                           ('schedule_reconfirmed', '재수락'), ('schedule_declined', '거절'),
+                           ('schedule_recruitment', '모집')]:
+            with self.subTest(kind=kind), patch.object(push, 'get_firebase_app'), \
+                 patch.object(push.messaging, 'send') as send:
+                push.send_message('fid', 'uid', 'event', notification_type=kind)
+                message = send.call_args.args[0]
+                self.assertEqual(message.data['type'], kind)
+                self.assertIn(word, message.notification.body)
+                self.assertEqual(set(message.data), {'notification_id', 'user_uid', 'type'})
+
+    def test_automatic_recruitment_is_not_pushed(self):
+        self.assertFalse(store.supports_push(dict(notification_type='schedule_recruitment', request_history_seq=1)))
+        self.assertTrue(store.supports_push(dict(notification_type='schedule_recruitment')))
+        self.assertFalse(store.supports_push(dict(notification_type='schedule_reminder')))
 
     def test_self_test_rejects_other_accounts_expired_and_stale_bindings(self):
         now = datetime.now(timezone.utc)

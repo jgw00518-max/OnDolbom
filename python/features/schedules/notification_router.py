@@ -1,3 +1,4 @@
+from python.features.activity.cache import badge_cache
 from python.features.schedules.reminders import reminder_is_current
 """일정 담당 B의 알림 조회 API. A의 공통 저장 함수를 재사용한다."""
 from typing import Literal
@@ -208,5 +209,8 @@ def notification_schedule(notification_id: str = Path(min_length=1, max_length=2
 def read_notification(notification_id: str = Path(min_length=1, max_length=200, pattern=r"^[A-Za-z0-9_-]+$"), claims: dict = Depends(require_firebase_user)):
     def action(connection, user_id):
         _required(connection, user_id, notification_id)
-        return dict(notification_id=notification_id, read_at=store.mark_read(notification_id, user_id))
+        read_at = store.mark_read(notification_id, user_id)
+        # 읽음 저장이 성공한 후에만 현재 계정의 배지 캐시를 폐기한다.
+        badge_cache.invalidate(claims['uid'])
+        return dict(notification_id=notification_id, read_at=read_at)
     return _run(claims, action)

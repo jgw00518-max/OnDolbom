@@ -187,7 +187,7 @@ class NotificationsVm extends AsyncNotifier<NotificationList> {
     }
     if (ref.mounted) {
       if (ref.exists(activityProvider)) {
-        ref.read(activityProvider.notifier).refresh();
+        ref.read(activityProvider.notifier).refresh(force: true);
       }
       // 열기 요청 도중 provider를 재생성하지 않고 해당 항목의 읽음만 반영한다.
       final previous = state.asData?.value;
