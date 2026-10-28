@@ -1151,8 +1151,8 @@ def respond_schedule_change(
                 start_time=pending_request["current"]["start_time"],
             )
 
-            # 긴급 변경에는 일반 응답 기한 제한을 적용하지 않는다.
-            if not deadline["is_urgent"]:
+            # 일반·긴급 구분 없이 응답 기한이 있으면 만료 여부를 검사한다.
+            if deadline["response_due_at"] is not None:
                 cursor.execute(
                     "SELECT CURRENT_TIMESTAMP AS server_now"
                 )

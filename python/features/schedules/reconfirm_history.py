@@ -64,7 +64,19 @@ def get_pending_reconfirm_request(
 
             request = history
             request_history_seqs.append(history["history_seq"])
+        # 표시 비교 기준은 현재 담당자가 마지막으로 확인한 내용이다.
+        # 응답하지 않은 이전 변경 요청들은 계속 거슬러 올라간다.
+        previous = None
 
+        for history in histories[1:]:
+            if (
+                history["update_accepted_by"] == accepted_by
+                and history["update_accepted_at"] is None
+            ):
+                continue
+
+            previous = history
+            break
         # 이전 이력이 없는 첫 변경이면 최초 등록 내용과 비교한다.
         if previous is None:
             cursor.execute(

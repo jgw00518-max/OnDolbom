@@ -112,6 +112,15 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
         ? item?.previousSchedule
         : null;
     final responseDueAt = item?.reconfirmResponseDueAt;
+    // 현재 공간 역할과 담당 여부에 따라 안내를 구분한다.
+    final urgentNotice = member.isRepresentative
+        ? '긴급 변경 · 담당 가족에게 연락해 주세요'
+        : mine
+        ? responseDueAt != null
+              ? '긴급 변경 · 아래 기한까지 재수락 또는 거절해 주세요. '
+                    '응답하지 않으면 담당 배정이 자동 해제됩니다.'
+              : '긴급 변경 · 돌봄 가능 여부에 응답해 주세요'
+        : '기존 담당자의 재수락을 기다리고 있어요';
 
     return PopScope(
       canPop: !isBusy,
@@ -190,6 +199,13 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                         ),
                         const SizedBox(height: 28),
                         infoRow(
+                          '날짜',
+                          dateText(item.date),
+                          previousValue: previous == null
+                              ? null
+                              : dateText(previous.date),
+                        ),
+                        infoRow(
                           '시작시간',
                           item.startTime,
                           previousValue: previous?.startTime,
@@ -202,16 +218,46 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                         infoRow('담당자', assigned ? personName : '모집 중'),
                         infoRow('일정 상태', item.state),
                         if (item.reconfirmRequired) ...[
-                          infoRow(
-                            '응답 기한',
-                            item.reconfirmIsUrgent
-                                ? '긴급 변경 · 전화 확인 필요'
-                                : responseDueAt == null
-                                ? '기한을 확인하지 못했습니다.'
-                                : '${dateText(responseDueAt)} '
-                                      '${responseDueAt.hour.toString().padLeft(2, '0')}:'
-                                      '${responseDueAt.minute.toString().padLeft(2, '0')}',
-                          ),
+                          if (item.reconfirmIsUrgent)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 17),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(
+                                    width: 86,
+                                    child: Text(
+                                      '확인 안내',
+                                      style: TextStyle(
+                                        color: Color(0xFF78716A),
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      urgentNotice,
+                                      style: const TextStyle(
+                                        color: Colors.black,
+                                        fontSize: 15,
+                                        height: 1.4,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          if (responseDueAt != null ||
+                              !item.reconfirmIsUrgent)
+                            infoRow(
+                              '응답 기한',
+                              responseDueAt == null
+                                  ? '기한을 확인하지 못했습니다.'
+                                  : '${dateText(responseDueAt)} '
+                                        '${responseDueAt.hour.toString().padLeft(2, '0')}:'
+                                        '${responseDueAt.minute.toString().padLeft(2, '0')}',
+                            ),
                         ],
                         infoRow(
                           '메모',
