@@ -14,14 +14,23 @@ final firebaseAuthProvider = Provider<FirebaseAuth>(
   (ref) => FirebaseAuth.instance,
 );
 
+// 실제 앱에서만 푸시 해제를 연결한다. 테스트·미지원 플랫폼은 기본 로그아웃을 유지한다.
+final beforeSignOutProvider = Provider<Future<void> Function()>(
+  (ref) => () async {},
+);
+
 /// 앱 시작 시에만 적용한다. 로그인 중에는 현재 세션을 유지한다.
 Future<void> restoreLoginSession(
   FirebaseAuth auth,
-  LoginPreferences preferences,
-) async {
+  LoginPreferences preferences, {
+  Future<void> Function()? beforeSignOut,
+}) async {
   // 세션 복원이 끝난 뒤 검사하고 홈 화면 표시 전에 미선택 세션을 종료한다.
   await auth.authStateChanges().first;
   if (!await preferences.readAutoLogin()) {
+    if (beforeSignOut != null && auth.currentUser != null) {
+      await beforeSignOut();
+    }
     await auth.signOut();
   }
 }
@@ -227,8 +236,10 @@ class AuthVm extends Notifier<AsyncValue<void>> {
   });
 
   // SDK 로그아웃 결과가 인증 스트림에 반영되면 앱이 로그인 화면으로 전환된다.
-  Future<void> signOut() =>
-      _run(() => ref.read(firebaseAuthProvider).signOut());
+  Future<void> signOut() => _run(() async {
+    await ref.read(beforeSignOutProvider)();
+    await ref.read(firebaseAuthProvider).signOut();
+  });
 
   void clearError() {
     if (!state.isLoading) state = const AsyncData(null);

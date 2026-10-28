@@ -7,6 +7,7 @@ import 'package:ondolbom/vm/auth/auth_vm.dart';
 import 'package:ondolbom/vm/auth/personal_settings_vm.dart';
 import 'package:ondolbom/vm/auth/user_profile_vm.dart';
 import 'package:ondolbom/view/auth/profile_edit_view.dart';
+import 'package:ondolbom/view/widgets/push_bridge.dart';
 
 class PersonalSettingsView extends ConsumerWidget {
   const PersonalSettingsView({super.key});
@@ -400,6 +401,7 @@ class PersonalSettingsView extends ConsumerWidget {
               ),
               const SizedBox(height: 28),
               _section('LOGIN'),
+              const PushSettingsTile(),
               _card(
                 settings.when(
                   loading: () => const Padding(

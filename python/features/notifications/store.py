@@ -45,7 +45,17 @@ def mark_read(identifier, user_id):
     return read_at(identifier, user_id)
 
 
+def exclude_actor(payload):
+    """직접 작업한 사용자는 제외하고 자동 재알림 대상은 유지한다."""
+    actor = payload.get('actor_id')
+    if actor and payload.get('notification_type') != 'schedule_reminder':
+        return {**payload, 'recipient_ids': [
+            user_id for user_id in payload['recipient_ids'] if user_id != actor]}
+    return payload
+
+
 def _prepare(transaction, ref, payload):
+    payload = exclude_actor(payload)
     snapshot = ref.get(transaction=transaction)
     if snapshot.exists:
         old = snapshot.to_dict()
@@ -68,7 +78,11 @@ def _publish(transaction, ref, fingerprint):
     if event['schedule_created_at'] != fingerprint:
         return False
     if event['status'] == 'pending':
-        transaction.update(ref, {'status': 'published', 'published_at': firestore.SERVER_TIMESTAMP})
+        values = {'status': 'published', 'published_at': firestore.SERVER_TIMESTAMP}
+        # 신규 일정 등록만 푸시 큐에 넣는다. 재발행·읽음 갱신은 재발송하지 않는다.
+        if event.get('notification_type', 'schedule_created') == 'schedule_created':
+            values['push_pending'] = True
+        transaction.update(ref, values)
     return True
 
 
