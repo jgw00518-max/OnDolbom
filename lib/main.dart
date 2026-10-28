@@ -1,3 +1,4 @@
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:ondolbom/theme/app_theme.dart';
 import 'package:ondolbom/view/widgets/app_text_scale.dart';
 import 'package:flutter/material.dart';
@@ -85,6 +86,15 @@ class MyApp extends ConsumerWidget {
     final session = ref.watch(authUserProvider);
 
     return MaterialApp(
+      locale: const Locale('ko', 'KR'),
+      supportedLocales: const [
+        Locale('ko', 'KR')
+      ],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate
+      ],
       debugShowCheckedModeBanner: false,
       title: '온돌봄',
       navigatorKey: _pushNavigatorKey,
