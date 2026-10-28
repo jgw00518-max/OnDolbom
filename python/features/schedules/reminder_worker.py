@@ -1,4 +1,4 @@
-"""API 서버가 자동 실행한다. 단독 실행도 가능하며 --once는 한 번만 검사한다."""
+"""알림 담당자가 별도 터미널에서 실행한다. --once는 한 번만 검사한다."""
 import argparse
 import logging
 from time import monotonic, sleep

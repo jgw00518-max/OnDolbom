@@ -122,6 +122,7 @@ def send_message(fid, uid, identifier, test=False, notification_type='schedule_c
             'schedule_reconfirmed': '변경된 돌봄 일정이 재수락되었습니다. 앱에서 확인해 주세요.',
             'schedule_declined': '변경된 돌봄 일정의 재수락이 거절되었습니다. 앱에서 확인해 주세요.',
             'schedule_recruitment': '돌봄 일정의 담당자를 다시 모집합니다. 앱에서 확인해 주세요.',
+            'schedule_reminder': '시작까지 72시간 이내인 돌봄 일정에 아직 담당자가 없습니다. 앱에서 확인해 주세요.',
             'schedule_reconfirm': '돌봄 일정의 날짜 또는 시간이 변경되었습니다. 앱에서 재수락 여부를 확인해 주세요.',
         }[notification_type]),
         data={'notification_id': str(identifier), 'user_uid': uid, 'type': 'test' if test else notification_type},

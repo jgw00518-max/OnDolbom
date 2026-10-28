@@ -1,4 +1,4 @@
-"""API 서버의 시작·종료에 72시간 재알림 worker를 연결한다."""
+"""명시적으로 요청한 경우에만 API에 worker를 연결한다. 기본은 분리 실행이다."""
 import asyncio
 from contextlib import asynccontextmanager, suppress
 import logging
@@ -40,8 +40,9 @@ def stop_worker(process):
 
 @asynccontextmanager
 async def reminder_lifespan(app):
-    # 자동 테스트 또는 별도 worker를 운영하는 배포 환경에서 명시적으로 끈다.
-    if os.getenv('ONDOLBOM_REMINDER_WORKER', '1').lower() in {'0', 'false', 'off'}:
+    # 팀원 API를 켤 때 공유 Firestore를 조회하는 worker가 중복 실행되지 않게 기본 비활성화한다.
+    # 기존 통합 실행이 필요할 때만 환경 변수로 명시적으로 활성화한다.
+    if os.getenv('ONDOLBOM_REMINDER_WORKER', '0').lower() not in {'1', 'true', 'on'}:
         yield
         return
     process = start_worker()
