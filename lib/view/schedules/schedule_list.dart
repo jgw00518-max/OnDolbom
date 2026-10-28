@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/family_room_label.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/view/schedules/schedule_detail.dart';
@@ -74,7 +75,7 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(12, 18, 12, 28),
         children: [
-          Text('${room.careRecipientName} 님의 돌봄 공간'),
+          FamilyRoomLabel(name: '${room.careRecipientName} 님의 돌봄 공간'),
           const SizedBox(height: 16),
           if (rooms.selectedParticipation?.isRepresentative == true)
             Align(

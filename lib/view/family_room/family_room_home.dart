@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/family_room_label.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -107,26 +108,7 @@ class FamilyRoomHome extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
         children: [
           // 공간 정보와 장식만 표시하며 기존 데이터 조회 흐름은 변경하지 않는다.
-          Row(
-            children: [
-              const Icon(
-                Icons.home_outlined,
-                size: 17,
-                color: AppColors.sageDark,
-              ),
-              const SizedBox(width: 7),
-              Expanded(
-                child: Text(
-                  '${room.careRecipientName} 님의 돌봄 공간',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.sageDark,
-                  ),
-                ),
-              ),
-            ],
-          ),
+          FamilyRoomLabel(name: '${room.careRecipientName} 님의 돌봄 공간'),
           const SizedBox(height: 18),
           LayoutBuilder(
             builder: (context, constraints) {

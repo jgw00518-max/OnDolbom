@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/family_room_label.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -47,13 +48,7 @@ class _InviteCreateState extends ConsumerState<InviteCreate> {
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              Text(
-                '${widget.recipientName} 님의 돌봄 공간',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              FamilyRoomLabel(name: '${widget.recipientName} 님의 돌봄 공간'),
               const SizedBox(height: 12),
               const Text('함께 돌볼 가족의 로그인 이메일을 입력해 주세요.'),
               const SizedBox(height: 24),

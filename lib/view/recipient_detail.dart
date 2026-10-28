@@ -47,12 +47,6 @@ class RecipientDetail extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          Text(
-            '${room.careRecipientName} 님의 돌봄 공간',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 24),
-
           // 제목과 수정 버튼
           Row(
             children: [

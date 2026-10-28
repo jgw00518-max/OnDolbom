@@ -82,6 +82,41 @@ Future<void> fill(WidgetTester tester, String name, String value) async {
 }
 
 void main() {
+  testWidgets('등록 순서와 무관하게 아침·점심·저녁 안에서 식전·식후 순서로 표시한다', (tester) async {
+    await mount(
+      tester,
+      MockClient(
+        (_) async => response([
+          {...medicationJson(4, '기타 약'), 'medication_time': '취침 전'},
+          {...medicationJson(3, '저녁 약'), 'medication_time': '저녁 식후 30분'},
+          {...medicationJson(2, '점심 약'), 'medication_time': '점심 식후 30분'},
+          medicationJson(1, '아침 약'),
+          {...medicationJson(5, '저녁 식전 약'), 'medication_time': '저녁 식전 30분'},
+          {...medicationJson(6, '점심 식전 약'), 'medication_time': '점심 식전 30분'},
+          {...medicationJson(7, '아침 식전 약'), 'medication_time': '아침 식전 30분'},
+        ]),
+      ),
+    );
+    tester.view.physicalSize = const Size(390, 2800);
+    await tester.pumpAndSettle();
+    final names = [
+      '아침 식전 약',
+      '아침 약',
+      '점심 식전 약',
+      '점심 약',
+      '저녁 식전 약',
+      '저녁 약',
+      '기타 약',
+    ];
+    for (var i = 0; i < names.length - 1; i++) {
+      expect(
+        tester.getTopLeft(find.textContaining(names[i])).dy,
+        lessThan(tester.getTopLeft(find.textContaining(names[i + 1])).dy),
+      );
+    }
+    expect(tester.takeException(), isNull);
+  });
+
   test('모델은 숫자·문자열 용량과 null을 처리한다', () {
     final numeric = Medication.fromJson(medicationJson(1, '테스트 약'));
     expect(numeric.doseLabel, '0.5정');

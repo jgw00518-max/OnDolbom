@@ -1,3 +1,5 @@
+import 'package:ondolbom/theme/app_colors.dart';
+import 'package:ondolbom/view/medications/medication_style.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -140,17 +142,18 @@ class _MedicationEditDialogState extends ConsumerState<MedicationEditDialog> {
         ref.watch(medicationEditAllowedProvider(widget.query.context));
     final colors = Theme.of(context).colorScheme;
     final enabled = !_saving && allowed;
-    InputDecoration decoration(String label) => InputDecoration(
-      labelText: label,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      errorMaxLines: 3,
-    );
+    InputDecoration decoration(String label) => MedicationStyle.field(label);
     return PopScope(
       canPop: _finished || (!_saving && !_dirty),
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _cancel();
       },
       child: Dialog(
+        backgroundColor: AppColors.background,
+        surfaceTintColor: Colors.transparent,
+        shape: MedicationStyle.shape,
+        clipBehavior: Clip.antiAlias,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         child: ConstrainedBox(
           constraints: BoxConstraints(
             maxWidth: 440,
@@ -159,25 +162,9 @@ class _MedicationEditDialogState extends ConsumerState<MedicationEditDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 8, 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '투약 정보 수정',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.titleLarge?.copyWith(color: colors.primary),
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: '닫기',
-                      onPressed: _saving ? null : _cancel,
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
+              MedicationHeading(
+                title: '투약 정보 수정',
+                onClose: _saving ? null : _cancel,
               ),
               const Divider(height: 1),
               Flexible(
@@ -191,13 +178,12 @@ class _MedicationEditDialogState extends ConsumerState<MedicationEditDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(widget.query.context.roomName),
-                        const SizedBox(height: 8),
-                        TextButton.icon(
+                        TextButton(
                           key: const ValueKey('medication-edit-date'),
                           onPressed: enabled ? _pickDate : null,
-                          icon: const Icon(Icons.calendar_today_outlined),
-                          label: Text(medicationDateKey(_date)),
+                          child: MedicationDateLabel(
+                            date: medicationDateKey(_date),
+                          ),
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
@@ -373,17 +359,24 @@ class _MedicationEditDialogState extends ConsumerState<MedicationEditDialog> {
                 ),
               ),
               const Divider(height: 1),
-              Padding(
+              Container(
+                color: AppColors.surface,
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
                     OutlinedButton(
                       onPressed: _saving ? null : _cancel,
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(80, 48),
+                      ),
                       child: const Text('취소'),
                     ),
                     const Spacer(),
                     FilledButton(
                       onPressed: enabled ? _save : null,
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(110, 48),
+                      ),
                       child: Text(_saving ? '저장 중…' : '수정 저장'),
                     ),
                   ],
