@@ -1,6 +1,7 @@
 """프로젝트 루트에서 python -m python.main 으로 실행."""
 
 from fastapi import FastAPI
+from python.features.schedules.reminder_lifecycle import reminder_lifespan
 from python.features.activity.router import router as activity_router
 
 from python.features.auth.router import router as auth_router
@@ -20,7 +21,8 @@ from python.features.schedules.router import router as schedules_router
 from python.features.invites.router import router as invites_router
 
 
-app = FastAPI(title="온돌봄 사용자 API")
+# 실제 서버 프로세스의 생명주기에만 worker를 연결한다. import만 할 때는 실행하지 않는다.
+app = FastAPI(title="온돌봄 사용자 API", lifespan=reminder_lifespan)
 app.include_router(activity_router)
 app.include_router(inquiries_router)
 app.include_router(notices_router)

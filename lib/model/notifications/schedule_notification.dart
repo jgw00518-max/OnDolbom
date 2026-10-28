@@ -43,6 +43,7 @@ class ScheduleNotification {
   );
 
   String get title => switch (type) {
+    'schedule_reminder' => '시작까지 72시간 이내, 돌봄 담당자가 필요해요',
     'schedule_accepted' => '가족이 돌봄 일정을 수락했어요',
     'schedule_reconfirmed' => '담당자가 변경된 일정을 재수락했어요',
     'schedule_declined' => '담당자가 재수락을 거절했어요',
