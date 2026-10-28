@@ -45,7 +45,7 @@ class Schedule {
     // 일반 재수락 요청의 응답 기한
   final DateTime? reconfirmResponseDueAt;
 
-  // 요청 당시 시작까지 12시간 이하였는지 여부
+  // 요청 당시 시작까지 24시간 이하였는지 여부
   final bool reconfirmIsUrgent;
 
   String get title => name == null || name!.trim().isEmpty ? '돌봄 일정' : name!;

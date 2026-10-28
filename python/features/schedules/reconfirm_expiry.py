@@ -77,8 +77,8 @@ def get_expired_reconfirm_request(
             start_time=request["current"]["start_time"],
         )
 
-        # 긴급 변경은 자동 만료하지 않는다.
-        if deadline["is_urgent"]:
+        # 기한이 없는 12시간 이하 긴급 요청만 자동 만료에서 제외한다.
+        if deadline["response_due_at"] is None:
             return None
 
         cursor.execute("SELECT CURRENT_TIMESTAMP AS server_now")
