@@ -19,6 +19,7 @@ class MedicationListView extends ConsumerStatefulWidget {
 
 class _MedicationListViewState extends ConsumerState<MedicationListView> {
   final _unconfirmDialogs = <int>{};
+  final _deleting = <int>{};
   late DateTime _date = DateUtils.dateOnly(
     widget.initialDate ?? DateTime.now(),
   );
@@ -47,6 +48,60 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('투약일지를 등록했어요.')));
+    }
+  }
+
+  Future<void> _deletePeriod(MedicationQuery query, Medication item) async {
+    if (!_deleting.add(item.seq)) return;
+    try {
+      final approved = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('남은 복용 기간을 삭제할까요?'),
+          content: Text(
+            '${item.info ?? '이 약'}의 같은 등록 묶음에서 오늘과 이후 날짜의 항목을 삭제해요.\n오늘 체크한 항목도 삭제되며, 어제까지의 기록은 유지돼요.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('삭제'),
+            ),
+          ],
+        ),
+      );
+      if (approved != true || !mounted) return;
+      final count = await ref
+          .read(medicationVmProvider(query).notifier)
+          .deletePeriod(item);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              count == 0
+                  ? '오늘 이후에 삭제할 항목이 없어요.'
+                  : '오늘 이후의 투약 항목 $count개를 삭제했어요.',
+            ),
+          ),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              error is MedicationFailure
+                  ? error.message
+                  : '약을 삭제하지 못했어요. 다시 시도해 주세요.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      _deleting.remove(item.seq);
     }
   }
 
@@ -396,8 +451,25 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
                                                       ],
                                                     )
                                                   : const Text('복약 전'),
-                                              trailing: const Icon(
-                                                Icons.chevron_right,
+                                              trailing: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  if (canCreate)
+                                                    IconButton(
+                                                      tooltip: '약 삭제',
+                                                      icon: const Icon(
+                                                        Icons.delete_outline,
+                                                      ),
+                                                      onPressed: () =>
+                                                          _deletePeriod(
+                                                            query,
+                                                            item,
+                                                          ),
+                                                    ),
+                                                  const Icon(
+                                                    Icons.chevron_right,
+                                                  ),
+                                                ],
                                               ),
                                               onTap: () => _showDetail(item),
                                             ),

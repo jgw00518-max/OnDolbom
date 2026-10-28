@@ -180,6 +180,7 @@ void main() {
             'family_room_id': 'room-a',
             'medication_info': '새 테스트 약',
             'medication_date': date,
+            'duration_days': 2,
             'medication_time': '아침 식후 30분',
             'dosage': '0.500',
             'dosage_unit': '정',

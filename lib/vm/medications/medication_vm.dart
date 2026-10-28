@@ -149,7 +149,9 @@ class MedicationVm extends AsyncNotifier<MedicationFeed> {
       }
       if (response.statusCode == 403) {
         throw MedicationFailure(
-          delete
+          path.startsWith('delete/')
+              ? '현재 공간의 주보호자만 약을 삭제할 수 있어요.'
+              : delete
               ? '체크한 본인 또는 현재 주보호자만 체크를 해제할 수 있어요.'
               : patch
               ? '현재 공간의 주보호자만 투약 정보를 수정할 수 있어요.'
@@ -359,6 +361,7 @@ class MedicationVm extends AsyncNotifier<MedicationFeed> {
     required String time,
     required String dosage,
     required String unit,
+    int durationDays = 1,
   }) async {
     _ensureCanCreate();
     if (query.context.familyRoomId.isEmpty || query.context.userId.isEmpty) {
@@ -373,18 +376,40 @@ class MedicationVm extends AsyncNotifier<MedicationFeed> {
         !isValidMedicationDosage(dosage)) {
       throw const MedicationFailure('약 정보와 용량을 확인해 주세요.');
     }
+    if (durationDays < 1 || durationDays > 365) {
+      throw const MedicationFailure('복용 기간은 1~365일로 입력해 주세요.');
+    }
     await _request(
       'insert',
       body: {
         'family_room_id': query.context.familyRoomId,
         'medication_info': info.trim(),
         'medication_date': query.date,
+        'duration_days': durationDays,
         'medication_time': time.trim(),
         'dosage': dosage.trim(),
         'dosage_unit': unit.trim(),
       },
     );
-    if (ref.mounted) ref.invalidateSelf();
+    // 기간에 포함된 다른 날짜 화면도 다음 조회에서 새 항목을 받도록 무효화한다.
+    if (ref.mounted) ref.invalidate(medicationVmProvider);
+  }
+
+  Future<int> deletePeriod(Medication item) async {
+    _ensureCanCreate();
+    if (item.familyRoomId != query.context.familyRoomId) {
+      throw const MedicationFailure('선택한 공간이 변경되었습니다.');
+    }
+    final result = await _request(
+      'delete/${item.seq}',
+      delete: true,
+      expectedStatus: 200,
+      beforeSend: _ensureCanCreate,
+      body: {'family_room_id': query.context.familyRoomId},
+    );
+    final count = result['deleted_count'] as int;
+    if (ref.mounted) ref.invalidate(medicationVmProvider);
+    return count;
   }
 
   void _ensureCanCreate() {

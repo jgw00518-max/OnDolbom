@@ -21,6 +21,9 @@ class _MedicationFormDialogState extends ConsumerState<MedicationFormDialog> {
   final _dosage = TextEditingController();
   final _unit = TextEditingController();
   final _minutes = TextEditingController(text: '30');
+  final _days = TextEditingController(text: '7');
+  bool _customPeriod = false;
+  int _periodDays = 2;
   String _meal = '아침';
   String _timing = '식후';
   bool _saving = false;
@@ -30,7 +33,7 @@ class _MedicationFormDialogState extends ConsumerState<MedicationFormDialog> {
 
   @override
   void dispose() {
-    for (final controller in [_info, _dosage, _unit, _minutes]) {
+    for (final controller in [_info, _dosage, _unit, _minutes, _days]) {
       controller.dispose();
     }
     super.dispose();
@@ -85,6 +88,7 @@ class _MedicationFormDialogState extends ConsumerState<MedicationFormDialog> {
             time: '$_meal $_timing ${int.parse(_minutes.text)}분',
             dosage: _dosage.text,
             unit: _unit.text,
+            durationDays: _customPeriod ? int.parse(_days.text) : _periodDays,
           );
       if (mounted) _close(true);
     } catch (error) {
@@ -150,6 +154,140 @@ class _MedicationFormDialogState extends ConsumerState<MedicationFormDialog> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         MedicationDateLabel(date: widget.query.date),
+                        const SizedBox(height: 20),
+                        // 기본 기간과 직접 입력은 상호 배타적으로 활성화한다.
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: AppColors.peachSoft,
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                '복용 기간',
+                                style: TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                              const SizedBox(height: 12),
+                              RadioGroup<bool>(
+                                groupValue: _customPeriod,
+                                onChanged: (value) {
+                                  if (_saving || value == null) return;
+                                  setState(() {
+                                    _customPeriod = value;
+                                    _dirty = true;
+                                  });
+                                },
+                                child: Column(
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Radio<bool>(
+                                          value: false,
+                                          enabled: !_saving,
+                                        ),
+                                        Expanded(
+                                          child: DropdownButtonFormField<int>(
+                                            isExpanded: true,
+                                            key: const ValueKey(
+                                              'medication-period',
+                                            ),
+                                            initialValue: _periodDays,
+                                            decoration: field('기간 선택'),
+                                            items: const [
+                                              DropdownMenuItem(
+                                                value: 2,
+                                                child: Text('2일'),
+                                              ),
+                                              DropdownMenuItem(
+                                                value: 3,
+                                                child: Text('3일'),
+                                              ),
+                                              DropdownMenuItem(
+                                                value: 5,
+                                                child: Text('5일'),
+                                              ),
+                                              DropdownMenuItem(
+                                                value: 7,
+                                                child: Text('7일'),
+                                              ),
+                                              DropdownMenuItem(
+                                                value: 30,
+                                                child: Text('1개월 (30일)'),
+                                              ),
+                                              DropdownMenuItem(
+                                                value: 90,
+                                                child: Text('3개월 (90일)'),
+                                              ),
+                                            ],
+                                            onChanged: _saving || _customPeriod
+                                                ? null
+                                                : (value) => setState(() {
+                                                    _periodDays = value!;
+                                                    _dirty = true;
+                                                  }),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 14),
+                                    Row(
+                                      children: [
+                                        Radio<bool>(
+                                          value: true,
+                                          enabled: !_saving,
+                                        ),
+                                        const Text('직접 입력'),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: TextFormField(
+                                            key: const ValueKey(
+                                              'medication-period-days',
+                                            ),
+                                            controller: _days,
+                                            enabled: !_saving && _customPeriod,
+                                            keyboardType: TextInputType.number,
+                                            inputFormatters: [
+                                              FilteringTextInputFormatter
+                                                  .digitsOnly,
+                                              LengthLimitingTextInputFormatter(
+                                                3,
+                                              ),
+                                            ],
+                                            decoration: field(
+                                              '일수',
+                                            ).copyWith(suffixText: '일'),
+                                            validator: (value) {
+                                              if (!_customPeriod) return null;
+                                              final days = int.tryParse(
+                                                value ?? '',
+                                              );
+                                              return days == null ||
+                                                      days < 1 ||
+                                                      days > 365
+                                                  ? '1~365일 입력'
+                                                  : null;
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                '선택한 날짜부터 시작일을 포함해 매일 추가돼요.\n직접 입력은 최대 365일까지 가능해요.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  height: 1.5,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                         const SizedBox(height: 20),
                         const Text(
                           '복약 시간과 약',

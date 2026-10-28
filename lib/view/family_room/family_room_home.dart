@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/family_room/space_settings_view.dart';
 import 'package:ondolbom/view/widgets/family_room_label.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter/material.dart';
@@ -6,16 +7,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/view/medications/medication_list_view.dart';
 import 'package:ondolbom/view/chats/chat_view.dart';
 import 'package:ondolbom/view/memos/memo_list_view.dart';
-import 'package:ondolbom/view/exports/export_view.dart';
-import 'package:ondolbom/vm/family_room/family_context.dart';
 import 'package:ondolbom/view/recipient_detail.dart';
 import 'package:ondolbom/view/schedules/schedule_list.dart';
 import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
-import 'package:ondolbom/view/invites/invite_create.dart';
 import 'package:ondolbom/view/widgets/account_drawer.dart';
-
-import 'package:ondolbom/view/family_room/family_member_list.dart';
-import 'package:ondolbom/view/family_room/family_room_delete_dialog.dart';
 
 class FamilyRoomHome extends ConsumerWidget {
   const FamilyRoomHome({super.key});
@@ -24,7 +19,6 @@ class FamilyRoomHome extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(familyRoomProvider);
     final room = state.selectedRoom;
-    final colors = Theme.of(context).colorScheme;
 
     if (room == null) {
       return Scaffold(
@@ -49,60 +43,6 @@ class FamilyRoomHome extends ConsumerWidget {
           style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
         ),
         leading: const AccountMenuButton(),
-        actions: [
-          PopupMenuButton<String>(
-            tooltip: '가족 공간 메뉴',
-            icon: const Icon(Icons.more_vert),
-            enabled: !state.isLoading,
-            itemBuilder: (_) => [
-              const PopupMenuItem(
-                value: 'export',
-                child: Row(
-                  children: [
-                    Icon(Icons.download_outlined),
-                    SizedBox(width: 8),
-                    Text('메모·채팅 내보내기'),
-                  ],
-                ),
-              ),
-              if (state.selectedParticipation?.isRepresentative == true &&
-                  state.selectedParticipation?.isActive == true)
-                PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete_outline, color: colors.error),
-                      const SizedBox(width: 8),
-                      Text('가족 공간 삭제', style: TextStyle(color: colors.error)),
-                    ],
-                  ),
-                ),
-            ],
-            onSelected: (action) async {
-              final navigator = Navigator.of(context);
-              if (action == 'export') {
-                final selected = ref.read(familyContextProvider);
-                if (selected.familyRoomId != room.familyRoomId) return;
-                await navigator.push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => ExportView(selected: selected),
-                  ),
-                );
-                return;
-              }
-              if (action != 'delete') return;
-              final deleted = await showDialog<bool>(
-                context: context,
-                barrierDismissible: false,
-                builder: (_) => FamilyRoomDeleteDialog(room: room),
-              );
-              if (!context.mounted || deleted != true) return;
-              final notifier = ref.read(familyRoomProvider.notifier);
-              navigator.popUntil((route) => route.isFirst);
-              await notifier.fetchRooms();
-            },
-          ),
-        ],
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
@@ -229,53 +169,21 @@ class FamilyRoomHome extends ConsumerWidget {
               ),
               const SizedBox(width: 10),
 
-              if (state.selectedParticipation?.isRepresentative == true)
-                menuButton(
-                  '가족 초대',
-                  Icons.person_add_alt_1,
-                  () => inviteCreateAction(
-                    context,
-                    room.familyRoomId,
-                    room.careRecipientName,
+              // 모든 역할에서 같은 위치로 공간 관리 기능에 접근한다.
+              menuButton(
+                '공간 설정',
+                Icons.settings_outlined,
+                () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SpaceSettingsView(),
                   ),
-                )
-              else
-                const Expanded(child: SizedBox()),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 28),
 
-          // 오늘의 일정
-          // 주보호자와 일반 가족 모두 가족 목록을 조회한다.
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        FamilyMemberList(familyRoomId: room.familyRoomId),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.groups_outlined),
-              label: const Text(
-                '함께하는 가족',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.textPrimary,
-                backgroundColor: AppColors.peachSoft,
-                side: BorderSide.none,
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(22),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 28),
+          // 가족 관리 기능은 공간 설정으로 모으고 일정 카드를 메뉴 아래에 배치한다.
           Card(
             color: AppColors.surface,
             shape: RoundedRectangleBorder(
@@ -359,7 +267,7 @@ class FamilyRoomHome extends ConsumerWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: title == '일정' || title == '실시간 채팅' || title == '가족 초대'
+                  color: title == '일정' || title == '실시간 채팅' || title == '공간 설정'
                       ? AppColors.sageLight
                       : AppColors.peachSoft,
                   borderRadius: BorderRadius.circular(14),
@@ -405,37 +313,6 @@ class FamilyRoomHome extends ConsumerWidget {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('아직 연결하지 않은 기능입니다.')));
-  }
-
-  // 초대 등록 후 메일 발송 결과를 안내한다.
-  Future<void> inviteCreateAction(
-    BuildContext context,
-    String familyRoomId,
-    String recipientName,
-  ) async {
-    final emailSent = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => InviteCreate(
-          familyRoomId: familyRoomId,
-          recipientName: recipientName,
-        ),
-      ),
-    );
-
-    // 뒤로 가기로 취소한 경우에는 안내하지 않는다.
-    if (!context.mounted || emailSent == null) {
-      return;
-    }
-
-    final message = emailSent
-        ? '초대를 등록하고 이메일을 발송했습니다.'
-        : '초대는 등록했지만 이메일 발송에 실패했습니다. '
-              '초대받은 계정으로 로그인하면 받은 초대에서 확인할 수 있습니다.';
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
