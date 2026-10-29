@@ -1,5 +1,6 @@
 import 'package:ondolbom/model/notifications/schedule_notification.dart';
 import 'dart:convert';
+import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -36,6 +37,75 @@ Map<String, dynamic> item() => {
 };
 
 void main() {
+  test('중복 응답·겹친 페이지는 ID로 합치고 다른 이벤트와 읽음은 보존한다', () async {
+    final pendingPage = Completer<http.Response>();
+    final pageRequested = Completer<void>();
+    final client = MockClient((request) async {
+      if (request.url.path.endsWith('/read')) {
+        return http.Response(jsonEncode({'read_at': 'read-now'}), 200);
+      }
+      if (request.url.path.endsWith('/schedule')) {
+        return http.Response(
+          jsonEncode(item()),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      }
+      if (request.url.queryParameters['before_id'] != null) {
+        pageRequested.complete();
+        return pendingPage.future;
+      }
+      return http.Response(
+        jsonEncode({
+          'results': [item(), item()],
+          'next_before_id': '1',
+        }),
+        200,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+      );
+    });
+    final container = ProviderContainer(
+      overrides: [
+        firebaseAuthProvider.overrideWithValue(NotificationTestAuth()),
+        authUserProvider.overrideWith(
+          (ref) => Stream.value(const AppUser(uid: 'verified')),
+        ),
+        authHttpClientProvider.overrideWithValue(client),
+      ],
+    );
+    addTearDown(container.dispose);
+    addTearDown(client.close);
+    final subscription = container.listen(notificationsVmProvider, (_, _) {});
+    addTearDown(subscription.close);
+    expect(
+      (await container.read(notificationsVmProvider.future)).items.length,
+      1,
+    );
+    final vm = container.read(notificationsVmProvider.notifier);
+    final loading = vm.loadMore();
+    await pageRequested.future;
+    await vm.open('1');
+    pendingPage.complete(
+      http.Response(
+        jsonEncode({
+          'results': [
+            item(),
+            {...item(), 'notification_id': 'different-event'},
+            item(),
+          ],
+          'next_before_id': null,
+        }),
+        200,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+      ),
+    );
+    await loading;
+    final result = container.read(notificationsVmProvider).requireValue;
+    expect(result.items.map((item) => item.id), ['1', 'different-event']);
+    expect(result.items.first.readAt, 'read-now');
+    expect(result.nextBeforeId, isNull);
+  });
+
   test(
     'List uses ID token; opening rechecks schedule then marks read',
     () async {

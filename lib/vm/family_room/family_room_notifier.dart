@@ -25,6 +25,11 @@ class FamilyRoomDeleteFailure implements Exception {
   final String message;
 }
 
+class FamilyRoomMembershipFailure implements Exception {
+  const FamilyRoomMembershipFailure(this.message);
+  final String message;
+}
+
 class FamilyRoomNotifier extends Notifier<FamilyRoomState> {
   // 계정 변경 전의 요청 결과를 구분한다.
   Object sessionKey = Object();
@@ -180,6 +185,97 @@ class FamilyRoomNotifier extends Notifier<FamilyRoomState> {
     }
 
     state = state.copyWith(selectedRoomId: familyRoomId, clearError: true);
+  }
+
+  // 서버 권한을 최종 기준으로 하며 계정·선택 공간이 바뀐 응답은 적용하지 않는다.
+  Future<void> endMembership({
+    required String familyRoomId,
+    int? participateSeq,
+  }) async {
+    if (state.isLoading) {
+      throw const FamilyRoomMembershipFailure(
+        '다른 요청을 처리 중이에요. 잠시 후 다시 시도해 주세요.',
+      );
+    }
+    final requestKey = sessionKey;
+    final uid = ref.read(firebaseAuthProvider).currentUser?.uid;
+    final memberId = state.selectedParticipation?.userId;
+    void checkTarget() {
+      final member = state.selectedParticipation;
+      if (uid == null ||
+          !isCurrentRequest(requestKey, uid) ||
+          state.selectedRoomId != familyRoomId ||
+          member?.isActive != true) {
+        throw const FamilyRoomMembershipFailure(
+          '계정·공간이 변경됐어요. 목록을 다시 확인해 주세요.',
+        );
+      }
+      if (participateSeq == null && member!.isRepresentative) {
+        throw const FamilyRoomMembershipFailure('주보호자는 이전 후 공간에서 나갈 수 있습니다.');
+      }
+      if (participateSeq != null && member!.isRepresentative != true) {
+        throw const FamilyRoomMembershipFailure('현재 주보호자만 가족을 강퇴할 수 있습니다.');
+      }
+    }
+
+    checkTarget();
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final token = await getLoginToken().timeout(const Duration(seconds: 15));
+      checkTarget();
+      final action = participateSeq == null
+          ? 'leave'
+          : 'members/$participateSeq/remove';
+      final response = await ref
+          .read(familyRoomHttpClientProvider)
+          .post(
+            Uri.parse(
+              '$baseUrl/family-room/${Uri.encodeComponent(familyRoomId)}/$action',
+            ),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 30));
+      checkTarget();
+      if (response.statusCode != 200) {
+        throw FamilyRoomMembershipFailure(
+          getErrorMessage(response, '참여 종료를 처리하지 못했습니다.'),
+        );
+      }
+      final body = jsonDecode(utf8.decode(response.bodyBytes));
+      if (body is! Map ||
+          body['result'] != 'OK' ||
+          body['family_room_id'] != familyRoomId ||
+          (participateSeq == null
+              ? body['user_id'] != memberId
+              : body['participate_seq'] != participateSeq)) {
+        throw const FamilyRoomMembershipFailure(
+          '처리 결과를 확인하지 못했습니다. 목록을 새로고침해 주세요.',
+        );
+      }
+      if (participateSeq == null) {
+        // 종료된 공간은 즉시 선택 상태에서 제거해 하위 기능이 이전 권한을 재사용하지 않게 한다.
+        state = FamilyRoomState(
+          rooms: state.rooms
+              .where((room) => room.familyRoomId != familyRoomId)
+              .toList(),
+          participations: Map.of(state.participations)..remove(familyRoomId),
+        );
+      }
+    } on FamilyRoomMembershipFailure {
+      rethrow;
+    } on TimeoutException {
+      throw const FamilyRoomMembershipFailure(
+        '결과 확인이 지연됩니다. 공간·가족 목록을 새로고침해 처리 여부를 확인해 주세요.',
+      );
+    } catch (_) {
+      throw const FamilyRoomMembershipFailure(
+        '참여 종료 결과를 확인하지 못했습니다. 연결과 목록을 확인해 주세요.',
+      );
+    } finally {
+      if (isCurrentRequest(requestKey, uid)) {
+        state = state.copyWith(isLoading: false);
+      }
+    }
   }
 
   Future<void> deleteRoom({

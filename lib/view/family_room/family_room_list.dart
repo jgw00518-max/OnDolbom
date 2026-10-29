@@ -35,57 +35,25 @@ class _FamilyRoomListState extends ConsumerState<FamilyRoomList> {
   static const _paper = AppColors.background;
   static const _muted = Color(0xFF918782);
 
-  Widget _createButton(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: 15),
-    child: OutlinedButton(
-      onPressed: () => createRoomAction(context),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: _ink,
-        backgroundColor: const Color(0xFFFFF9F5),
-        padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 16),
-        minimumSize: const Size.fromHeight(76),
-        side: const BorderSide(color: Color(0xFFE3BBA7)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(19)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 39,
-            height: 39,
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(13),
-            ),
-            child: const Icon(Icons.add, size: 19),
-          ),
-          const SizedBox(width: 13),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '새 돌봄 공간 만들기',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  '새로운 가족을 위한 공간을 시작해요',
-                  style: TextStyle(fontSize: 11, color: _muted),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(familyRoomProvider);
     return Scaffold(
       backgroundColor: _paper,
       drawer: const AccountDrawer(),
+      // 목록 안의 생성 카드를 대신하며 기존 공간 생성·완료 후 갱신을 재사용한다.
+      floatingActionButton: FloatingActionButton(
+        tooltip: '새 돌봄 공간 만들기',
+        onPressed: () => createRoomAction(context),
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.textPrimary,
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: AppColors.border),
+        ),
+        child: const Icon(Icons.add, size: 32),
+      ),
       appBar: AppBar(
         backgroundColor: _paper,
         foregroundColor: _ink,
@@ -158,7 +126,7 @@ class _FamilyRoomListState extends ConsumerState<FamilyRoomList> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 560),
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 112),
                 children: [
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -351,7 +319,6 @@ class _FamilyRoomListState extends ConsumerState<FamilyRoomList> {
                       ),
                     );
                   }),
-                  _createButton(context),
                   if (state.rooms.isEmpty) ...[
                     const SizedBox(height: 20),
                     TextButton(

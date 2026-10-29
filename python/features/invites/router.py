@@ -140,22 +140,55 @@ def check_inviter(conn, family_room_id: str, user_id: str):
                 detail="현재 공간의 주보호자만 가족을 초대할 수 있습니다.",
             )
 # 주보호자가 가족에게 보낼 초대를 저장한다.
-# 실제 이메일 전송은 이후 단계에서 연결한다.
+# SMTP 발송과 발송 상태 확정은 신규 생성·만료 재요청에서 함께 사용한다.
 @router.post("", status_code=201)
 def create_invite(
     data: InviteCreate,
     current_user: dict = Depends(get_current_user),
 ) -> dict:
+    return _create_invite(data, current_user)
+
+
+@router.post("/{invite_id}/resend", status_code=201)
+def resend_invite(invite_id: str, current_user: dict = Depends(get_current_user)) -> dict:
+    """원래 발신자가 만료 초대 대신 새 초대를 만들고 이메일을 다시 보낸다."""
+    return _create_invite(None, current_user, resend_invite_id=invite_id)
+
+
+def _create_invite(data, current_user, resend_invite_id=None):
     conn = None
 
     try:
         conn = connect()
 
-        check_inviter(
-            conn,
-            data.family_room_id,
-            current_user["user_id"],
-        )
+        if resend_invite_id is not None:
+            # 공간 → 초대 순서로 잠그기 위해 먼저 본인 초대의 공간만 조회한다.
+            with conn.cursor() as cursor:
+                cursor.execute("""SELECT family_room_id FROM invite
+                    WHERE invite_id=%s AND inviter_id=%s AND invite_deleted_at IS NULL""",
+                    (resend_invite_id, current_user["user_id"]))
+                source = cursor.fetchone()
+            if source is None:
+                raise HTTPException(404, "본인이 보낸 초대가 없거나 확인할 수 없습니다.")
+            check_inviter(conn, source["family_room_id"], current_user["user_id"])
+            with conn.cursor() as cursor:
+                cursor.execute("""SELECT family_room_id, invite_email, invite_status,
+                    DATE_ADD(invite_at, INTERVAL 7 DAY) <= CURRENT_TIMESTAMP AS expired
+                    FROM invite WHERE invite_id=%s AND inviter_id=%s
+                    AND family_room_id=%s AND invite_deleted_at IS NULL FOR UPDATE""",
+                    (resend_invite_id, current_user["user_id"], source["family_room_id"]))
+                original = cursor.fetchone()
+            if original is None:
+                raise HTTPException(404, "초대가 없거나 확인할 수 없습니다.")
+            if not (original["invite_status"] == "만료" or
+                    (original["invite_status"] == "대기" and original["expired"])):
+                raise HTTPException(409, "만료된 초대만 재요청할 수 있습니다.")
+            # 수신 이메일·공간은 요청 본문으로 바꾸지 않고 기존 초대에서 결정한다.
+            data = InviteCreate(family_room_id=original["family_room_id"],
+                                invite_email=original["invite_email"])
+
+        if resend_invite_id is None:
+            check_inviter(conn, data.family_room_id, current_user["user_id"])
 
         # 이메일 비교는 앞뒤 공백과 대소문자를 구분하지 않는다.
         invite_email = data.invite_email.strip().lower()
@@ -377,6 +410,7 @@ def get_received_invites(
                     i.family_room_id,
                     i.invite_email,
                     i.invite_at,
+                    DATE_ADD(i.invite_at, INTERVAL 7 DAY) AS expires_at,
                     i.invite_status,
                     f.care_recipient_name,
                     u.name AS inviter_name
@@ -829,7 +863,16 @@ def get_sent_invites(
                     i.family_room_id,
                     i.invite_email,
                     i.invite_at,
+                    DATE_ADD(i.invite_at, INTERVAL 7 DAY) AS expires_at,
                     i.invite_status,
+                    (i.inviter_id = p.user_id AND i.invite_status = '만료'
+                     AND NOT EXISTS (SELECT 1 FROM invite newer
+                         WHERE newer.family_room_id=i.family_room_id
+                         AND LOWER(TRIM(newer.invite_email))=LOWER(TRIM(i.invite_email))
+                         AND newer.invite_deleted_at IS NULL
+                         AND (newer.invite_status='발송대기' OR
+                              (newer.invite_status='대기' AND
+                               DATE_ADD(newer.invite_at, INTERVAL 7 DAY)>CURRENT_TIMESTAMP)))) AS can_resend,
                     f.care_recipient_name,
                     u.name AS inviter_name
                 FROM invite AS i

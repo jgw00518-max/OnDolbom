@@ -118,6 +118,23 @@ class ScheduleReminderTests(unittest.TestCase):
             self.assertEqual(api.check_reminders(), 1)
             self.assertEqual(api.check_reminders(), 1)
 
+    def test_urgent_registration_publishes_only_reminder(self):
+        connection = MagicMock()
+        connection.cursor.return_value.__enter__.return_value.lastrowid = 7
+        data = routes.ScheduleCreate(family_room_id='room', schedule_date='2026-10-31',
+                                     start_time='11:00', end_time='12:00')
+        with patch.object(routes, 'connect', return_value=connection), \
+             patch.object(routes, 'check_representative'), patch.object(routes, 'check_schedule_overlap'), \
+             patch.object(routes, 'prepare_schedule_notifications', return_value=False), \
+             patch.object(routes, 'publish_schedule_notifications') as publish, \
+             patch.object(routes, 'try_remind', return_value=True) as remind:
+            result = routes.create_schedule(data, 'guardian')
+        publish.assert_not_called()
+        remind.assert_called_once_with(7)
+        self.assertFalse(result['notification_published'])
+        self.assertTrue(result['reminder_published'])
+        connection.commit.assert_called_once()
+
     def test_registration_and_time_change_trigger_immediate_check_after_commit(self):
         for update in [False, True]:
             connection = MagicMock()

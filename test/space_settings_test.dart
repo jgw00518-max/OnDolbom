@@ -12,7 +12,7 @@ import 'family_room_delete_test.dart' show DeleteRooms, guardianProvider;
 
 void main() {
   for (final guardian in [true, false]) {
-    testWidgets('공간 설정의 역할별 관리 버튼과 미구현 안내: $guardian', (tester) async {
+    testWidgets('공간 설정의 역할별 관리 버튼과 종료 확인: $guardian', (tester) async {
       await tester.binding.setSurfaceSize(Size(guardian ? 390 : 320, 1900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final container = ProviderContainer(
@@ -69,8 +69,8 @@ void main() {
       if (guardian) {
         await tester.tap(find.byTooltip('가족 강퇴'));
         await tester.pumpAndSettle();
-        expect(find.text('가족 강퇴 기능은 준비 중이에요.'), findsOneWidget);
-        await tester.pump(const Duration(seconds: 5));
+        expect(find.text('가족을 강퇴할까요?'), findsOneWidget);
+        await tester.tap(find.text('취소'));
         await tester.pumpAndSettle();
       }
       await tester.tap(find.byTooltip('이전 화면'));
@@ -79,7 +79,7 @@ void main() {
       await tester.tap(find.text('공간에서 나가기'));
       await tester.pumpAndSettle();
       expect(
-        find.textContaining(guardian ? '먼저 주보호자 이전' : '나가기 기능은 준비'),
+        find.textContaining(guardian ? '먼저 주보호자 이전' : '공간에서 나갈까요?'),
         findsOneWidget,
       );
       expect(tester.takeException(), isNull);

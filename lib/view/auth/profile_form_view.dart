@@ -1,3 +1,4 @@
+import 'package:ondolbom/vm/auth/auth_vm.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/vm/auth/user_profile_vm.dart';
@@ -11,6 +12,8 @@ class ProfileFormView extends ConsumerStatefulWidget {
 
 class _ProfileFormViewState extends ConsumerState<ProfileFormView> {
   final _form = GlobalKey<FormState>();
+  bool _sendingVerification = false;
+  String? _verificationNotice;
   final _name = TextEditingController();
   final _phone = TextEditingController();
 
@@ -19,6 +22,34 @@ class _ProfileFormViewState extends ConsumerState<ProfileFormView> {
     _name.dispose();
     _phone.dispose();
     super.dispose();
+  }
+
+  Future<void> _sendVerification() async {
+    if (_sendingVerification) return;
+    setState(() {
+      _sendingVerification = true;
+      _verificationNotice = null;
+    });
+    try {
+      final user = ref.read(firebaseAuthProvider).currentUser;
+      if (user == null) throw StateError('signed out');
+      // 기존 미인증 계정도 소유한 이메일을 인증한 뒤 로컬 프로필을 등록할 수 있다.
+      await user.sendEmailVerification();
+      if (mounted) {
+        setState(
+          () => _verificationNotice =
+              '인증 메일을 보냈습니다. 메일의 링크로 인증한 뒤 아래 저장 버튼을 다시 눌러 주세요.',
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _verificationNotice = '인증 메일을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sendingVerification = false);
+    }
   }
 
   @override
@@ -71,9 +102,26 @@ class _ProfileFormViewState extends ConsumerState<ProfileFormView> {
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ),
+            // 이메일 미인증 오류에만 복구 경로를 제공하고 탈퇴 계정은 우회하지 않는다.
+            if (state.hasError &&
+                state.error.toString().contains('회원가입 이메일 인증'))
+              OutlinedButton.icon(
+                onPressed: state.isLoading || _sendingVerification
+                    ? null
+                    : _sendVerification,
+                icon: const Icon(Icons.mark_email_read_outlined),
+                label: Text(
+                  _sendingVerification ? '인증 메일 보내는 중…' : '이메일 인증 메일 보내기',
+                ),
+              ),
+            if (_verificationNotice != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(_verificationNotice!),
+              ),
             const SizedBox(height: 16),
             FilledButton(
-              onPressed: state.isLoading
+              onPressed: state.isLoading || _sendingVerification
                   ? null
                   : () {
                       // 실패 시 입력을 유지하고, 성공 시 VM이 프로필 재조회를 요청한다.

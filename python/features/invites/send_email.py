@@ -33,6 +33,7 @@ def send_invite_email(invite_email: str):
     message.set_content(
         "가족과 함께하는 돌봄, 온돌봄\n\n"
         "가족 공간 초대가 도착했어요.\n"
+        "초대는 발송 후 7일 동안 유효합니다. 만료되면 초대한 가족에게 재요청해 주세요.\n"
         "온돌봄에서 가족들과 돌봄 일정을 나누고,\n"
         "소중한 일상을 함께 챙겨보세요.\n\n"
         "[가족 공간 참여 방법]\n\n"
@@ -154,6 +155,8 @@ def send_invite_email(invite_email: str):
                       <p style="margin:0; padding:16px;
                                 background-color:#FFF5EC; border-radius:12px;
                                 color:#99522F; font-size:13px; line-height:1.8;">
+                        <strong>초대 유효기간은 발송 후 7일입니다.</strong><br>
+                        만료되면 초대한 가족에게 새 초대를 요청해 주세요.<br><br>
                         <strong>가입 전 확인해 주세요</strong><br>
                         꼭 초대 메일을 받은 이메일 주소로 가입·로그인해 주세요.
                         다른 이메일 주소로 이용하면 초대를 확인할 수 없어요.

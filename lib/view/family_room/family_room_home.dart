@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/family_room/space_switcher_button.dart';
 import 'package:ondolbom/view/family_room/space_settings_view.dart';
 import 'package:ondolbom/view/widgets/family_room_label.dart';
 import 'package:ondolbom/theme/app_colors.dart';
@@ -44,8 +45,10 @@ class FamilyRoomHome extends ConsumerWidget {
         ),
         leading: const AccountMenuButton(),
       ),
+      floatingActionButton: const SpaceSwitcherButton(),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+        // 마지막 일정 카드가 이동 버튼에 가려지지 않도록 아래 여백을 확보한다.
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 112),
         children: [
           // 공간 정보와 장식만 표시하며 기존 데이터 조회 흐름은 변경하지 않는다.
           FamilyRoomLabel(name: '${room.careRecipientName} 님의 돌봄 공간'),
