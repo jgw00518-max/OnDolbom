@@ -163,7 +163,7 @@ class SpaceSettingsView extends ConsumerWidget {
                       if (guardian) {
                         _notice(
                           context,
-                          '공간에서 나가려면 먼저 주보호자 이전이 필요해요. 이전 기능은 준비 중이에요.',
+                          '공간에서 나가려면 먼저 주보호자 이전이 필요해요. 함께하는 가족에서 이전해 주세요.',
                         );
                         return;
                       }

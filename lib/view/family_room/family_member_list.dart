@@ -1,4 +1,6 @@
 import 'package:ondolbom/view/family_room/membership_exit_dialog.dart';
+import 'package:ondolbom/view/family_room/representative_transfer_dialog.dart';
+import 'package:ondolbom/vm/auth/auth_vm.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
@@ -30,9 +32,15 @@ class FamilyMemberList extends ConsumerWidget {
         actions: [
           IconButton(
             tooltip: '새로고침',
-            onPressed: () {
-              ref.invalidate(familyMembersProvider(familyRoomId));
-            },
+            onPressed: state.isLoading
+                ? null
+                : () async {
+                    await ref
+                        .read(familyRoomProvider.notifier)
+                        .refreshRoomsPreservingState();
+                    if (!context.mounted) return;
+                    ref.invalidate(familyMembersProvider(familyRoomId));
+                  },
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -105,7 +113,13 @@ class FamilyMemberList extends ConsumerWidget {
                         ),
                       FamilyMemberCard(
                         member: items[i],
-                        canManage: canManage,
+                        canManage:
+                            canManage &&
+                            items[i].userId !=
+                                state.selectedParticipation?.userId,
+                        onTransfer: state.isLoading
+                            ? null
+                            : () => _transfer(context, ref, items[i]),
                         onRemove: state.isLoading
                             ? null
                             : () async {
@@ -135,6 +149,47 @@ class FamilyMemberList extends ConsumerWidget {
       ),
     );
   }
+
+  Future<void> _transfer(
+    BuildContext context,
+    WidgetRef ref,
+    FamilyMember target,
+  ) async {
+    final uid = ref.read(firebaseAuthProvider).currentUser?.uid;
+    final notifier = ref.read(familyRoomProvider.notifier);
+    final transferred = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => RepresentativeTransferDialog(
+        familyRoomId: familyRoomId,
+        target: target,
+      ),
+    );
+    if (!context.mounted ||
+        transferred != true ||
+        ref.read(firebaseAuthProvider).currentUser?.uid != uid ||
+        ref.read(familyRoomProvider).selectedRoomId != familyRoomId) {
+      return;
+    }
+    // 성공 응답으로 일반 가족 권한을 먼저 반영한 뒤 두 목록을 서버에서 다시 조회한다.
+    ref.invalidate(familyMembersProvider(familyRoomId));
+    await notifier.refreshRoomsPreservingState();
+    if (!context.mounted ||
+        ref.read(firebaseAuthProvider).currentUser?.uid != uid ||
+        ref.read(familyRoomProvider).selectedRoomId != familyRoomId) {
+      return;
+    }
+    final refreshFailed = ref.read(familyRoomProvider).errorMessage != null;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          refreshFailed
+              ? '주보호자 이전은 완료됐지만 공간 정보를 새로고침하지 못했습니다. 목록을 다시 확인해 주세요.'
+              : '주보호자를 이전했습니다. 이제 일반 가족으로 참여합니다.',
+        ),
+      ),
+    );
+  }
 }
 
 /// 이름·역할과 관리 버튼을 분리해 가족별 작업 대상을 명확히 보여 준다.
@@ -144,10 +199,12 @@ class FamilyMemberCard extends StatelessWidget {
     required this.member,
     this.canManage = false,
     this.onRemove,
+    this.onTransfer,
   });
   final FamilyMember member;
   final bool canManage;
   final VoidCallback? onRemove;
+  final VoidCallback? onTransfer;
 
   @override
   Widget build(BuildContext context) {
@@ -165,6 +222,7 @@ class FamilyMemberCard extends StatelessWidget {
           '주보호자 이전',
           Icons.workspace_premium_outlined,
           AppColors.sageDark,
+          onPressed: onTransfer,
         ),
         _button(
           context,
@@ -273,12 +331,7 @@ class FamilyMemberCard extends StatelessWidget {
   }) => Tooltip(
     message: feature,
     child: OutlinedButton.icon(
-      // 주보호자 이전은 준비 중이며 강퇴만 확인창과 실제 API로 연결한다.
-      onPressed: label == '강퇴'
-          ? onPressed
-          : () => ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text('$feature 기능은 준비 중이에요.'))),
+      onPressed: onPressed,
       icon: Icon(icon, size: 16),
       label: Text(label),
       style: OutlinedButton.styleFrom(

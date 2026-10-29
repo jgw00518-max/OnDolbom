@@ -2,10 +2,10 @@ from datetime import date
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, Path
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from python.database import connect
-from python.features.family_room.membership import end_membership
+from python.features.family_room.membership import end_membership, transfer_representative
 
 import os
 
@@ -317,6 +317,24 @@ async def delete_family_room(
     # DB 삭제가 확정된 이후에만 연결을 닫는다. 실패 시 연결을 건드리지 않는다.
     await chat_manager.close_room(family_room_id, code=4403)
     return result
+
+
+class RepresentativeTransfer(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra='forbid')
+
+    target_user_id: str = Field(min_length=1, max_length=50, pattern=r'^\S+$')
+
+
+@router.post("/{family_room_id}/transfer-representative")
+async def transfer_family_room_representative(
+    data: RepresentativeTransfer,
+    family_room_id: str = Path(min_length=1, max_length=50, pattern=r'^\S+$'),
+    current_user_id: str = Depends(get_current_user_id),
+) -> dict:
+    # 참여는 종료하지 않으므로 역할 교체 시 채팅 연결을 끊지 않는다.
+    return await run_in_threadpool(
+        transfer_representative, family_room_id, current_user_id, data.target_user_id,
+    )
 
 
 # DB 참여 종료가 확정된 사용자만 이 프로세스의 채팅 연결에서 제외한다.
