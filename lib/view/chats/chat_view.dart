@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:ondolbom/vm/chats/chat_notifications_vm.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'dart:typed_data';
+import 'package:ondolbom/theme/app_colors.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -332,11 +333,36 @@ class _ChatViewState extends ConsumerState<ChatView>
                     horizontal: 16,
                     vertical: 8,
                   ),
-                  child: Row(
-                    children: [
-                      const Spacer(),
-                      Text(label, style: TextStyle(color: colors.primary)),
-                    ],
+                  // 상태 행이 내용 너비로 줄어들지 않게 화면 너비를 확보한다.
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Icon(
+                          Icons.circle,
+                          size: 8,
+                          color: state.status == ChatStatus.connected
+                              ? AppColors.sageDark
+                              : AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: 5),
+                        Flexible(
+                          fit: FlexFit.loose,
+                          child: Text(
+                            label,
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: state.status == ChatStatus.connected
+                                  ? AppColors.sageDark
+                                  : AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 if (state.error != null || state.status != ChatStatus.connected)
@@ -410,8 +436,8 @@ class _ChatViewState extends ConsumerState<ChatView>
                                         children: [
                                           Image.memory(
                                             message.image!,
-                                            width: 220,
-                                            height: 160,
+                                            width: 260,
+                                            height: 200,
                                             fit: BoxFit.contain,
                                             cacheWidth: 600,
                                             errorBuilder: (_, _, _) =>
@@ -446,33 +472,49 @@ class _ChatViewState extends ConsumerState<ChatView>
                               );
                             }
                             final message = messages[messageIndex];
-                            return _Bubble(
-                              key: ValueKey('chat-${message.seq}'),
-                              content: message.content,
-                              isDeleted: message.isDeleted,
-                              mine: message.userId == selected.userId,
-                              author: message.userId == selected.userId
-                                  ? '나'
-                                  : message.authorLabel,
-                              footer: state.changing.contains(message.seq)
-                                  ? '변경 중…'
-                                  : '${_time(message)}${message.updatedAt != null && !message.isDeleted ? ' · 수정됨' : ''}',
-                              onLongPress:
-                                  message.userId == selected.userId &&
-                                      !message.isDeleted &&
-                                      state.status == ChatStatus.connected &&
-                                      !state.loadingHistory &&
-                                      !state.changing.contains(message.seq)
-                                  ? () => _messageActions(selected, message)
-                                  : null,
-                              image: message.hasImage && !message.isDeleted
-                                  ? ChatImageView(
-                                      query: (
-                                        context: selected,
-                                        seq: message.seq,
-                                      ),
-                                    )
-                                  : null,
+                            final day = message.sentAt;
+                            final olderDay = messageIndex + 1 < messages.length
+                                ? messages[messageIndex + 1].sentAt
+                                : null;
+                            // 역순 목록의 더 오래된 메시지와 비교해 이전 대화 조회 시 날짜 중복을 막는다.
+                            final showDate =
+                                day != null &&
+                                !DateUtils.isSameDay(day, olderDay);
+                            return Column(
+                              key: ValueKey('chat-day-${message.seq}'),
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (showDate) _DateSeparator(date: day),
+                                _Bubble(
+                                  key: ValueKey('chat-${message.seq}'),
+                                  content: message.content,
+                                  isDeleted: message.isDeleted,
+                                  mine: message.userId == selected.userId,
+                                  author: message.userId == selected.userId
+                                      ? '나'
+                                      : message.authorLabel,
+                                  footer: state.changing.contains(message.seq)
+                                      ? '변경 중…'
+                                      : '${_time(message)}${message.updatedAt != null && !message.isDeleted ? ' · 수정됨' : ''}',
+                                  onLongPress:
+                                      message.userId == selected.userId &&
+                                          !message.isDeleted &&
+                                          state.status ==
+                                              ChatStatus.connected &&
+                                          !state.loadingHistory &&
+                                          !state.changing.contains(message.seq)
+                                      ? () => _messageActions(selected, message)
+                                      : null,
+                                  image: message.hasImage && !message.isDeleted
+                                      ? ChatImageView(
+                                          query: (
+                                            context: selected,
+                                            seq: message.seq,
+                                          ),
+                                        )
+                                      : null,
+                                ),
+                              ],
                             );
                           },
                         ),
@@ -515,7 +557,16 @@ class _ChatViewState extends ConsumerState<ChatView>
                             ? () => _pickImage(selected)
                             : null,
                         icon: const Icon(Icons.photo_outlined),
+                        style: IconButton.styleFrom(
+                          minimumSize: const Size(44, 48),
+                          backgroundColor: AppColors.peachSoft,
+                          foregroundColor: AppColors.sageDark,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: TextField(
                           key: const ValueKey('chat-input'),
@@ -523,10 +574,41 @@ class _ChatViewState extends ConsumerState<ChatView>
                           minLines: 1,
                           maxLines: 4,
                           maxLength: 4000,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: AppColors.textPrimary,
+                          ),
                           textInputAction: TextInputAction.newline,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             hintText: '가족에게 메시지를 보내세요',
-                            border: OutlineInputBorder(),
+                            filled: true,
+                            fillColor: AppColors.surface,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 14,
+                            ),
+                            hintStyle: const TextStyle(
+                              fontSize: 14,
+                              color: AppColors.textSecondary,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: const BorderSide(
+                                color: AppColors.border,
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: const BorderSide(
+                                color: AppColors.border,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: const BorderSide(
+                                color: AppColors.sageDark,
+                              ),
+                            ),
                             counterText: '',
                           ),
                         ),
@@ -535,6 +617,13 @@ class _ChatViewState extends ConsumerState<ChatView>
                       ValueListenableBuilder<TextEditingValue>(
                         valueListenable: _input,
                         builder: (context, value, _) => IconButton.filled(
+                          style: IconButton.styleFrom(
+                            minimumSize: const Size(48, 48),
+                            backgroundColor: AppColors.sageDark,
+                            foregroundColor: AppColors.surface,
+                            disabledBackgroundColor: AppColors.sageLight,
+                            disabledForegroundColor: AppColors.sageDark,
+                          ),
                           tooltip: '메시지 전송',
                           onPressed:
                               state.canSend &&
@@ -560,7 +649,7 @@ class _ChatViewState extends ConsumerState<ChatView>
   String _time(ChatMessage message) {
     final value = message.sentAt;
     if (value == null) return '저장됨';
-    return '${value.month}/${value.day} ${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+    return '${value.hour < 12 ? '오전' : '오후'} ${value.hour % 12 == 0 ? 12 : value.hour % 12}:${value.minute.toString().padLeft(2, '0')}';
   }
 }
 
@@ -589,86 +678,169 @@ class _Bubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Align(
-      alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-      child: GestureDetector(
-        onLongPress: onLongPress,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 420),
-          margin: EdgeInsets.only(
-            bottom: 12,
-            left: mine ? 40 : 0,
-            right: mine ? 0 : 40,
-          ),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: mine
-                ? colors.secondaryContainer
-                : Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: colors.outlineVariant),
-          ),
-          child: IntrinsicWidth(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    const messageStyle = TextStyle(
+      fontSize: 16,
+      height: 1.5,
+      color: AppColors.textPrimary,
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) => Align(
+        alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 20),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: constraints.maxWidth * (mine ? 0.86 : 0.92),
+            ),
+            child: Row(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Flexible(
+                if (!mine) ...[
+                  ExcludeSemantics(
+                    child: CircleAvatar(
+                      radius: 17,
+                      backgroundColor: AppColors.sageLight,
+                      foregroundColor: AppColors.sageDark,
                       child: Text(
-                        author,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: colors.onSurfaceVariant,
+                        author.characters.first,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
-                    if (onLongPress != null)
-                      IconButton(
-                        tooltip: '메시지 메뉴',
-                        onPressed: onLongPress,
-                        constraints: const BoxConstraints(
-                          minWidth: 32,
-                          minHeight: 32,
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Flexible(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: mine
+                        ? CrossAxisAlignment.end
+                        : CrossAxisAlignment.start,
+                    children: [
+                      if (!mine)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Text(
+                            author,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
                         ),
-                        padding: EdgeInsets.zero,
-                        visualDensity: VisualDensity.compact,
-                        icon: const Icon(Icons.more_horiz, size: 18),
+                      if (onLongPress != null)
+                        SizedBox(
+                          height: 36,
+                          child: IconButton(
+                            tooltip: '메시지 메뉴',
+                            onPressed: onLongPress,
+                            padding: EdgeInsets.zero,
+                            icon: const Icon(
+                              Icons.more_horiz,
+                              size: 21,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      GestureDetector(
+                        onLongPress: onLongPress,
+                        behavior: HitTestBehavior.opaque,
+                        child: Container(
+                          constraints: const BoxConstraints(maxWidth: 420),
+                          padding: EdgeInsets.all(image == null ? 14 : 8),
+                          decoration: BoxDecoration(
+                            color: mine
+                                ? AppColors.peachSoft
+                                : AppColors.surface,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (image != null)
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: image,
+                                ),
+                              if (image != null && content.isNotEmpty)
+                                const SizedBox(height: 8),
+                              if (content.isNotEmpty)
+                                Padding(
+                                  padding: EdgeInsets.all(
+                                    image == null ? 0 : 4,
+                                  ),
+                                  child: onLongPress == null
+                                      ? SelectableText(
+                                          content,
+                                          style: isDeleted
+                                              ? messageStyle.copyWith(
+                                                  color:
+                                                      AppColors.textSecondary,
+                                                )
+                                              : messageStyle,
+                                        )
+                                      : Text(content, style: messageStyle),
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                ?image,
-                if (image != null && content.isNotEmpty)
-                  const SizedBox(height: 6),
-                if (content.isNotEmpty)
-                  (onLongPress == null
-                      ? SelectableText(
-                          content,
-                          style: isDeleted
-                              ? const TextStyle(color: Colors.grey)
-                              : null,
-                        )
-                      : Text(content)),
-                const SizedBox(height: 6),
-                Text(
-                  footer,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: colors.onSurfaceVariant,
+                      const SizedBox(height: 5),
+                      Text(
+                        footer,
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.4,
+                          color: retry == null
+                              ? AppColors.textSecondary
+                              : Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                      if (retry != null)
+                        TextButton(
+                          onPressed: retryEnabled ? retry : null,
+                          child: const Text('재전송'),
+                        ),
+                    ],
                   ),
                 ),
-                if (retry != null)
-                  TextButton(
-                    onPressed: retryEnabled ? retry : null,
-                    child: const Text('재전송'),
-                  ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DateSeparator extends StatelessWidget {
+  const _DateSeparator({required this.date});
+  final DateTime date;
+
+  @override
+  Widget build(BuildContext context) {
+    const weekdays = ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'];
+    return Padding(
+      padding: const EdgeInsets.only(top: 12, bottom: 24),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.peachSoft,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Text(
+          '${date.year}년 ${date.month}월 ${date.day}일 ${weekdays[date.weekday - 1]}',
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppColors.sageDark,
           ),
         ),
       ),

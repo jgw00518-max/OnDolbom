@@ -29,8 +29,8 @@ class ChatImageView extends ConsumerWidget {
     }
     final provider = chatImageProvider(query);
     return SizedBox(
-      width: expanded ? double.infinity : 220,
-      height: expanded ? MediaQuery.sizeOf(context).height * 0.6 : 160,
+      width: expanded ? double.infinity : 260,
+      height: expanded ? MediaQuery.sizeOf(context).height * 0.6 : 200,
       child: ref
           .watch(provider)
           .when(
@@ -47,7 +47,8 @@ class ChatImageView extends ConsumerWidget {
             data: (bytes) {
               final image = Image.memory(
                 bytes,
-                fit: BoxFit.contain,
+                // 목록은 사진을 채워 표시하고 확대 화면에서는 원본 전체를 보여준다.
+                fit: expanded ? BoxFit.contain : BoxFit.cover,
                 cacheWidth: expanded ? null : 600,
                 errorBuilder: (_, _, _) =>
                     const Center(child: Text('사진을 표시할 수 없어요.')),
