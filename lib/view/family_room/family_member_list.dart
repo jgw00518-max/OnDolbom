@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/family_room/membership_exit_dialog.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
@@ -102,7 +103,28 @@ class FamilyMemberList extends ConsumerWidget {
                           endIndent: 20,
                           color: AppColors.border,
                         ),
-                      FamilyMemberCard(member: items[i], canManage: canManage),
+                      FamilyMemberCard(
+                        member: items[i],
+                        canManage: canManage,
+                        onRemove: state.isLoading
+                            ? null
+                            : () async {
+                                final removed = await showDialog<bool>(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (_) => MembershipExitDialog(
+                                    familyRoomId: familyRoomId,
+                                    target: items[i],
+                                  ),
+                                );
+                                if (!context.mounted || removed != true) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('가족의 공간 참여를 종료했습니다.'),
+                                  ),
+                                );
+                              },
+                      ),
                     ],
                   ],
                 ),
@@ -121,9 +143,11 @@ class FamilyMemberCard extends StatelessWidget {
     super.key,
     required this.member,
     this.canManage = false,
+    this.onRemove,
   });
   final FamilyMember member;
   final bool canManage;
+  final VoidCallback? onRemove;
 
   @override
   Widget build(BuildContext context) {
@@ -148,6 +172,7 @@ class FamilyMemberCard extends StatelessWidget {
           '가족 강퇴',
           Icons.person_remove_outlined,
           Theme.of(context).colorScheme.error,
+          onPressed: onRemove,
         ),
       ],
     );
@@ -243,14 +268,17 @@ class FamilyMemberCard extends StatelessWidget {
     String label,
     String feature,
     IconData icon,
-    Color color,
-  ) => Tooltip(
+    Color color, {
+    VoidCallback? onPressed,
+  }) => Tooltip(
     message: feature,
     child: OutlinedButton.icon(
-      // 이전·강퇴 API는 미구현이므로 서버 요청 없이 준비 중 안내만 표시한다.
-      onPressed: () => ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('$feature 기능은 준비 중이에요.'))),
+      // 주보호자 이전은 준비 중이며 강퇴만 확인창과 실제 API로 연결한다.
+      onPressed: label == '강퇴'
+          ? onPressed
+          : () => ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('$feature 기능은 준비 중이에요.'))),
       icon: Icon(icon, size: 16),
       label: Text(label),
       style: OutlinedButton.styleFrom(

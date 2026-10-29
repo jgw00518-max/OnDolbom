@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, Path
 from pydantic import BaseModel, Field, field_validator
 
 from python.database import connect
+from python.features.family_room.membership import end_membership
 
 import os
 
@@ -315,6 +316,28 @@ async def delete_family_room(
     result = await run_in_threadpool(_soft_delete_family_room, family_room_id, current_user_id)
     # DB 삭제가 확정된 이후에만 연결을 닫는다. 실패 시 연결을 건드리지 않는다.
     await chat_manager.close_room(family_room_id, code=4403)
+    return result
+
+
+# DB 참여 종료가 확정된 사용자만 이 프로세스의 채팅 연결에서 제외한다.
+@router.post("/{family_room_id}/leave")
+async def leave_family_room(
+    family_room_id: str = Path(min_length=1, max_length=50),
+    current_user_id: str = Depends(get_current_user_id),
+):
+    result = await run_in_threadpool(end_membership, family_room_id, current_user_id)
+    await chat_manager.close_member(family_room_id, result['user_id'])
+    return result
+
+
+@router.post("/{family_room_id}/members/{participate_seq}/remove")
+async def remove_family_member(
+    family_room_id: str = Path(min_length=1, max_length=50),
+    participate_seq: int = Path(gt=0),
+    current_user_id: str = Depends(get_current_user_id),
+):
+    result = await run_in_threadpool(end_membership, family_room_id, current_user_id, participate_seq)
+    await chat_manager.close_member(family_room_id, result['user_id'])
     return result
 
 

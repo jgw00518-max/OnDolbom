@@ -5,19 +5,28 @@ import 'package:ondolbom/model/invites/family_invite.dart';
 import 'package:ondolbom/view/invites/received_invites.dart';
 import 'package:ondolbom/vm/invites/invite_vm.dart';
 
-FamilyInvite invite(String id, String status) => FamilyInvite(
-  inviteId: id,
-  familyRoomId: 'room',
-  inviteEmail: 'family@example.com',
-  inviteAt: DateTime(2026, 10, 27, 14, 30),
-  inviteStatus: status,
-  recipientName: '가족',
-  inviterName: '초대한 가족',
-);
+FamilyInvite invite(String id, String status, {bool canResend = false}) =>
+    FamilyInvite(
+      inviteId: id,
+      canResend: canResend,
+      familyRoomId: 'room',
+      inviteEmail: 'family@example.com',
+      inviteAt: DateTime(2026, 10, 27, 14, 30),
+      inviteStatus: status,
+      recipientName: '가족',
+      inviterName: '초대한 가족',
+    );
 
 class DesignInviteVm extends InviteVm {
   DesignInviteVm(super.ref);
   final cancelled = <String>[];
+  final resent = <String>[];
+  @override
+  Future<bool> resendInvite(String inviteId) async {
+    resent.add(inviteId);
+    return true;
+  }
+
   @override
   Future<void> cancelInvite(String inviteId) async {
     cancelled.add(inviteId);
@@ -67,6 +76,41 @@ void main() {
     expect((container.read(inviteVmProvider) as DesignInviteVm).cancelled, [
       'sent',
     ]);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('발신자용 만료 초대에서 재요청하고 새 이메일 발송 결과를 표시한다', (tester) async {
+    final container = ProviderContainer(
+      overrides: [
+        receivedInvitesProvider.overrideWith((ref) async => []),
+        sentInvitesProvider.overrideWith(
+          (ref) async => [
+            invite('own-expired', '만료', canResend: true),
+            invite('other-expired', '만료'),
+          ],
+        ),
+        inviteVmProvider.overrideWith((ref) => DesignInviteVm(ref)),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: ReceivedInvites()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('보낸 초대').first);
+    await tester.pumpAndSettle();
+    final button = find.widgetWithText(FilledButton, '재요청');
+    expect(button, findsOneWidget);
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    expect((container.read(inviteVmProvider) as DesignInviteVm).resent, [
+      'own-expired',
+    ]);
+    expect(find.textContaining('새 초대장을 이메일로 보냈습니다.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

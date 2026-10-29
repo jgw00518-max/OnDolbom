@@ -1,8 +1,8 @@
+import 'package:ondolbom/view/family_room/membership_exit_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
-import 'package:ondolbom/view/recipient_detail.dart';
 import 'package:ondolbom/view/exports/export_view.dart';
 import 'package:ondolbom/view/invites/invite_create.dart';
 import 'package:ondolbom/view/family_room/family_member_list.dart';
@@ -94,14 +94,6 @@ class SpaceSettingsView extends ConsumerWidget {
           const SizedBox(height: 28),
           _label('공간 정보'),
           _group([
-            _action(
-              context,
-              '돌봄 대상자 정보',
-              '이름, 생년월일, 돌봄 장소를 확인해요',
-              Icons.person_outline,
-              AppColors.peachSoft,
-              () => _open(context, const RecipientDetail()),
-            ),
             if (guardian)
               _action(
                 context,
@@ -165,12 +157,29 @@ class SpaceSettingsView extends ConsumerWidget {
               '내 계정만 이 공간에서 나가요',
               Icons.logout,
               AppColors.peachSoft,
-              () => _notice(
-                context,
-                guardian
-                    ? '공간에서 나가려면 먼저 주보호자 이전이 필요해요. 이전 기능은 준비 중이에요.'
-                    : '공간에서 나가기 기능은 준비 중이에요.',
-              ),
+              state.isLoading
+                  ? null
+                  : () async {
+                      if (guardian) {
+                        _notice(
+                          context,
+                          '공간에서 나가려면 먼저 주보호자 이전이 필요해요. 이전 기능은 준비 중이에요.',
+                        );
+                        return;
+                      }
+                      final navigator = Navigator.of(context);
+                      final left = await showDialog<bool>(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (_) => MembershipExitDialog(
+                          familyRoomId: room.familyRoomId,
+                        ),
+                      );
+                      if (!context.mounted || left != true) return;
+                      final notifier = ref.read(familyRoomProvider.notifier);
+                      navigator.popUntil((route) => route.isFirst);
+                      await notifier.fetchRooms();
+                    },
               color: danger,
             ),
             if (guardian)
