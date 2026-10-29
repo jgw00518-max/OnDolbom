@@ -197,7 +197,8 @@ void main() {
     );
     await tester.tap(find.text('약 추가'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('추가'));
+    await tester.ensureVisible(find.text('약 추가하기'));
+    await tester.tap(find.text('약 추가하기'));
     await tester.pumpAndSettle();
     expect(posts, 0);
     await fill(tester, 'info', '새 테스트 약');
@@ -207,10 +208,11 @@ void main() {
     FocusManager.instance.primaryFocus?.unfocus();
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('추가'));
+    await tester.ensureVisible(find.text('약 추가하기'));
+    await tester.tap(find.text('약 추가하기'));
     await tester.pumpAndSettle();
     expect(posts, 1);
-    expect(find.byType(MedicationFormDialog), findsNothing);
+    expect(find.byType(MedicationFormView), findsNothing);
     expect(find.text('새 테스트 약 0.5정'), findsOneWidget);
   });
 
@@ -234,18 +236,19 @@ void main() {
     await fill(tester, 'unit', '포');
     FocusManager.instance.primaryFocus?.unfocus();
     await tester.pumpAndSettle();
-    await tester.tap(find.text('추가'));
+    await tester.ensureVisible(find.text('약 추가하기'));
+    await tester.tap(find.text('약 추가하기'));
     await tester.pump();
     await tester.tap(find.text('등록 중…'));
     expect(posts, 1);
     pending.complete(http.Response('{"detail":"error"}', 500));
     await tester.pumpAndSettle();
-    expect(find.byType(MedicationFormDialog), findsOneWidget);
+    expect(find.byType(MedicationFormView), findsOneWidget);
     final info = tester.widget<TextFormField>(
       find.byKey(const ValueKey('medication-info')),
     );
     expect(info.controller!.text, '저장할 약');
-    expect(find.text('추가'), findsOneWidget);
+    expect(find.text('약 추가하기'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

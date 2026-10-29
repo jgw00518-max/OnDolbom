@@ -61,7 +61,7 @@ void main() {
     expect(find.text('현재 공간의 주보호자만 투약일지를 작성할 수 있어요.'), findsOneWidget);
     expect(
       tester
-          .widget<FilledButton>(find.widgetWithText(FilledButton, '추가'))
+          .widget<FilledButton>(find.widgetWithText(FilledButton, '약 추가하기'))
           .onPressed,
       isNull,
     );

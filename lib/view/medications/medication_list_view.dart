@@ -39,12 +39,13 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
         !ref.read(medicationCreateAllowedProvider(query.context))) {
       return;
     }
-    final saved = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => MedicationFormDialog(query: query),
+    // 약 추가는 별도 화면에서 작성하고 저장 완료 후 목록에 결과를 돌려준다.
+    final saved = await Navigator.of(context).push<DateTime>(
+      MaterialPageRoute(builder: (_) => MedicationFormView(query: query)),
     );
-    if (mounted && saved == true) {
+    if (mounted && saved != null) {
+      // 시작일을 바꿔 등록했다면 목록도 저장한 날짜로 이동해 결과를 바로 확인한다.
+      setState(() => _date = saved);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('투약일지를 등록했어요.')));

@@ -26,22 +26,15 @@ void main() {
       tester.widget<DropdownButtonFormField<int>>(period).onChanged,
       isNotNull,
     );
-    expect(tester.widget<TextFormField>(days).enabled, isFalse);
-    await tester.ensureVisible(
-      find.byWidgetPredicate((widget) => widget is Radio<bool> && widget.value),
-    );
+    expect(days, findsNothing);
+    await tester.ensureVisible(find.text('직접 입력'));
+    await tester.tap(find.text('직접 입력'));
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.byWidgetPredicate((widget) => widget is Radio<bool> && widget.value),
-    );
-    await tester.pumpAndSettle();
-    expect(
-      tester.widget<DropdownButtonFormField<int>>(period).onChanged,
-      isNull,
-    );
+    expect(period, findsNothing);
     expect(tester.widget<TextFormField>(days).enabled, isTrue);
     await tester.enterText(days, '0');
-    await tester.tap(find.text('추가'));
+    await tester.ensureVisible(find.text('약 추가하기'));
+    await tester.tap(find.text('약 추가하기'));
     await tester.pumpAndSettle();
     expect(find.text('1~365일 입력'), findsOneWidget);
     await tester.ensureVisible(days);
@@ -52,10 +45,11 @@ void main() {
     await fixture.fill(tester, 'unit', '정');
     FocusManager.instance.primaryFocus?.unfocus();
     await tester.pumpAndSettle();
-    await tester.tap(find.text('추가'));
+    await tester.ensureVisible(find.text('약 추가하기'));
+    await tester.tap(find.text('약 추가하기'));
     await tester.pumpAndSettle();
     expect(saved?['duration_days'], 365);
-    expect(find.byType(MedicationFormDialog), findsNothing);
+    expect(find.byType(MedicationFormView), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
