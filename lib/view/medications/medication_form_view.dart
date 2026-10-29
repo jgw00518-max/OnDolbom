@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/app_date_picker.dart';
 import 'package:ondolbom/view/widgets/discard_changes_dialog.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
@@ -43,7 +44,7 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
 
   Future<void> _pickStartDate() async {
     if (_saving) return;
-    final date = await showDatePicker(
+    final date = await showAppDatePicker(
       context: context,
       initialDate: _startDate,
       firstDate: DateTime(1900),
@@ -156,33 +157,15 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
     child: child,
   );
 
-  Widget _section(String title, String help) => Padding(
+  Widget _section(String title) => Padding(
     padding: const EdgeInsets.only(top: 28, bottom: 14),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Flexible(
-          child: Text(
-            help,
-            textAlign: TextAlign.right,
-            style: const TextStyle(
-              fontSize: 11,
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ),
-      ],
+    child: Text(
+      title,
+      style: const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w800,
+        color: AppColors.textPrimary,
+      ),
     ),
   );
 
@@ -369,12 +352,15 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
                           key: const ValueKey('medication-start-date'),
                           onTap: _saving ? null : _pickStartDate,
                           child: Padding(
-                            padding: const EdgeInsets.all(20),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 18,
+                              vertical: 14,
+                            ),
                             child: Row(
                               children: [
                                 Container(
-                                  width: 44,
-                                  height: 44,
+                                  width: 40,
+                                  height: 40,
                                   decoration: BoxDecoration(
                                     color: AppColors.peachSoft,
                                     borderRadius: BorderRadius.circular(15),
@@ -399,11 +385,11 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
                                           color: AppColors.sageDark,
                                         ),
                                       ),
-                                      const SizedBox(height: 7),
+                                      const SizedBox(height: 5),
                                       Text(
                                         medicationDateKey(_startDate),
                                         style: const TextStyle(
-                                          fontSize: 21,
+                                          fontSize: 19,
                                           fontWeight: FontWeight.w800,
                                           color: AppColors.textPrimary,
                                         ),
@@ -422,7 +408,7 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
                           ),
                         ),
                       ),
-                      _section('복용 기간', '얼마나 오래 복용하나요?'),
+                      _section('복용 기간'),
                       _card(
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -520,7 +506,7 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
                           ],
                         ),
                       ),
-                      _section('복약 시간', '언제 약을 복용하나요?'),
+                      _section('복약 시간'),
                       _card(
                         LayoutBuilder(
                           builder: (context, constraints) {
@@ -557,7 +543,7 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
                           },
                         ),
                       ),
-                      _section('약 정보', '복용할 약을 알려주세요'),
+                      _section('약 정보'),
                       _card(
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,

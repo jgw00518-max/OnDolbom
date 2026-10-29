@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/app_date_picker.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/view/medications/medication_style.dart';
 import 'package:flutter/material.dart';
@@ -121,7 +122,7 @@ class _MedicationEditDialogState extends ConsumerState<MedicationEditDialog> {
   }
 
   Future<void> _pickDate() async {
-    final selected = await showDatePicker(
+    final selected = await showAppDatePicker(
       context: context,
       initialDate: _date,
       firstDate: DateTime(1),

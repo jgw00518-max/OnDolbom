@@ -66,10 +66,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('medication-start-date')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('24').last);
-    final dateContext = tester.element(find.byType(DatePickerDialog));
-    await tester.tap(
-      find.text(MaterialLocalizations.of(dateContext).okButtonLabel),
-    );
+    await tester.tap(find.byKey(const ValueKey('date-picker-apply')));
     await tester.pumpAndSettle();
     expect(find.text('2026-10-24'), findsOneWidget);
     await fixture.fill(tester, 'info', '날짜 변경 약');

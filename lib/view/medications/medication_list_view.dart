@@ -1,3 +1,5 @@
+import 'package:ondolbom/view/widgets/discard_changes_dialog.dart';
+import 'package:ondolbom/view/widgets/app_date_picker.dart';
 import 'package:ondolbom/view/widgets/menu_header_icon.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/view/medications/medication_style.dart';
@@ -26,7 +28,7 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
   );
 
   Future<void> _pickDate() async {
-    final selected = await showDatePicker(
+    final selected = await showAppDatePicker(
       context: context,
       initialDate: _date,
       firstDate: DateTime(1900),
@@ -131,19 +133,11 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
     try {
       final approved = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('복약 완료 체크 해제'),
-          content: const Text('체크를 해제하면 미완료로 표시됩니다.\n체크를 해제하시겠습니까?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('취소'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('해제'),
-            ),
-          ],
+        builder: (context) => const DiscardChangesDialog(
+          title: '복약 완료 체크 해제',
+          message: '체크를 해제하면 미완료로 표시됩니다.\n체크를 해제하시겠습니까?',
+          continueLabel: '취소',
+          discardLabel: '해제',
         ),
       );
       if (!mounted || approved != true) return;
@@ -441,10 +435,43 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
                                                               .start,
                                                       children: [
                                                         const Text('복약 완료'),
+                                                        const SizedBox(
+                                                          height: 6,
+                                                        ),
+                                                        Container(
+                                                          padding:
+                                                              const EdgeInsets.symmetric(
+                                                                horizontal: 10,
+                                                                vertical: 5,
+                                                              ),
+                                                          decoration: BoxDecoration(
+                                                            color: AppColors
+                                                                .sageLight,
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  20,
+                                                                ),
+                                                          ),
+                                                          child: Text(
+                                                            '체크: ${item.confirmedByLabel}',
+                                                            style:
+                                                                const TextStyle(
+                                                                  color: AppColors
+                                                                      .sageDark,
+                                                                  fontSize: 12,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w600,
+                                                                ),
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                          height: 4,
+                                                        ),
                                                         Text(
                                                           medicationConfirmationLabel(
                                                             item,
-                                                          ),
+                                                          ).split('\n').last,
                                                         ),
                                                       ],
                                                     )
