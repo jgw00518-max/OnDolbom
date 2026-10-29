@@ -1,3 +1,4 @@
+import 'package:ondolbom/vm/chats/chat_notifications_vm.dart';
 import 'package:ondolbom/view/family_room/space_switcher_button.dart';
 import 'package:ondolbom/view/family_room/space_settings_view.dart';
 import 'package:ondolbom/view/widgets/family_room_label.dart';
@@ -18,8 +19,15 @@ class FamilyRoomHome extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen(familyRoomProvider, (previous, next) {
+      if (previous?.selectedRoomId != next.selectedRoomId ||
+          (previous?.isLoading == true && !next.isLoading)) {
+        ref.invalidate(chatUnreadProvider);
+      }
+    });
     final state = ref.watch(familyRoomProvider);
     final room = state.selectedRoom;
+    final chatCounts = ref.watch(chatUnreadProvider).asData?.value;
 
     if (room == null) {
       return Scaffold(
@@ -140,9 +148,14 @@ class FamilyRoomHome extends ConsumerWidget {
               menuButton(
                 '실시간 채팅',
                 Icons.chat_bubble_outline,
-                () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => const ChatView()),
-                ),
+                () => Navigator.of(context)
+                    .push(
+                      MaterialPageRoute<void>(builder: (_) => const ChatView()),
+                    )
+                    .then((_) {
+                      if (context.mounted) ref.invalidate(chatUnreadProvider);
+                    }),
+                badge: chatCounts?[room.familyRoomId] ?? 0,
               ),
               const SizedBox(width: 10),
               menuButton(
@@ -247,7 +260,12 @@ class FamilyRoomHome extends ConsumerWidget {
   // ----- function -----
 
   // 반복되는 메뉴 모양을 만든다.
-  Widget menuButton(String title, IconData icon, VoidCallback action) {
+  Widget menuButton(
+    String title,
+    IconData icon,
+    VoidCallback action, {
+    int badge = 0,
+  }) {
     return Expanded(
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 106),
@@ -266,16 +284,25 @@ class FamilyRoomHome extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: title == '일정' || title == '실시간 채팅' || title == '공간 설정'
-                      ? AppColors.sageLight
-                      : AppColors.peachSoft,
-                  borderRadius: BorderRadius.circular(14),
+              // 배지는 고정 크기 아이콘 바깥에 겹쳐 표시해 그림의 크기·중심을 유지한다.
+              Badge(
+                isLabelVisible: badge > 0,
+                label: Text(badge > 99 ? '99+' : '$badge'),
+                backgroundColor: AppColors.primary,
+                textColor: AppColors.textPrimary,
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color:
+                        title == '일정' || title == '실시간 채팅' || title == '공간 설정'
+                        ? AppColors.sageLight
+                        : AppColors.peachSoft,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(icon, size: 23, color: AppColors.sageDark),
                 ),
-                child: Icon(icon, size: 23, color: AppColors.sageDark),
               ),
               const SizedBox(height: 9),
               Text(

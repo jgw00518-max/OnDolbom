@@ -111,10 +111,11 @@ def _claim(transaction, ref, now):
     return attempts
 
 
-def send_message(fid, uid, identifier, test=False, notification_type='schedule_created'):
+def send_message(fid, uid, identifier, test=False, notification_type='schedule_created', family_room_id=None, chat_seq=None):
     # 잠금 화면에는 대상자 건강정보나 메모를 노출하지 않는다.
     return messaging.send(messaging.Message(fid=fid,
         notification=messaging.Notification(title='온돌봄', body='푸시 연결 테스트입니다.' if test else {
+            'chat_message': '가족의 새 채팅이 도착했습니다. 앱에서 확인해 주세요.',
             'schedule_created': '새 돌봄 일정이 등록되었습니다. 앱에서 확인해 주세요.',
             'schedule_changed': '돌봄 일정이 변경되었습니다. 앱에서 확인해 주세요.',
             'schedule_deleted': '돌봄 일정이 삭제되었습니다. 앱에서 확인해 주세요.',
@@ -125,10 +126,11 @@ def send_message(fid, uid, identifier, test=False, notification_type='schedule_c
             'schedule_reminder': '시작까지 72시간 이내인 돌봄 일정에 아직 담당자가 없습니다. 앱에서 확인해 주세요.',
             'schedule_reconfirm': '돌봄 일정의 날짜 또는 시간이 변경되었습니다. 앱에서 재수락 여부를 확인해 주세요.',
         }[notification_type]),
-        data={'notification_id': str(identifier), 'user_uid': uid, 'type': 'test' if test else notification_type},
+        data={'notification_id': str(identifier), 'user_uid': uid, 'type': 'test' if test else notification_type,
+              **({'family_room_id': family_room_id, 'chat_seq': str(chat_seq)} if notification_type == 'chat_message' else {})},
         android=messaging.AndroidConfig(priority='high', ttl=timedelta(hours=24),
             notification=messaging.AndroidNotification(channel_id='ondolbom_updates',
-                icon='ic_stat_notification', tag=digest(str(identifier))))), app=get_firebase_app())
+                icon='ic_stat_notification', tag=digest('chat_' + family_room_id if notification_type == 'chat_message' else str(identifier))))), app=get_firebase_app())
 
 
 @router.post('/test')
@@ -163,7 +165,7 @@ def _disable_device(transaction, ref, generation):
         transaction.update(ref, {'enabled': False})
 
 
-def dispatch_event(identifier, event):
+def dispatch_event(identifier, event, *, visible_loader=None, finish_event=True):
     """등록·변경·삭제를 전달한다. 앱 내 알림 저장과 푸시 실패는 분리한다."""
     database = db()
     terminal = True
@@ -193,13 +195,15 @@ def dispatch_event(identifier, event):
                         cursor.execute('''SELECT user_id FROM `user` WHERE user_id=%s
                             AND BINARY user_firebase_uid=BINARY %s AND withdrawn_at IS NULL''', (user_id, device['user_uid']))
                         user = cursor.fetchone()
-                    visible = None if user is None else _visible(connection, user_id, event)
+                    visible = None if user is None else (visible_loader or _visible)(connection, user_id, event)
                     if visible is None:
                         delivery.update({'status': 'skipped', 'lease_until': now}, timeout=10)
                         continue
                     send_message(current['fid'], device['user_uid'], identifier,
                                  # 주보호자는 거절 결과, 다른 가족은 재모집 안내를 받는다.
-                                 notification_type=visible.get('notification_type', event.get('notification_type', 'schedule_created')))
+                                 notification_type=visible.get('notification_type', event.get('notification_type', 'schedule_created')),
+                                 **({'family_room_id': event['family_room_id'], 'chat_seq': event['chat_seq']}
+                                    if event.get('notification_type') == 'chat_message' else {}))
                     delivery.update({'status': 'sent', 'sent_at': now, 'lease_until': now}, timeout=10)
                 except (messaging.UnregisteredError, messaging.SenderIdMismatchError):
                     delivery.update({'status': 'failed', 'error_code': 'invalid_token', 'lease_until': now}, timeout=10)
@@ -211,8 +215,9 @@ def dispatch_event(identifier, event):
                         'lease_until': now, 'error_code': type(error).__name__}, timeout=10)
                     terminal &= attempts >= 5
         # 모든 기기가 성공·건너뜀·최종 실패 상태일 때만 큐에서 제거한다.
-        if terminal:
+        if terminal and finish_event:
             store.collection().document(str(identifier)).update({'push_pending': False}, timeout=10)
+        return terminal
     finally:
         connection.close()
 

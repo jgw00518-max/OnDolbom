@@ -16,6 +16,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.websockets import WebSocketDisconnect
 
 from python.database import connect
+from python.features.chats import read_status
 from python.features.auth.firebase_auth import require_firebase_user, verify_firebase_token
 from python.features.chats.connection_manager import ChatConnection, manager
 from python.features.memos.images import read_image
@@ -106,6 +107,28 @@ def _public_message(row):
         result['chat_content'] = '삭제된 메시지입니다.'
         result['has_image'] = 0
     return result
+
+
+class ChatRead(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    family_room_id: str = Field(min_length=1,max_length=50)
+    chat_seq: int = Field(ge=0,strict=True)
+
+
+@router.get('/unread')
+def chat_unread(current_user_id: str = Depends(get_current_user_id)):
+    try:
+        return {'counts':read_status.unread_counts(current_user_id)}
+    except (pymysql.MySQLError,ValueError):
+        raise HTTPException(503,'채팅 미읽음 수를 조회하지 못했습니다.') from None
+
+
+@router.post('/read')
+def chat_read(data: ChatRead,current_user_id: str = Depends(get_current_user_id)):
+    try:
+        return read_status.mark_read(data.family_room_id,current_user_id,data.chat_seq)
+    except (pymysql.MySQLError,ValueError):
+        raise HTTPException(503,'채팅 읽음 처리를 완료하지 못했습니다.') from None
 
 
 @router.get('/messages')
@@ -226,6 +249,11 @@ def _save(room_id, user_id, message, image_data=None):
                 row = cursor.fetchone()
                 if row is None:
                     raise HTTPException(503, '저장한 메시지를 확인하지 못했습니다.')
+        if not duplicate:
+            # 메시지와 푸시 대기를 함께 확정한다. 동일 UUID 재전송은 새 작업을 만들지 않는다.
+            with connection.cursor() as cursor:
+                cursor.execute("""INSERT INTO chat_push_outbox (chat_seq,family_room_id,user_id)
+                    VALUES (%s,%s,%s)""", (row['chat_seq'],room_id,user_id))
         connection.commit()
         return _public_message(row), duplicate
     except HTTPException:

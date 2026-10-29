@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pymysql import MySQLError
 
 from python.database import connect
+from python.features.chats.read_status import initialize as initialize_chat_read
 from python.features.auth.firebase_auth import require_firebase_user
 
 from python.features.invites.send_email import send_invite_email
@@ -603,6 +604,9 @@ def accept_invite(
                 """,
                 (user_id, family_room_id, 0),
             )
+
+            # 기존 대화는 조회할 수 있지만 신규 참여 전 메시지는 미읽음에 넣지 않는다.
+            initialize_chat_read(cursor, cursor.lastrowid, family_room_id)
 
             # 참여 등록과 초대 상태 변경을 함께 저장한다.
             cursor.execute(
