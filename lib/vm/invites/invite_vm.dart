@@ -34,7 +34,7 @@ final receivedInvitesProvider = FutureProvider.autoDispose<List<FamilyInvite>>((
   return ref.read(inviteVmProvider).fetchReceivedInvites();
 }, retry: (retryCount, error) => null);
 
-// 로그인한 사용자가 주보호자로 관리하는 공간의 보낸 초대를 조회한다.
+// 로그인한 사용자가 본인 이름으로 보낸 초대만 조회한다.
 final sentInvitesProvider = FutureProvider.autoDispose<List<FamilyInvite>>((
   ref,
 ) async {

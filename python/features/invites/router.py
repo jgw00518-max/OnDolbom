@@ -826,7 +826,7 @@ def reject_invite(
         if conn is not None:
             conn.close()
 
-# 현재 주보호자로 관리하는 공간의 보낸 초대를 조회한다.
+# 현재 참여 중인 공간에서 본인이 보낸 초대만 조회한다.
 @router.get("/sent")
 def get_sent_invites(
     current_user: dict = Depends(get_current_user),
@@ -838,7 +838,7 @@ def get_sent_invites(
         conn = connect()
 
         with conn.cursor() as cursor:
-            # 관리 중인 공간의 대기 초대 중 7일이 지난 건을 만료 처리한다.
+            # 본인이 보낸 대기 초대만 조회 시 만료 처리한다.
             cursor.execute(
                 """
                 UPDATE invite AS i
@@ -848,7 +848,7 @@ def get_sent_invites(
                   ON p.family_room_id = i.family_room_id
                 SET i.invite_status = %s
                 WHERE p.user_id = %s
-                  AND p.is_representative = 1
+                  AND i.inviter_id = p.user_id
                   AND p.left_at IS NULL
                   AND f.family_room_deleted_at IS NULL
                   AND i.invite_deleted_at IS NULL
@@ -859,7 +859,7 @@ def get_sent_invites(
                 ("만료", user_id, "대기"),
             )
 
-            # 공간별 역할을 검사하여 현재 주보호자인 공간만 조회한다.
+            # 주보호자 이전은 초대 발신자를 바꾸지 않는다. 본인 발신 기록만 조회한다.
             cursor.execute(
                 """
                 SELECT DISTINCT
@@ -869,7 +869,7 @@ def get_sent_invites(
                     i.invite_at,
                     DATE_ADD(i.invite_at, INTERVAL 7 DAY) AS expires_at,
                     i.invite_status,
-                    (i.inviter_id = p.user_id AND i.invite_status = '만료'
+                    (i.inviter_id = p.user_id AND p.is_representative = 1 AND i.invite_status = '만료'
                      AND NOT EXISTS (SELECT 1 FROM invite newer
                          WHERE newer.family_room_id=i.family_room_id
                          AND LOWER(TRIM(newer.invite_email))=LOWER(TRIM(i.invite_email))
@@ -877,6 +877,8 @@ def get_sent_invites(
                          AND (newer.invite_status='발송대기' OR
                               (newer.invite_status='대기' AND
                                DATE_ADD(newer.invite_at, INTERVAL 7 DAY)>CURRENT_TIMESTAMP)))) AS can_resend,
+                    (p.is_representative = 1 AND i.invite_status = '대기'
+                     AND DATE_ADD(i.invite_at, INTERVAL 7 DAY)>CURRENT_TIMESTAMP) AS can_cancel,
                     f.care_recipient_name,
                     u.name AS inviter_name
                 FROM invite AS i
@@ -887,7 +889,7 @@ def get_sent_invites(
                 JOIN `user` AS u
                   ON u.user_id = i.inviter_id
                 WHERE p.user_id = %s
-                  AND p.is_representative = 1
+                  AND i.inviter_id = p.user_id
                   AND p.left_at IS NULL
                   AND f.family_room_deleted_at IS NULL
                   AND i.invite_deleted_at IS NULL
