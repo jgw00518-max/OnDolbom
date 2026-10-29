@@ -260,7 +260,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('medication-edit-date')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('24').last);
-    await tester.tap(find.text('OK'));
+    await tester.tap(find.byKey(const ValueKey('date-picker-apply')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('수정 저장'));
     await tester.pumpAndSettle();
