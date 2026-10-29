@@ -1,7 +1,80 @@
-"""공간 참여 종료와 미완료 일정 배정 해제를 하나의 트랜잭션으로 처리한다."""
+"""공간 역할 이전 및 참여 종료·미완료 일정 배정 해제를 트랜잭션으로 처리한다."""
 from fastapi import HTTPException
 from pymysql import MySQLError
 from python.database import connect
+
+
+def transfer_representative(room_id: str, actor_id: str, target_user_id: str) -> dict:
+    """활성 주보호자와 일반 가족의 역할만 교체하고 참여·원본 기록은 보존한다."""
+    connection = None
+    try:
+        connection = connect()
+        with connection.cursor() as cursor:
+            # 이전·탈퇴·강퇴·공간 삭제가 같은 공간을 동시에 바꾸지 않도록 공간부터 잠근다.
+            cursor.execute("""SELECT family_room_id FROM family_room
+                WHERE family_room_id=%s AND family_room_deleted_at IS NULL
+                FOR UPDATE""", (room_id,))
+            if cursor.fetchone() is None:
+                raise HTTPException(404, '이용할 수 없는 가족 공간입니다.')
+            # 전체 활성 참여를 잠가 기존 주보호자가 한 명인지도 검증한다.
+            cursor.execute("""SELECT participate_seq,user_id,is_representative
+                FROM participate WHERE family_room_id=%s
+                AND left_at IS NULL AND is_active=1
+                ORDER BY participate_seq FOR UPDATE""", (room_id,))
+            members = cursor.fetchall()
+            actor = next((row for row in members if row['user_id'] == actor_id), None)
+            if actor is None or actor['is_representative'] != 1:
+                raise HTTPException(403, '현재 주보호자만 권한을 이전할 수 있습니다.')
+            if actor_id == target_user_id:
+                raise HTTPException(409, '본인에게 주보호자를 이전할 수 없습니다.')
+            representatives = [row for row in members if row['is_representative'] == 1]
+            if len(representatives) != 1:
+                raise HTTPException(409, '주보호자 정보가 일치하지 않습니다. 가족 목록을 다시 확인해 주세요.')
+            target = next((row for row in members if row['user_id'] == target_user_id), None)
+            if target is None or target['is_representative'] != 0:
+                raise HTTPException(409, '현재 공간에 참여 중인 일반 가족에게만 이전할 수 있습니다.')
+            # 계정 탈퇴와도 경합할 수 있으므로 두 계정의 최신 상태를 잠금 조회한다.
+            # 여러 공간이 같은 사용자를 참조해도 계정 잠금 순서는 일관되게 유지한다.
+            cursor.execute("""SELECT user_id,withdrawn_at FROM `user`
+                WHERE user_id IN (%s,%s) ORDER BY user_id FOR UPDATE""",
+                tuple(sorted((actor_id, target_user_id))))
+            users = {row['user_id']: row for row in cursor.fetchall()}
+            if actor_id not in users or users[actor_id]['withdrawn_at'] is not None:
+                raise HTTPException(403, '이용 가능한 주보호자 계정이 아닙니다.')
+            if target_user_id not in users or users[target_user_id]['withdrawn_at'] is not None:
+                raise HTTPException(409, '이전받을 가족의 계정 상태가 변경되었습니다.')
+
+            # is_active는 생성 컬럼이다. 역할만 바꾸고 두 UPDATE를 함께 확정한다.
+            cursor.execute("""UPDATE participate SET is_representative=0
+                WHERE participate_seq=%s AND family_room_id=%s AND user_id=%s
+                AND is_representative=1 AND is_active=1 AND left_at IS NULL""",
+                (actor['participate_seq'], room_id, actor_id))
+            if cursor.rowcount != 1:
+                raise HTTPException(409, '주보호자 정보가 변경되었습니다. 다시 확인해 주세요.')
+            cursor.execute("""UPDATE participate SET is_representative=1
+                WHERE participate_seq=%s AND family_room_id=%s AND user_id=%s
+                AND is_representative=0 AND is_active=1 AND left_at IS NULL""",
+                (target['participate_seq'], room_id, target_user_id))
+            if cursor.rowcount != 1:
+                raise HTTPException(409, '이전받을 가족의 참여 정보가 변경되었습니다.')
+        connection.commit()
+        return {
+            'result': 'OK',
+            'family_room_id': room_id,
+            'previous_representative_user_id': actor_id,
+            'representative_user_id': target_user_id,
+        }
+    except HTTPException:
+        if connection is not None:
+            connection.rollback()
+        raise
+    except (MySQLError, ValueError):
+        if connection is not None:
+            connection.rollback()
+        raise HTTPException(503, '주보호자를 이전하지 못했습니다. 다시 시도해 주세요.') from None
+    finally:
+        if connection is not None:
+            connection.close()
 
 
 def end_membership(room_id, actor_id, participate_seq=None):
