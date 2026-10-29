@@ -5,7 +5,6 @@ from pymysql import MySQLError
 
 from python.database import connect
 from python.features.auth.firebase_auth import require_firebase_user
-from python.features.activity.receipts import answer_token
 
 router = APIRouter(prefix="/inquiries", tags=["inquiries"])
 
@@ -123,8 +122,7 @@ def inquiry_detail(question_seq: int = Path(gt=0), claims: dict = Depends(requir
                 WHERE question_seq = %s AND user_id = %s AND answer_deleted_at IS NULL
                 ORDER BY answered_at, answer_seq""", (question_seq, user_id))
             answers = cursor.fetchall()
-        return {**question, "answered": bool(answers), "answers": answers,
-                "badge_token": answer_token(answers) if answers else None}
+        return {**question, "answered": bool(answers), "answers": answers}
     except (MySQLError, ValueError):
         raise HTTPException(503, "문의 내용을 불러오지 못했습니다.") from None
     finally:

@@ -1,4 +1,3 @@
-import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -16,8 +15,6 @@ class FamilyMemberList extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leadingWidth: 62,
-        leading: const AppBackLeading(),
         title: const Text('함께하는 가족'),
         actions: [
           IconButton(

@@ -1,9 +1,6 @@
 """프로젝트 루트에서 python -m python.main 으로 실행."""
 
 from fastapi import FastAPI
-from python.features.notifications.push import router as push_router
-from python.features.schedules.reminder_lifecycle import reminder_lifespan
-from python.features.activity.router import router as activity_router
 
 from python.features.auth.router import router as auth_router
 from python.features.auth.kakao_auth import router as kakao_auth_router
@@ -22,10 +19,7 @@ from python.features.schedules.router import router as schedules_router
 from python.features.invites.router import router as invites_router
 
 
-# 기본 실행은 API만 제공한다. worker는 담당자 터미널에서 별도로 실행한다.
-app = FastAPI(title="온돌봄 사용자 API", lifespan=reminder_lifespan)
-app.include_router(push_router)
-app.include_router(activity_router)
+app = FastAPI(title="온돌봄 사용자 API")
 app.include_router(inquiries_router)
 app.include_router(notices_router)
 app.include_router(kakao_auth_router, prefix="/auth", tags=["auth"])

@@ -59,29 +59,6 @@ Future<void> mount(WidgetTester tester, http.Client client) async {
 }
 
 void main() {
-  testWidgets('줄바꿈으로 3줄을 넘는 메모는 말줄임표를 표시하고 상세는 원문을 유지한다', (tester) async {
-    const content = '1\n2\n3\n4\n5';
-    await mount(
-      tester,
-      MockClient((_) async => listResponse([memoJson('multiline', content)])),
-    );
-    expect(find.text('1\n2\n3…'), findsOneWidget);
-    await tester.tap(find.text('1\n2\n3…'));
-    await tester.pumpAndSettle();
-    expect(find.text(content), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('정확히 3줄인 메모에는 말줄임표를 붙이지 않는다', (tester) async {
-    const content = '1\n2\n3';
-    await mount(
-      tester,
-      MockClient((_) async => listResponse([memoJson('three-lines', content)])),
-    );
-    expect(find.text(content), findsOneWidget);
-    expect(find.text('1\n2\n3…'), findsNothing);
-  });
-
   test('작성자 이름은 공백을 제거하고 없는 경우 ID 대신 기본 문구를 사용한다', () {
     for (final name in [null, '', '   ']) {
       final memo = Memo.fromJson({...memoJson('1', '내용'), 'author_name': name});
@@ -110,13 +87,13 @@ void main() {
         ]),
       ),
     );
-    expect(find.text('김본인'), findsOneWidget);
-    expect(find.text('이가족'), findsOneWidget);
+    expect(find.textContaining('김본인 ·'), findsOneWidget);
+    expect(find.textContaining('이가족 ·'), findsOneWidget);
     expect(find.textContaining('other-user-id'), findsNothing);
     await tester.tap(find.text('가족 메모'));
     await tester.pumpAndSettle();
     expect(find.text('메모 상세'), findsOneWidget);
-    expect(find.text('이가족'), findsOneWidget);
+    expect(find.textContaining('이가족 ·'), findsOneWidget);
     expect(find.textContaining('other-user-id'), findsNothing);
   });
 

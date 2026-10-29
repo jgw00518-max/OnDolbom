@@ -1,5 +1,3 @@
-import 'package:ondolbom/model/settings/text_size_preferences.dart';
-import 'text_size_test.dart' show MemoryTextSizePreferences;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,64 +15,6 @@ import 'login_preferences_test.dart' show MemoryPreferences;
 import 'widget_test.dart' show FakeAuth;
 
 void main() {
-  testWidgets('설정 디자인은 좁은 화면에서 표시되며 미구현 설정은 비활성화한다', (tester) async {
-    tester.view.physicalSize = const Size(320, 900);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          textSizePreferencesProvider.overrideWithValue(
-            MemoryTextSizePreferences(),
-          ),
-          loginPreferencesProvider.overrideWithValue(MemoryPreferences()),
-          authUserProvider.overrideWith(
-            (ref) => Stream.value(
-              const AppUser(uid: 'uid', email: 'family@example.com'),
-            ),
-          ),
-          userProfileProvider.overrideWith(
-            (ref) async => const UserProfile(
-              userId: 'db',
-              name: '가족 사용자',
-              phone: '010-1234-5678',
-            ),
-          ),
-        ],
-        child: MaterialApp(
-          builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: const TextScaler.linear(1.2)),
-            child: child!,
-          ),
-          home: const PersonalSettingsView(),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('가족 사용자'), findsOneWidget);
-    expect(tester.widget<Switch>(find.byType(Switch).first).onChanged, isNull);
-    expect(
-      tester
-          .widget<DropdownButton<String>>(find.byType(DropdownButton<String>))
-          .onChanged,
-      isNull,
-    );
-    await tester.ensureVisible(find.text('크게'));
-    await tester.pumpAndSettle();
-    for (final label in ['작게', '보통', '크게']) {
-      expect(
-        tester
-            .widget<OutlinedButton>(find.widgetWithText(OutlinedButton, label))
-            .onPressed,
-        isNotNull,
-      );
-    }
-    expect(tester.takeException(), isNull);
-  });
-
   testWidgets('왼쪽 끝 메뉴·왼쪽 Drawer·다섯 메뉴와 로그아웃 경로 정리를 확인한다', (tester) async {
     final auth = FakeAuth();
     await tester.pumpWidget(
@@ -147,9 +87,6 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          textSizePreferencesProvider.overrideWithValue(
-            MemoryTextSizePreferences(),
-          ),
           loginPreferencesProvider.overrideWithValue(preferences),
           authUserProvider.overrideWith(
             (ref) => Stream.value(
@@ -164,18 +101,12 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('아이디 저장'), 250);
-    await tester.pumpAndSettle();
     await tester.tap(find.text('아이디 저장'));
     await tester.pumpAndSettle();
     expect(preferences.email, 'family@example.com');
-    await tester.scrollUntilVisible(find.text('자동 로그인'), 150);
-    await tester.pumpAndSettle();
     await tester.tap(find.text('자동 로그인'));
     await tester.pumpAndSettle();
     expect(preferences.autoLogin, true);
-    await tester.scrollUntilVisible(find.text('아이디 저장'), 250);
-    await tester.pumpAndSettle();
     await tester.tap(find.text('아이디 저장'));
     await tester.pumpAndSettle();
     expect(preferences.email, isNull);

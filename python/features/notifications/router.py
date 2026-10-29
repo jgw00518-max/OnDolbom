@@ -1,5 +1,4 @@
-"""Firestore 알림 목록·읽음 API. 현재 공간 접근 권한은 MySQL에서 재검사한다."""
-from python.features.activity.cache import badge_cache
+﻿"""Firestore 알림 목록·읽음 API. 현재 공간 접근 권한은 MySQL에서 재검사한다."""
 from fastapi import APIRouter, Depends, HTTPException, Query, Path
 from google.api_core.exceptions import GoogleAPICallError
 from pymysql import MySQLError
@@ -81,8 +80,5 @@ def notification_schedule(notification_id: int = Path(gt=0), claims: dict = Depe
 def read_notification(notification_id: int = Path(gt=0), claims: dict = Depends(require_firebase_user)):
     def action(connection, user_id):
         _required(connection, user_id, notification_id)
-        read_at = store.mark_read(notification_id, user_id)
-        # 읽음 저장이 성공한 후에만 현재 계정의 배지 캐시를 폐기한다.
-        badge_cache.invalidate(claims['uid'])
-        return dict(notification_id=notification_id, read_at=read_at)
+        return dict(notification_id=notification_id, read_at=store.mark_read(notification_id, user_id))
     return _run(claims, action)

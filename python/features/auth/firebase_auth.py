@@ -1,6 +1,5 @@
 """사용자 API에서 재사용할 Firebase ID 토큰 검증. 키는 저장소 밖에 둔다."""
 
-import logging
 import os
 from pathlib import Path
 from threading import Lock
@@ -15,7 +14,6 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 _lock = Lock()
 _app_name = "ondolbom-api"
 _bearer = HTTPBearer(auto_error=False)
-_logger = logging.getLogger(__name__)
 
 
 def get_firebase_app():
@@ -52,12 +50,7 @@ def verify_firebase_token(token: str) -> dict:
     try:
         # 서명·만료·프로젝트를 검증하고, 철회 토큰과 비활성화 계정도 확인한다.
         claims = auth.verify_id_token(token, app=app, check_revoked=True)
-    except (auth.InvalidIdTokenError, auth.RevokedIdTokenError, auth.UserDisabledError, auth.UserNotFoundError, ValueError) as error:
-        # 토큰·UID·예외 원문 대신 오류 유형과 고정된 진단 문구만 기록한다.
-        reason = type(error).__name__
-        if "Token used too early" in str(error):
-            reason = "Token used too early; check server clock synchronization"
-        _logger.warning("Firebase ID token rejected: %s", reason)
+    except (auth.InvalidIdTokenError, auth.RevokedIdTokenError, auth.UserDisabledError, auth.UserNotFoundError, ValueError):
         raise HTTPException(401, "로그인 정보가 유효하지 않습니다. 다시 로그인해 주세요.",
                             headers={"WWW-Authenticate": "Bearer"}) from None
     except (auth.CertificateFetchError, exceptions.FirebaseError):

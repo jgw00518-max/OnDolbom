@@ -130,7 +130,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('계정 메뉴'));
       await tester.pumpAndSettle();
-      expect(find.text('가족 이름 님'), findsOneWidget);
+      expect(find.text('가족 이름'), findsOneWidget);
       expect(find.text('family@example.com'), findsOneWidget);
       expect(find.text('010-1234-5678'), findsOneWidget);
       await tester.tap(find.text('문의'));
@@ -200,18 +200,13 @@ void main() {
         child: const MaterialApp(home: InquiryFormView(familyRoomId: 'room-a')),
       ),
     );
-    await tester.ensureVisible(find.text('문의 등록'));
-    await tester.pumpAndSettle();
     await tester.tap(find.text('문의 등록'));
     await tester.pump();
     expect(calls, 0);
     await tester.enterText(find.byType(TextFormField).first, '제목');
     await tester.enterText(find.byType(TextFormField).last, '내용');
-    await tester.ensureVisible(find.text('현재 가족 공간과 관련된 문의'));
-    await tester.pumpAndSettle();
     await tester.tap(find.text('현재 가족 공간과 관련된 문의'));
     await tester.ensureVisible(find.text('문의 등록'));
-    await tester.pumpAndSettle();
     await tester.tap(find.text('문의 등록'));
     await tester.pump();
     await tester.tap(find.text('등록 중…'));

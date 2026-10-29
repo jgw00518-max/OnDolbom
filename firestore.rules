@@ -6,16 +6,6 @@ service cloud.firestore {
     match /schedule_notifications/{document=**} {
       allow read, write: if false;
     }
-    match /activity_reads/{document=**} {
-      allow read, write: if false;
-    }
-    // 기기 토큰과 발송 이력은 인증된 Python API에서만 관리한다.
-    match /push_devices/{document=**} {
-      allow read, write: if false;
-    }
-    match /push_deliveries/{document=**} {
-      allow read, write: if false;
-    }
     // 인증번호·재설정 토큰은 서버 Admin SDK만 접근한다.
     match /password_reset_challenges/{document=**} {
       allow read, write: if false;

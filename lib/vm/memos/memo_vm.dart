@@ -8,8 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:ondolbom/model/memos/memo.dart';
 import 'package:ondolbom/vm/family_room/family_context.dart';
 
-export 'package:ondolbom/vm/family_room/family_context.dart'
-    show apiBaseUrlProvider;
+export 'package:ondolbom/vm/family_room/family_context.dart' show apiBaseUrlProvider;
 
 typedef MemoContext = FamilyContext;
 
@@ -281,8 +280,8 @@ class MemoVm extends AsyncNotifier<MemoFeed> {
 
   Future<void> createMemo(String content, {Uint8List? image}) async {
     final text = content.trim();
-    if (text.isEmpty || text.runes.length > 2000) {
-      throw const MemoFailure('메모는 1~2,000자로 작성해 주세요.');
+    if (text.isEmpty || text.runes.length > 10000) {
+      throw const MemoFailure('메모는 1~10,000자로 작성해 주세요.');
     }
     if (context.userId.isEmpty || context.familyRoomId.isEmpty) {
       throw const MemoFailure('사용자와 돌봄 공간을 먼저 선택해 주세요.');
@@ -324,8 +323,8 @@ class MemoVm extends AsyncNotifier<MemoFeed> {
   }) async {
     _checkCanManage(memo);
     final text = content.trim();
-    if (text.isEmpty || text.runes.length > 2000) {
-      throw const MemoFailure('메모는 1~2,000자로 작성해 주세요.');
+    if (text.isEmpty || text.runes.length > 10000) {
+      throw const MemoFailure('메모는 1~10,000자로 작성해 주세요.');
     }
     _validateImage(image);
     if (image != null && removeImage) {

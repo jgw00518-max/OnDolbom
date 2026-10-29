@@ -1,4 +1,3 @@
-import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -69,8 +68,11 @@ class _RecipientEditState extends ConsumerState<RecipientEdit> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('대상자 정보 편집'),
-          leadingWidth: 62,
-          leading: AppBackLeading(enabled: !isSaving),
+          leading: IconButton(
+            tooltip: '뒤로',
+            onPressed: isSaving ? null : () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back),
+          ),
         ),
         body: !canEdit
             ? const Center(
