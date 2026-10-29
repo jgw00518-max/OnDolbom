@@ -1,3 +1,4 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,16 +25,52 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
   bool isEditing = false;
   bool isResponding = false;
   bool isDeleting = false;
+  bool isWithdrawing = false;
   bool accepted = false;
   String? errorMessage;
   late final String? loginUid;
+  SharedPreferences? reviewPreferences;
+  String? seenContentVersion;
+  final Set<String> displayedChanges = {};
+
+  String reviewKey() =>
+      'schedule_content_seen:$loginUid:'
+      '${widget.query.familyRoomId}:${widget.item.seq}';
+
+  Future<void> loadReviewState() async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.reload();
+    if (!mounted) return;
+    setState(() {
+      reviewPreferences = preferences;
+      seenContentVersion = preferences.getString(reviewKey());
+    });
+  }
+
+  // 화면에 표시한 버전만 저장한다. 열린 창의 비교 표시는 유지한다.
+  void markContentDisplayed(String version) {
+    if (displayedChanges.contains(version)) return;
+    displayedChanges.add(version);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted ||
+          ref.read(firebaseAuthProvider).currentUser?.uid != loginUid ||
+          ref.read(familyRoomProvider).selectedRoomId !=
+              widget.query.familyRoomId) {
+        return;
+      }
+      await reviewPreferences?.setString(reviewKey(), version);
+    });
+  }
+
   // 처리 중에는 다른 버튼과 뒤로 가기를 막는다.
-  bool get isBusy => isAccepting || isEditing || isResponding || isDeleting;
+  bool get isBusy =>
+      isAccepting || isEditing || isResponding || isDeleting || isWithdrawing;
 
   @override
   void initState() {
     super.initState();
     loginUid = ref.read(firebaseAuthProvider).currentUser?.uid;
+    loadReviewState();
   }
 
   @override
@@ -111,17 +148,19 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
     final previous = item?.reconfirmRequired == true
         ? item?.previousSchedule
         : null;
+    final contentVersion = item?.contentChangeVersion;
+    final showContentChange =
+        reviewPreferences != null &&
+        contentVersion != null &&
+        (displayedChanges.contains(contentVersion) ||
+            seenContentVersion != contentVersion);
+    final contentBefore = showContentChange
+        ? item?.contentBeforeFor(seenContentVersion)
+        : null;
+    if (showContentChange && contentBefore != null) {
+      markContentDisplayed(contentVersion);
+    }
     final responseDueAt = item?.reconfirmResponseDueAt;
-    // 현재 공간 역할과 담당 여부에 따라 안내를 구분한다.
-    final urgentNotice = member.isRepresentative
-        ? '긴급 변경 · 담당 가족에게 연락해 주세요'
-        : mine
-        ? responseDueAt != null
-              ? '긴급 변경 · 아래 기한까지 재수락 또는 거절해 주세요. '
-                    '응답하지 않으면 담당 배정이 자동 해제됩니다.'
-              : '긴급 변경 · 돌봄 가능 여부에 응답해 주세요'
-        : '기존 담당자의 재수락을 기다리고 있어요';
-
     return PopScope(
       canPop: !isBusy,
       child: Dialog(
@@ -190,7 +229,9 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                         const SizedBox(height: 18),
                         changeText(
                           item.title,
-                          previousValue: previous?.title,
+                          previousValue:
+                              contentBefore?.title ??
+                              (contentVersion == null ? previous?.title : null),
                           style: const TextStyle(
                             fontSize: 23,
                             fontWeight: FontWeight.bold,
@@ -218,38 +259,7 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                         infoRow('담당자', assigned ? personName : '모집 중'),
                         infoRow('일정 상태', item.state),
                         if (item.reconfirmRequired) ...[
-                          if (item.reconfirmIsUrgent)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 17),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const SizedBox(
-                                    width: 86,
-                                    child: Text(
-                                      '확인 안내',
-                                      style: TextStyle(
-                                        color: Color(0xFF78716A),
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Text(
-                                      urgentNotice,
-                                      style: const TextStyle(
-                                        color: Colors.black,
-                                        fontSize: 15,
-                                        height: 1.4,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          if (responseDueAt != null ||
-                              !item.reconfirmIsUrgent)
+                          if (responseDueAt != null || !item.reconfirmIsUrgent)
                             infoRow(
                               '응답 기한',
                               responseDueAt == null
@@ -257,14 +267,22 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                                   : '${dateText(responseDueAt)} '
                                         '${responseDueAt.hour.toString().padLeft(2, '0')}:'
                                         '${responseDueAt.minute.toString().padLeft(2, '0')}',
+                              valueStyle: TextStyle(
+                                color: item.reconfirmIsUrgent
+                                    ? const Color(0xFFC62828)
+                                    : Colors.black,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                         ],
                         infoRow(
                           '메모',
                           memoText(item.memo),
-                          previousValue: previous == null
-                              ? null
-                              : memoText(previous.memo),
+                          previousValue: contentBefore != null
+                              ? memoText(contentBefore.memo)
+                              : contentVersion == null && previous != null
+                              ? memoText(previous.memo)
+                              : null,
                           newLine: true,
                         ),
                         infoRow('등록자', item.creatorName ?? '가족'),
@@ -335,71 +353,96 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                       ],
                       if (item != null &&
                           member.isRepresentative &&
-                          item.state == '미완료' &&
                           !schedules.isLoading &&
                           !schedules.hasError) ...[
                         const SizedBox(height: 24),
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton.icon(
-                            onPressed: isBusy ? null : () => editAction(item),
-                            icon: const Icon(Icons.edit_outlined, size: 20),
-                            label: Text(isEditing ? '편집 중…' : '일정 변경'),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFFAC5D32),
-                              foregroundColor: Colors.white,
-                              disabledBackgroundColor: const Color(0xFFF0E8E0),
-                              disabledForegroundColor: const Color(0xFFAA9B8E),
-                              minimumSize: const Size.fromHeight(52),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              textStyle: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: FilledButton(
+                                onPressed: isBusy
+                                    ? null
+                                    : () => deleteAction(item!),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: const Color(0xFFB87568),
+                                  foregroundColor: Colors.white,
+                                  minimumSize: const Size(0, 48),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 12,
+                                  ),
+                                ),
+                                child: Text(isDeleting ? '삭제 중…' : '일정 삭제'),
                               ),
                             ),
-                          ),
+                            if (item.state == '미완료') ...[
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: FilledButton(
+                                  onPressed: isBusy
+                                      ? null
+                                      : () => editAction(item!),
+                                  style: FilledButton.styleFrom(
+                                    minimumSize: const Size(0, 48),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                  child: Text(isEditing ? '편집 중…' : '일정 변경'),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ],
                       if (item != null &&
-                          member.isRepresentative &&
+                          mine &&
+                          !item.reconfirmRequired &&
+                          item.state == '미완료' &&
+                          item.acceptedAt != null &&
                           !schedules.isLoading &&
                           !schedules.hasError) ...[
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          width: double.infinity,
-                          child: TextButton.icon(
-                            onPressed: isBusy ? null : () => deleteAction(item),
-                            icon: const Icon(Icons.delete_outline, size: 20),
-                            label: Text(isDeleting ? '삭제 중…' : '일정 삭제'),
-                            style: TextButton.styleFrom(
-                              foregroundColor: const Color(0xFFA65F48),
-                              minimumSize: const Size.fromHeight(48),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              textStyle: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
+                        const SizedBox(height: 24),
+                        Center(
+                          child: SizedBox(
+                            width: 156,
+                            child: FilledButton(
+                              onPressed: isBusy
+                                  ? null
+                                  : () => withdrawAction(item!),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFFB87568),
+                                foregroundColor: Colors.white,
+                                minimumSize: const Size(0, 48),
                               ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
+                              child: Text(isWithdrawing ? '처리 중…' : '일정 참여 취소'),
                             ),
                           ),
                         ),
                       ],
                       if (canRespond) ...[
                         const SizedBox(height: 24),
-                        const Text('변경된 일정 내용을 확인하고 재수락하거나 거절해 주세요.'),
+                        Text(
+                          responseDueAt != null
+                              ? '변경된 일정 내용을 확인하고 재수락하거나 거절해 주세요.\n'
+                                    '응답 기한 내에 응답하지 않으면 담당 배정이 자동 해제됩니다.'
+                              : '변경된 일정 내용을 확인하고 재수락하거나 거절해 주세요.',
+                          style: const TextStyle(height: 1.5),
+                        ),
                         const SizedBox(height: 12),
                         Row(
                           children: [
                             Expanded(
-                              child: OutlinedButton(
+                              child: FilledButton(
                                 onPressed: isBusy
                                     ? null
                                     : () => respondAction(item!, false),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: const Color(0xFFB87568),
+                                  foregroundColor: Colors.white,
+                                  minimumSize: const Size(0, 48),
+                                ),
                                 child: const Text('거절'),
                               ),
                             ),
@@ -409,6 +452,9 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                                 onPressed: isBusy
                                     ? null
                                     : () => respondAction(item!, true),
+                                style: FilledButton.styleFrom(
+                                  minimumSize: const Size(0, 48),
+                                ),
                                 child: Text(isResponding ? '처리 중…' : '재수락'),
                               ),
                             ),
@@ -484,6 +530,7 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
     String value, {
     String? previousValue,
     bool newLine = false,
+    TextStyle? valueStyle,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 17),
@@ -506,7 +553,7 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                 fontSize: 15,
                 height: 1.4,
                 color: Color(0xFF403C39),
-              ),
+              ).merge(valueStyle),
             ),
           ),
         ],
@@ -530,7 +577,10 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
         children: [
           TextSpan(
             text: previousValue,
-            style: const TextStyle(color: Color(0xFF78716A)),
+            style: const TextStyle(
+              color: Color(0xFF78716A),
+              fontWeight: FontWeight.normal,
+            ),
           ),
           TextSpan(
             text: newLine ? '\n→ ' : ' → ',
@@ -560,6 +610,126 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
 
   String memoText(String? memo) {
     return memo == null || memo.isEmpty ? '등록된 메모가 없습니다.' : memo;
+  }
+
+  Future<void> withdrawAction(Schedule item) async {
+    if (isBusy) return;
+    // 취소 확인창을 여는 시점의 최신 표시 일정으로 남은 시간을 확인한다.
+    final timeParts = item.startTime.split(':');
+    final startsAt = DateTime(
+      item.date.year,
+      item.date.month,
+      item.date.day,
+      int.parse(timeParts[0]),
+      int.parse(timeParts[1]),
+    );
+    final remaining = startsAt.difference(DateTime.now());
+    final needsContact =
+        remaining > Duration.zero && remaining < const Duration(hours: 24);
+    setState(() => isWithdrawing = true);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.background,
+        surfaceTintColor: Colors.transparent,
+        title: const Text(
+          '일정 참여 취소',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '이 일정의 담당 참여를 취소할까요?\n'
+                '담당 배정이 해제되고,\n'
+                '가족에게 재모집 안내가 전달됩니다.',
+              ),
+              if (needsContact) ...[
+                const SizedBox(height: 18),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.peachSoft,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Text(
+                    '일정 시작까지 24시간이 채 남지 않았습니다.\n'
+                    '주보호자에게 알려 새로운 담당 가족을 찾도록\n'
+                    '알려주세요',
+                    style: TextStyle(
+                      color: Color(0xFF9B5C50),
+                      fontWeight: FontWeight.w600,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('취소'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFB87568),
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('참여 취소'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    if (confirmed != true) {
+      setState(() => isWithdrawing = false);
+      return;
+    }
+    try {
+      if (ref.read(firebaseAuthProvider).currentUser?.uid != loginUid ||
+          ref.read(familyRoomProvider).selectedRoomId !=
+              widget.query.familyRoomId) {
+        throw Exception('로그인 상태와 가족 공간을 다시 확인해 주세요.');
+      }
+      final published = await ref
+          .read(scheduleVmProvider)
+          .withdrawSchedule(item);
+      if (mounted) {
+        setState(() {
+          accepted = false;
+          errorMessage = published ? null : '참여 취소는 완료됐지만 알림 발행 확인이 필요합니다.';
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(
+          () => errorMessage = error.toString().replaceFirst('Exception: ', ''),
+        );
+      }
+    }
+    if (!mounted) return;
+    ref.invalidate(scheduleListProvider(widget.query));
+    try {
+      await ref.read(scheduleListProvider(widget.query).future);
+    } catch (_) {
+      /* 기존 조회 오류 안내를 사용한다. */
+    } finally {
+      if (mounted) setState(() => isWithdrawing = false);
+    }
   }
 
   // 기존 담당자가 재수락·거절하고 최신 일정으로 화면을 갱신한다.

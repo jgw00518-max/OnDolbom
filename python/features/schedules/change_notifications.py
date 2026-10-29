@@ -687,8 +687,10 @@ def publish_reconfirm_expiry_notification(identifier: str):
             start_time=saved["start_time"],
         )
 
+        # 긴급 여부가 아니라 실제 기한 유무로 자동 만료 발행을 판단한다.
+        # 12시간 초과~24시간 이하 요청도 기한이 지나면 발행한다.
         if (
-            deadline["is_urgent"]
+            deadline["response_due_at"] is None
             or saved["updated_at"] < deadline["response_due_at"]
         ):
             return False

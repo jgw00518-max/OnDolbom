@@ -10,11 +10,15 @@ class Schedule {
     this.memo,
     this.creatorName,
     this.acceptedBy,
+    this.acceptedAt,
     this.acceptedName,
     this.historySeq,
     this.reconfirmRequired = false,
     this.reconfirmUserId,
     this.previousSchedule,
+    this.contentChangeVersion,
+    this.contentChangeBefore,
+    this.contentChanges = const [],
     this.reconfirmResponseDueAt,
     this.reconfirmIsUrgent = false,
   });
@@ -28,6 +32,7 @@ class Schedule {
   final String? memo;
   final String? creatorName;
   final String? acceptedBy;
+  final DateTime? acceptedAt;
   final String? acceptedName;
 
   // 최신 변경 이력 번호
@@ -42,7 +47,24 @@ class Schedule {
   // 재수락 요청 직전의 일정 내용
   final PreviousSchedule? previousSchedule;
 
-    // 일반 재수락 요청의 응답 기한
+  // 이름·메모만 바뀐 이력의 기기별 확인 표시용 정보
+  final String? contentChangeVersion;
+  final PreviousSchedule? contentChangeBefore;
+  final List<Map<String, dynamic>> contentChanges;
+
+  PreviousSchedule? contentBeforeFor(String? seenVersion) {
+    final seen = int.tryParse(seenVersion ?? '') ?? -1;
+    for (final change in contentChanges) {
+      if ((int.tryParse(change['version'] as String) ?? 0) > seen) {
+        return PreviousSchedule.fromJson(
+          change['before'] as Map<String, dynamic>,
+        );
+      }
+    }
+    return contentChangeBefore;
+  }
+
+  // 일반 재수락 요청의 응답 기한
   final DateTime? reconfirmResponseDueAt;
 
   // 요청 당시 시작까지 24시간 이하였는지 여부
@@ -66,15 +88,25 @@ class Schedule {
       memo: json['schedule_memo'] as String?,
       creatorName: json['creator_name'] as String?,
       acceptedBy: json['accepted_by'] as String?,
+      acceptedAt: DateTime.tryParse(json['accepted_at'] as String? ?? ''),
       acceptedName: json['accepted_name'] as String?,
       historySeq: (json['history_seq'] as num?)?.toInt(),
       reconfirmRequired:
           json['reconfirm_required'] == 1 || json['reconfirm_required'] == true,
       reconfirmUserId: json['reconfirm_user_id'] as String?,
-            reconfirmResponseDueAt: json['reconfirm_response_due_at'] == null
+      reconfirmResponseDueAt: json['reconfirm_response_due_at'] == null
           ? null
           : DateTime.parse(json['reconfirm_response_due_at'] as String),
       reconfirmIsUrgent: json['reconfirm_is_urgent'] == true,
+      contentChanges: (json['content_change']?['changes'] as List? ?? [])
+          .map((value) => Map<String, dynamic>.from(value as Map))
+          .toList(),
+      contentChangeVersion: json['content_change']?['version'] as String?,
+      contentChangeBefore: json['content_change']?['before'] == null
+          ? null
+          : PreviousSchedule.fromJson(
+              json['content_change']['before'] as Map<String, dynamic>,
+            ),
       previousSchedule: json['previous_schedule'] == null
           ? null
           : PreviousSchedule.fromJson(
@@ -84,8 +116,8 @@ class Schedule {
   }
 }
 
-  // 변경 전·후 비교에 사용할 이전 일정 내용
-  class PreviousSchedule {
+// 변경 전·후 비교에 사용할 이전 일정 내용
+class PreviousSchedule {
   const PreviousSchedule({
     required this.date,
     required this.startTime,
@@ -100,8 +132,7 @@ class Schedule {
   final String? name;
   final String? memo;
 
-  String get title =>
-      name == null || name!.trim().isEmpty ? '돌봄 일정' : name!;
+  String get title => name == null || name!.trim().isEmpty ? '돌봄 일정' : name!;
 
   factory PreviousSchedule.fromJson(Map<String, dynamic> json) {
     return PreviousSchedule(
