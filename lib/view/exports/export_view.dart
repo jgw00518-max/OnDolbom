@@ -1,5 +1,4 @@
 import 'package:ondolbom/theme/app_colors.dart';
-import 'package:ondolbom/view/widgets/family_room_label.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -85,8 +84,6 @@ class _ExportViewState extends ConsumerState<ExportView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  FamilyRoomLabel(name: widget.selected.roomName),
-                  const SizedBox(height: 20),
                   _ExportSection(
                     title: '내보낼 기간',
                     icon: Icons.date_range_outlined,
@@ -280,7 +277,7 @@ class _ExportViewState extends ConsumerState<ExportView> {
                   const SizedBox(height: 24),
                   if (!allowed)
                     Text(
-                      '계정 또는 가족 공간이 변경됐어요. 화면을 다시 열어 주세요.',
+                      '계정 또는 돌봄 공간이 변경됐어요. 화면을 다시 열어 주세요.',
                       style: TextStyle(color: colors.error),
                     )
                   else ...[

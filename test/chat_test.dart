@@ -453,6 +453,6 @@ void main() {
         child: const MaterialApp(home: ChatView()),
       ),
     );
-    expect(find.text('로그인 후 가족 공간을 선택해 주세요.'), findsOneWidget);
+    expect(find.text('로그인 후 돌봄 공간을 선택해 주세요.'), findsOneWidget);
   });
 }

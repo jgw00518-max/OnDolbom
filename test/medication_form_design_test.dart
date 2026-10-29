@@ -22,7 +22,7 @@ void main() {
       }),
       primary: true,
     );
-    await tester.tap(find.text('약 추가'));
+    await tester.tap(find.byTooltip('약 추가'));
     await tester.pumpAndSettle();
     expect(find.byType(MedicationFormView), findsOneWidget);
     expect(find.byType(Dialog), findsNothing);
@@ -61,7 +61,7 @@ void main() {
       }),
       primary: true,
     );
-    await tester.tap(find.text('약 추가'));
+    await tester.tap(find.byTooltip('약 추가'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('medication-start-date')));
     await tester.pumpAndSettle();

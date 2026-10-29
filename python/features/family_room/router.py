@@ -31,7 +31,7 @@ def _soft_delete_family_room(family_room_id: str, user_id: str) -> dict:
                 WHERE family_room_id = %s FOR UPDATE''', (family_room_id,))
             room = cursor.fetchone()
             if room is None:
-                raise HTTPException(404, "가족 공간을 찾을 수 없습니다.")
+                raise HTTPException(404, "돌봄 공간을 찾을 수 없습니다.")
             cursor.execute('''SELECT p.participate_seq, p.is_representative
                 FROM participate AS p JOIN `user` AS u ON u.user_id = p.user_id
                 WHERE p.family_room_id = %s AND p.user_id = %s
@@ -40,7 +40,7 @@ def _soft_delete_family_room(family_room_id: str, user_id: str) -> dict:
                 LIMIT 1 FOR UPDATE''', (family_room_id, user_id))
             member = cursor.fetchone()
             if member is None or member["is_representative"] != 1:
-                raise HTTPException(403, "현재 공간의 주보호자만 가족 공간을 삭제할 수 있습니다.")
+                raise HTTPException(403, "현재 공간의 주보호자만 돌봄 공간을 삭제할 수 있습니다.")
             deleted_at = room["family_room_deleted_at"]
             already_deleted = deleted_at is not None
             if not already_deleted:
@@ -61,7 +61,7 @@ def _soft_delete_family_room(family_room_id: str, user_id: str) -> dict:
     except (MySQLError, ValueError):
         if connection is not None:
             connection.rollback()
-        raise HTTPException(503, "가족 공간을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.") from None
+        raise HTTPException(503, "돌봄 공간을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.") from None
     finally:
         if connection is not None:
             connection.close()
@@ -144,7 +144,7 @@ def create_family_room(
             # 서버에서 중복 가능성이 낮은 공간 ID를 생성한다.
             family_room_id = str(uuid4())
 
-            # 1. 대상자 정보와 가족 공간을 저장한다.
+            # 1. 대상자 정보와 돌봄 공간을 저장한다.
             cursor.execute(
                 """
                 INSERT INTO family_room (
@@ -251,7 +251,7 @@ def create_family_room(
 
         raise HTTPException(
             status_code=500,
-            detail="가족 공간 생성 중 오류가 발생했습니다.",
+            detail="돌봄 공간 생성 중 오류가 발생했습니다.",
         ) from None
 
     finally:
@@ -373,7 +373,7 @@ current_user_id: str = Depends(get_current_user_id),
         current_user_id=current_user_id,
     )
 
-# 현재 사용자가 참여 중인 가족 공간 목록
+# 현재 사용자가 참여 중인 돌봄 공간 목록
 @router.get("")
 def get_family_rooms(
     # 변경 후
@@ -473,7 +473,7 @@ current_user_id: str = Depends(get_current_user_id),
     except Exception:
         raise HTTPException(
             status_code=500,
-            detail="가족 공간 목록을 불러오지 못했습니다.",
+            detail="돌봄 공간 목록을 불러오지 못했습니다.",
         ) from None
 
     finally:
@@ -513,7 +513,7 @@ def get_family_members(
             if cursor.fetchone() is None:
                 raise HTTPException(
                     status_code=403,
-                    detail="현재 참여 중인 가족 공간만 조회할 수 있습니다.",
+                    detail="현재 참여 중인 돌봄 공간만 조회할 수 있습니다.",
                 )
 
             # 현재 참여 가족만 조회하고 주보호자를 먼저 표시한다.
@@ -585,7 +585,7 @@ def update_family_recipient(
             if cursor.fetchone() is None:
                 raise HTTPException(
                     status_code=403,
-                    detail="이용할 수 없는 가족 공간입니다.",
+                    detail="이용할 수 없는 돌봄 공간입니다.",
                 )
 
             # 최초 작성자가 아니라 현재 주보호자 권한으로 검사한다.

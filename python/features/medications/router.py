@@ -122,7 +122,7 @@ def unconfirm_medication(
             )
             member = cursor.fetchone()
             if member is None:
-                raise HTTPException(403, "해당 가족 공간의 투약일지 체크를 해제할 수 없습니다.")
+                raise HTTPException(403, "해당 돌봄 공간의 투약일지 체크를 해제할 수 없습니다.")
             key = (medication_log_seq, data.family_room_id)
             cursor.execute(
                 """SELECT medication_confirmed_at, confirmed_by_user_id FROM medication_log
@@ -187,7 +187,7 @@ def confirm_medication(
                 (data.family_room_id, current_user_id),
             )
             if cursor.fetchone() is None:
-                raise HTTPException(403, "해당 가족 공간의 투약일지를 체크할 수 없습니다.")
+                raise HTTPException(403, "해당 돌봄 공간의 투약일지를 체크할 수 없습니다.")
             target_sql = """SELECT m.medication_confirmed_at, m.confirmed_by_user_id,
                             checker.name AS confirmed_by_name
                          FROM medication_log AS m
@@ -451,7 +451,7 @@ def select_medications(
             )
             if cursor.fetchone() is None:
                 raise HTTPException(
-                    status_code=403, detail="해당 가족 공간에 접근할 수 없습니다.",
+                    status_code=403, detail="해당 돌봄 공간에 접근할 수 없습니다.",
                 )
 
             sql = """

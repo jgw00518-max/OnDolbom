@@ -84,7 +84,7 @@ class SpaceSwitcherButton extends ConsumerWidget {
                               color: AppColors.sageDark,
                             ),
                             title: const Text(
-                              '가족 공간 목록으로',
+                              '돌봄 공간 목록으로',
                               style: TextStyle(fontWeight: FontWeight.w700),
                             ),
                             trailing: const Icon(Icons.chevron_right),
@@ -232,7 +232,7 @@ class SpaceSwitcherButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => FloatingActionButton(
     heroTag: null,
-    tooltip: '가족 공간 이동',
+    tooltip: '돌봄 공간 이동',
     onPressed: () => _open(context, ref),
     backgroundColor: AppColors.peachLight,
     foregroundColor: AppColors.textPrimary,

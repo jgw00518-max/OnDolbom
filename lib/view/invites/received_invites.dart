@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/menu_header_icon.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -140,20 +141,13 @@ class _ReceivedInvitesState extends ConsumerState<ReceivedInvites> {
                 '가족 초대',
                 style: TextStyle(
                   color: _ink,
-                  fontSize: 21,
+                  fontSize: 24,
                   fontWeight: FontWeight.w800,
                 ),
               ),
             ],
           ),
-          actions: [
-            IconButton(
-              tooltip: '새로고침',
-              onPressed: isAccepting ? null : _refresh,
-              icon: const Icon(Icons.refresh, size: 22),
-            ),
-            const SizedBox(width: 8),
-          ],
+          actions: const [MenuHeaderIcon(icon: Icons.mail_outline)],
         ),
         body: Align(
           alignment: Alignment.topCenter,
@@ -729,7 +723,7 @@ class _ReceivedInvitesState extends ConsumerState<ReceivedInvites> {
                   ),
                   const SizedBox(height: 18),
                   const Text(
-                    '취소하면 이 초대로는\n가족 공간에 참여할 수 없어요.',
+                    '취소하면 이 초대로는\n돌봄 공간에 참여할 수 없어요.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,

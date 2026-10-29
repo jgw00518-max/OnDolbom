@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/menu_header_icon.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/view/widgets/activity_read_marker.dart';
 import 'package:flutter/material.dart';
@@ -9,12 +10,8 @@ const _noticeMuted = AppColors.textSecondary;
 const _noticePaper = AppColors.background;
 const _noticeLine = AppColors.border;
 
-// 목록·상세에서 같은 헤더 스타일을 사용하고 각각의 새로고침 동작을 유지한다.
-AppBar _noticeHeader(
-  BuildContext context, {
-  required bool detail,
-  required VoidCallback refresh,
-}) => AppBar(
+// 목록·상세에서 같은 장식과 상단 배치를 사용한다.
+AppBar _noticeHeader(BuildContext context, {required bool detail}) => AppBar(
   backgroundColor: _noticePaper,
   surfaceTintColor: Colors.transparent,
   foregroundColor: _noticeInk,
@@ -58,31 +55,17 @@ AppBar _noticeHeader(
         detail ? '공지 상세' : '공지사항',
         style: const TextStyle(
           color: _noticeInk,
-          fontSize: 21,
+          fontSize: 24,
           fontWeight: FontWeight.w800,
         ),
       ),
     ],
   ),
-  actions: [
-    Container(
-      width: 42,
-      height: 42,
-      margin: const EdgeInsets.only(right: 4),
-      decoration: BoxDecoration(
-        color: AppColors.peachLight,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: const Icon(
-        Icons.campaign_outlined,
-        size: 23,
-        color: Color(0xFF875C49),
-      ),
-    ),
-    IconButton(
-      tooltip: detail ? '공지 상세 새로고침' : '공지 새로고침',
-      onPressed: refresh,
-      icon: const Icon(Icons.refresh, size: 21),
+  actions: const [
+    MenuHeaderIcon(
+      icon: Icons.campaign_outlined,
+      backgroundColor: AppColors.peachLight,
+      foregroundColor: Color(0xFF875C49),
     ),
   ],
 );
@@ -113,11 +96,7 @@ class _NoticesViewState extends ConsumerState<NoticesView> {
     final result = ref.watch(noticesProvider(_offset));
     return Scaffold(
       backgroundColor: _noticePaper,
-      appBar: _noticeHeader(
-        context,
-        detail: false,
-        refresh: () => ref.invalidate(noticesProvider(_offset)),
-      ),
+      appBar: _noticeHeader(context, detail: false),
       body: result.when(
         loading: () => const Center(
           child: CircularProgressIndicator(color: AppColors.primary),
@@ -312,11 +291,7 @@ class NoticeDetailView extends ConsumerWidget {
     final result = ref.watch(noticeDetailProvider(noticeKey));
     return Scaffold(
       backgroundColor: _noticePaper,
-      appBar: _noticeHeader(
-        context,
-        detail: true,
-        refresh: () => ref.invalidate(noticeDetailProvider(noticeKey)),
-      ),
+      appBar: _noticeHeader(context, detail: true),
       body: result.when(
         loading: () => const Center(
           child: CircularProgressIndicator(color: AppColors.primary),

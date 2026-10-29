@@ -8,7 +8,7 @@ export 'package:ondolbom/vm/auth/user_profile_vm.dart' show apiBaseUrlProvider;
 
 typedef FamilyContext = ({String familyRoomId, String userId, String roomName});
 
-// 실행 옵션 대신 실제 로그인 프로필과 선택된 가족 공간을 사용한다.
+// 실행 옵션 대신 실제 로그인 프로필과 선택된 돌봄 공간을 사용한다.
 final familyContextProvider = Provider<FamilyContext>((ref) {
   final room = ref.watch(familyRoomProvider).selectedRoom;
   final user = ref.watch(profile.userProfileProvider).asData?.value;

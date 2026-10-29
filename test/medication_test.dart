@@ -195,7 +195,7 @@ void main() {
       }),
       primary: true,
     );
-    await tester.tap(find.text('약 추가'));
+    await tester.tap(find.byTooltip('약 추가'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('약 추가하기'));
     await tester.tap(find.text('약 추가하기'));
@@ -229,7 +229,7 @@ void main() {
       width: 320,
       primary: true,
     );
-    await tester.tap(find.text('약 추가'));
+    await tester.tap(find.byTooltip('약 추가'));
     await tester.pumpAndSettle();
     await fill(tester, 'info', '저장할 약');
     await fill(tester, 'dosage', '1');

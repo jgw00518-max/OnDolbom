@@ -69,7 +69,7 @@ def get_schedule_for_delete(
     if schedule is None:
         raise HTTPException(
             404,
-            "해당 가족 공간의 일정을 찾을 수 없습니다.",
+            "해당 돌봄 공간의 일정을 찾을 수 없습니다.",
         )
 
     return schedule

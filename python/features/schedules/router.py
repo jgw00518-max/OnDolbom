@@ -148,7 +148,7 @@ def check_representative(conn, family_room_id: str, user_id: str):
         if cursor.fetchone() is None:
             raise HTTPException(
                 status_code=403,
-                detail="이용할 수 없는 가족 공간입니다.",
+                detail="이용할 수 없는 돌봄 공간입니다.",
             )
 
         # 현재 참여 상태와 주보호자 권한을 확인한다.
@@ -587,7 +587,7 @@ def update_schedule(
             conn.close()
 
 
-# 현재 참여 중인 가족 공간의 월별 일정을 조회한다.
+# 현재 참여 중인 돌봄 공간의 월별 일정을 조회한다.
 @router.get("")
 def get_schedules(
     family_room_id: str = Query(min_length=1, max_length=50),
@@ -612,7 +612,7 @@ def get_schedules(
                 (family_room_id, current_user_id),
             )
             if cursor.fetchone() is None:
-                raise HTTPException(403, "현재 참여 중인 가족 공간만 조회할 수 있습니다.")
+                raise HTTPException(403, "현재 참여 중인 돌봄 공간만 조회할 수 있습니다.")
             # 변경 이력이 있으면 최신 이력을 적용한 일정으로 조회한다.
             cursor.execute(
                 """
@@ -804,7 +804,7 @@ def accept_schedule(
             if cursor.fetchone() is None:
                 raise HTTPException(
                     status_code=403,
-                    detail="이용할 수 없는 가족 공간입니다.",
+                    detail="이용할 수 없는 돌봄 공간입니다.",
                 )
             # 일정 행을 잠가 동시 수락 요청을 순서대로 처리한다.
             cursor.execute(
@@ -857,7 +857,7 @@ def accept_schedule(
             if member is None:
                 raise HTTPException(
                     status_code=403,
-                    detail="현재 참여 중인 가족 공간의 일정만 수락할 수 있습니다.",
+                    detail="현재 참여 중인 돌봄 공간의 일정만 수락할 수 있습니다.",
                 )
 
             if member["is_representative"] != 0:
@@ -1046,7 +1046,7 @@ def respond_schedule_change(
             )
 
             if cursor.fetchone() is None:
-                raise HTTPException(403, "이용할 수 없는 가족 공간입니다.")
+                raise HTTPException(403, "이용할 수 없는 돌봄 공간입니다.")
 
             # 현재 배정 상태를 잠금 조회한다.
             cursor.execute(

@@ -45,8 +45,9 @@ Future<void> mountImages(
 Future<void> tapText(WidgetTester tester, String text) async {
   FocusManager.instance.primaryFocus?.unfocus();
   await tester.pumpAndSettle();
-  await tester.ensureVisible(find.text(text));
-  await tester.tap(find.text(text));
+  final target = text == '메모 쓰기' ? find.byTooltip(text) : find.text(text);
+  await tester.ensureVisible(target);
+  await tester.tap(target);
   await tester.pumpAndSettle();
 }
 

@@ -35,12 +35,12 @@ def mark_read(room_id,user_id,chat_seq):
             # 메시지 저장·초대·탈퇴와 같은 순서로 잠가 참여 종료와 경합하지 않는다.
             q.execute("""SELECT family_room_id FROM family_room WHERE family_room_id=%s
                 AND family_room_deleted_at IS NULL FOR UPDATE""",(room_id,))
-            if q.fetchone() is None:raise HTTPException(403,'이용할 수 없는 가족 공간입니다.')
+            if q.fetchone() is None:raise HTTPException(403,'이용할 수 없는 돌봄 공간입니다.')
             q.execute("""SELECT p.participate_seq FROM participate p JOIN `user` u ON u.user_id=p.user_id
                 WHERE p.family_room_id=%s AND p.user_id=%s AND p.left_at IS NULL
                 AND p.is_active=1 AND u.withdrawn_at IS NULL FOR UPDATE""",(room_id,user_id))
             member=q.fetchone()
-            if member is None:raise HTTPException(403,'현재 참여 중인 가족 공간만 읽음 처리할 수 있습니다.')
+            if member is None:raise HTTPException(403,'현재 참여 중인 돌봄 공간만 읽음 처리할 수 있습니다.')
             if chat_seq:
                 q.execute('SELECT chat_seq FROM live_chat WHERE family_room_id=%s AND chat_seq=%s LIMIT 1',(room_id,chat_seq))
                 if q.fetchone() is None:raise HTTPException(422,'이 공간의 메시지 번호를 확인해 주세요.')

@@ -156,7 +156,7 @@ class ChatVm extends Notifier<ChatState> {
       return const ChatState(
         status: ChatStatus.blocked,
         loadingHistory: false,
-        error: '로그인 후 가족 공간을 선택해 주세요.',
+        error: '로그인 후 돌봄 공간을 선택해 주세요.',
       );
     }
     unawaited(Future.microtask(() => _connect(session)));
@@ -236,7 +236,7 @@ class ChatVm extends Notifier<ChatState> {
           if (state.status == ChatStatus.connected ||
               data['user_id'] != context.userId ||
               data['family_room_id'] != context.familyRoomId) {
-            _blocked(session, '로그인 계정 또는 가족 공간이 일치하지 않습니다.');
+            _blocked(session, '로그인 계정 또는 돌봄 공간이 일치하지 않습니다.');
             return;
           }
           session.authTimer?.cancel();
@@ -872,7 +872,7 @@ class ChatVm extends Notifier<ChatState> {
       // 실시간 전달로 이미 저장을 확인했으면 늦게 도착한 오류를 표시하지 않는다.
       if (!state.pending.any((item) => item.id == message.id)) return;
       if (response.statusCode == 401 || response.statusCode == 403) {
-        throw ChatFailure('로그인과 가족 공간 참여 상태를 확인해 주세요.', response.statusCode);
+        throw ChatFailure('로그인과 돌봄 공간 참여 상태를 확인해 주세요.', response.statusCode);
       }
       final payload =
           jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;

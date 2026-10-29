@@ -90,7 +90,10 @@ void main() {
         calls,
         contains(menu == '메모' ? '/memos/select' : '/medications/select'),
       );
-      expect(find.text('가족 A 님의 돌봄 공간'), findsOneWidget);
+      expect(find.text('가족 A 님의 돌봄 공간'), findsNothing);
+      if (menu == '메모') {
+        expect(find.byTooltip('메모 쓰기'), findsOneWidget);
+      }
       expect(tester.takeException(), isNull);
     });
   }

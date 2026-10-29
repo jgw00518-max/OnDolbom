@@ -140,7 +140,7 @@ class DeleteApiTests(TestCase):
         self.publish.assert_called_once_with(7, 42)
 
     def test_other_room_schedule_is_not_mutated(self):
-        self.get.side_effect = HTTPException(404, '해당 가족 공간의 일정이 없습니다.')
+        self.get.side_effect = HTTPException(404, '해당 돌봄 공간의 일정이 없습니다.')
         self.assertEqual(self.delete().status_code, 404)
         self.mark.assert_not_called()
         self.publish.assert_not_called()

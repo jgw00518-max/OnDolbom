@@ -174,7 +174,7 @@ void main() {
       await tester.tap(find.text('대상자 · 돌봄'));
       await tester.pumpAndSettle();
       expect(vm.opened, '1');
-      expect(find.text('가족 공간 참여 상태를 확인해 주세요.'), findsOneWidget);
+      expect(find.text('돌봄 공간 참여 상태를 확인해 주세요.'), findsOneWidget);
       expect(find.byType(AlertDialog), findsNothing);
     },
   );
