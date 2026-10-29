@@ -305,6 +305,47 @@ class ScheduleVm {
       throw Exception(message);
     }
   }
+
+  // 현재 담당자가 자신의 일정 참여만 철회한다.
+  Future<bool> withdrawSchedule(Schedule item) async {
+    final auth = ref.read(firebaseAuthProvider);
+    final user = auth.currentUser;
+    if (user == null || item.acceptedAt == null) {
+      throw Exception('일정을 다시 조회한 후 시도해 주세요.');
+    }
+    final token = await user.getIdToken();
+    if (!ref.mounted || auth.currentUser?.uid != user.uid || token == null) {
+      throw Exception('로그인 상태가 변경되었습니다.');
+    }
+    final base = ref.read(apiBaseUrlProvider).replaceAll(RegExp(r'/+$'), '');
+    final response = await ref
+        .read(scheduleHttpClientProvider)
+        .post(
+          Uri.parse('$base/schedules/${item.seq}/withdraw'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'expected_history_seq': item.historySeq,
+            'expected_accepted_at': item.acceptedAt!.toIso8601String(),
+          }),
+        )
+        .timeout(const Duration(seconds: 15));
+    if (!ref.mounted || auth.currentUser?.uid != user.uid) {
+      throw Exception('로그인 상태가 변경되었습니다.');
+    }
+    final body = jsonDecode(utf8.decode(response.bodyBytes));
+    if (response.statusCode != 200) {
+      throw Exception(
+        body is Map && body['detail'] is String
+            ? body['detail']
+            : '참여 철회를 처리하지 못했습니다.',
+      );
+    }
+    return body['notification_published'] == true;
+  }
+
   // 주보호자가 일정을 삭제하고 알림 발행 여부를 반환한다.
   Future<bool> deleteSchedule({
     required int scheduleSeq,
@@ -315,9 +356,9 @@ class ScheduleVm {
     if (user == null) throw Exception('로그인이 필요합니다.');
 
     final baseUrl = ref.read(apiBaseUrlProvider).replaceAll(RegExp(r'/+$'), '');
-    final uri = Uri.parse('$baseUrl/schedules/$scheduleSeq').replace(
-      queryParameters: {'family_room_id': familyRoomId},
-    );
+    final uri = Uri.parse(
+      '$baseUrl/schedules/$scheduleSeq',
+    ).replace(queryParameters: {'family_room_id': familyRoomId});
 
     for (var attempt = 0; attempt < 2; attempt++) {
       if (!ref.mounted || auth.currentUser?.uid != user.uid) {
@@ -368,5 +409,4 @@ class ScheduleVm {
 
     throw Exception('다시 로그인해 주세요.');
   }
-
 } // class
