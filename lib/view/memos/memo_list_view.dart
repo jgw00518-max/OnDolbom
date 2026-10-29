@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/model/memos/memo.dart';
 import 'package:ondolbom/view/memos/memo_form_view.dart';
@@ -24,7 +25,7 @@ class MemoListView extends ConsumerWidget {
       onBack: Navigator.of(context).canPop()
           ? () => Navigator.of(context).pop()
           : null,
-      action: FilledButton.tonal(
+      action: FilledButton(
         onPressed: canWrite
             ? () => Navigator.of(context).push(
                 MaterialPageRoute<MemoFormResult>(
@@ -67,11 +68,38 @@ class MemoListView extends ConsumerWidget {
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
                   children: [
-                    Text(
-                      '가족과 나누는 돌봄 이야기',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontSize: 13,
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: AppColors.peachSoft,
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.auto_stories_outlined,
+                            color: AppColors.sageDark,
+                            size: 26,
+                          ),
+                          SizedBox(height: 12),
+                          Text(
+                            '가족과 나누는 돌봄 이야기',
+                            style: TextStyle(
+                              fontSize: 19,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          SizedBox(height: 6),
+                          Text(
+                            '오늘의 안부와 기억하고 싶은 순간을 남겨 주세요.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              height: 1.6,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -85,24 +113,11 @@ class MemoListView extends ConsumerWidget {
                         ),
                       )
                     else
-                      Card(
-                        clipBehavior: Clip.antiAlias,
-                        child: Column(
-                          children: [
-                            for (var i = 0; i < data.items.length; i++) ...[
-                              if (i > 0)
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 20),
-                                  child: Divider(height: 1),
-                                ),
-                              _MemoCard(
-                                memo: data.items[i],
-                                selected: selected,
-                              ),
-                            ],
-                          ],
+                      for (final memo in data.items)
+                        Card(
+                          clipBehavior: Clip.antiAlias,
+                          child: _MemoCard(memo: memo, selected: selected),
                         ),
-                      ),
                     if (data.hasMore)
                       Padding(
                         padding: const EdgeInsets.only(top: 16),
@@ -162,12 +177,14 @@ class _MemoCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              memo.memoContent ?? '',
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 15, height: 1.65),
+            MemoMetadata(
+              author: memo.authorLabel,
+              date: memo.writtenAt,
+              likes: memo.likes ?? 0,
+              likeButton: MemoLikeButton(memo: memo, selected: selected),
             ),
+            const SizedBox(height: 12),
+            _MemoPreview(content: memo.memoContent ?? ''),
             const SizedBox(height: 12),
             if (memo.hasImage) ...[
               MemoImageView(
@@ -178,17 +195,11 @@ class _MemoCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
             ],
-            MemoMetadata(
-              author: memo.authorLabel,
-              date: memo.writtenAt,
-              likes: memo.likes ?? 0,
-              likeButton: MemoLikeButton(memo: memo, selected: selected),
-            ),
             const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerRight,
               child: Text(
-                '눌러서 자세히 보기',
+                '메모 읽기  →',
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 11,
@@ -199,6 +210,57 @@ class _MemoCard extends StatelessWidget {
         ),
       ),
     ),
+  );
+}
+
+class _MemoPreview extends StatelessWidget {
+  const _MemoPreview({required this.content});
+
+  final String content;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final style = DefaultTextStyle.of(
+        context,
+      ).style.merge(const TextStyle(fontSize: 15, height: 1.65));
+      final painter = TextPainter(
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+        locale: Localizations.maybeLocaleOf(context),
+        maxLines: 3,
+      );
+      bool fits(String text) {
+        painter.text = TextSpan(text: text, style: style);
+        painter.layout(maxWidth: constraints.maxWidth);
+        return !painter.didExceedMaxLines;
+      }
+
+      var preview = content;
+      // 명시적 줄바꿈에서도 생략 표시를 보장하고 이모지 결합 문자는 보존한다.
+      if (!fits(content)) {
+        final characters = content.characters.toList();
+        var lower = 0;
+        var upper = characters.length;
+        while (lower < upper) {
+          final middle = (lower + upper + 1) ~/ 2;
+          if (fits('${characters.take(middle).join()}…')) {
+            lower = middle;
+          } else {
+            upper = middle - 1;
+          }
+        }
+        preview = '${characters.take(lower).join().trimRight()}…';
+      }
+      painter.dispose();
+      return Text(
+        preview,
+        style: style,
+        maxLines: 3,
+        overflow: TextOverflow.ellipsis,
+        semanticsLabel: content,
+      );
+    },
   );
 }
 
@@ -326,7 +388,7 @@ class _MemoDetailViewState extends ConsumerState<MemoDetailView> {
                       disabled: _deleting,
                     ),
                   ),
-                  const Divider(height: 36),
+                  const Divider(height: 32),
                   SelectableText(
                     _content,
                     style: const TextStyle(fontSize: 16, height: 1.8),
@@ -387,7 +449,14 @@ class _Message extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 42, color: Theme.of(context).colorScheme.primary),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              color: AppColors.peachSoft,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 36, color: AppColors.sageDark),
+          ),
           const SizedBox(height: 18),
           Text(
             title,

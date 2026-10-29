@@ -1,3 +1,4 @@
+import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
 /// 회원가입의 표시만 담당한다. 실제 인증·재발송·가입 처리는 SignupView/VM에서 유지한다.
@@ -37,9 +38,9 @@ class SignupLayout extends StatelessWidget {
       asideDescription;
   final String asideEyebrow, stepLabel;
   final bool showBack, allowBackWhileBusy;
-  static const ink = Color(0xFF3E3A39);
-  static const peach = Color(0xFFF6B08A);
-  static const paper = Color(0xFFFFFAF7);
+  static const ink = AppColors.textPrimary;
+  static const peach = AppColors.primary;
+  static const paper = AppColors.background;
 
   static InputDecoration inputDecoration(
     String hint, {
@@ -227,7 +228,7 @@ class SignupLayout extends StatelessWidget {
             );
           }
           return ColoredBox(
-            color: const Color(0xFFFCEEE3),
+            color: AppColors.peachSoft,
             child: Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(
@@ -321,7 +322,7 @@ class _SignupAside extends StatelessWidget {
   final String eyebrow, stepLabel;
   @override
   Widget build(BuildContext context) => ColoredBox(
-    color: const Color(0xFFFFD6B5),
+    color: AppColors.peachLight,
     child: Stack(
       children: [
         Positioned(
@@ -332,7 +333,7 @@ class _SignupAside extends StatelessWidget {
             height: 290,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              color: Color(0xFFB7C8A1),
+              color: AppColors.sage,
             ),
           ),
         ),

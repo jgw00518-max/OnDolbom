@@ -1,3 +1,5 @@
+import 'package:ondolbom/view/widgets/family_room_label.dart';
+import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -197,7 +199,11 @@ class _ChatViewState extends ConsumerState<ChatView>
     }
     if (selected.userId.isEmpty || selected.familyRoomId.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: const Text('가족 채팅')),
+        appBar: AppBar(
+          leadingWidth: 62,
+          leading: const AppBackLeading(),
+          title: const Text('가족 채팅'),
+        ),
         body: const Center(child: Text('로그인 후 가족 공간을 선택해 주세요.')),
       );
     }
@@ -216,7 +222,11 @@ class _ChatViewState extends ConsumerState<ChatView>
     final messages = state.messages.reversed.toList();
     final pending = state.pending.reversed.toList();
     return Scaffold(
-      appBar: AppBar(title: const Text('가족 채팅')),
+      appBar: AppBar(
+        leadingWidth: 62,
+        leading: const AppBackLeading(),
+        title: const Text('가족 채팅'),
+      ),
       body: SafeArea(
         top: false,
         child: Center(
@@ -231,15 +241,7 @@ class _ChatViewState extends ConsumerState<ChatView>
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.home_outlined, size: 18),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          selected.roomName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
+                      Expanded(child: FamilyRoomLabel(name: selected.roomName)),
                       const SizedBox(width: 8),
                       Text(label, style: TextStyle(color: colors.primary)),
                     ],
@@ -507,58 +509,65 @@ class _Bubble extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: colors.outlineVariant),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    author,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colors.onSurfaceVariant,
-                    ),
-                  ),
-                  if (onLongPress != null)
-                    IconButton(
-                      tooltip: '메시지 메뉴',
-                      onPressed: onLongPress,
-                      constraints: const BoxConstraints(
-                        minWidth: 32,
-                        minHeight: 32,
+          child: IntrinsicWidth(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        author,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: colors.onSurfaceVariant,
+                        ),
                       ),
-                      padding: EdgeInsets.zero,
-                      visualDensity: VisualDensity.compact,
-                      icon: const Icon(Icons.more_horiz, size: 18),
                     ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              ?image,
-              if (image != null && content.isNotEmpty)
-                const SizedBox(height: 6),
-              if (content.isNotEmpty)
-                (onLongPress == null
-                    ? SelectableText(
-                        content,
-                        style: isDeleted
-                            ? const TextStyle(color: Colors.grey)
-                            : null,
-                      )
-                    : Text(content)),
-              const SizedBox(height: 6),
-              Text(
-                footer,
-                style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
-              ),
-              if (retry != null)
-                TextButton(
-                  onPressed: retryEnabled ? retry : null,
-                  child: const Text('재전송'),
+                    if (onLongPress != null)
+                      IconButton(
+                        tooltip: '메시지 메뉴',
+                        onPressed: onLongPress,
+                        constraints: const BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 32,
+                        ),
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.more_horiz, size: 18),
+                      ),
+                  ],
                 ),
-            ],
+                const SizedBox(height: 4),
+                ?image,
+                if (image != null && content.isNotEmpty)
+                  const SizedBox(height: 6),
+                if (content.isNotEmpty)
+                  (onLongPress == null
+                      ? SelectableText(
+                          content,
+                          style: isDeleted
+                              ? const TextStyle(color: Colors.grey)
+                              : null,
+                        )
+                      : Text(content)),
+                const SizedBox(height: 6),
+                Text(
+                  footer,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+                if (retry != null)
+                  TextButton(
+                    onPressed: retryEnabled ? retry : null,
+                    child: const Text('재전송'),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

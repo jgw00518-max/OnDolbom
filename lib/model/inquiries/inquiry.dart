@@ -17,6 +17,7 @@ class Inquiry {
     this.content,
     this.familyRoomId,
     this.answers = const [],
+    this.badgeToken,
   });
   final int id;
   final String title;
@@ -25,8 +26,10 @@ class Inquiry {
   final DateTime createdAt;
   final bool answered;
   final List<InquiryAnswer> answers;
+  final String? badgeToken;
   factory Inquiry.fromJson(Map<String, dynamic> json) => Inquiry(
     id: (json['question_seq'] as num).toInt(),
+    badgeToken: json['badge_token'] as String?,
     title: json['question_title'] as String,
     content: json['question_content'] as String?,
     familyRoomId: json['family_room_id'] as String?,

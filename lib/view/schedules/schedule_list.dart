@@ -1,3 +1,6 @@
+import 'package:ondolbom/view/widgets/family_room_label.dart';
+import 'package:ondolbom/view/widgets/app_back_button.dart';
+import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/view/schedules/schedule_detail.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -39,7 +42,11 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
     final room = rooms.selectedRoom;
     if (room == null || room.familyRoomId != widget.familyRoomId) {
       return Scaffold(
-        appBar: AppBar(title: const Text('돌봄 일정')),
+        appBar: AppBar(
+          leadingWidth: 62,
+          leading: const AppBackLeading(),
+          title: const Text('돌봄 일정'),
+        ),
         body: const Center(child: Text('가족 공간을 다시 선택해 주세요.')),
       );
     }
@@ -47,6 +54,8 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
     return Scaffold(
       backgroundColor: const Color(0xFFFFFBF7),
       appBar: AppBar(
+        leadingWidth: 62,
+        leading: const AppBackLeading(),
         backgroundColor: const Color(0xFFFFFBF7),
         foregroundColor: const Color(0xFF403C39),
         titleTextStyle: const TextStyle(
@@ -66,7 +75,7 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(12, 18, 12, 28),
         children: [
-          Text('${room.careRecipientName} 님의 돌봄 공간'),
+          FamilyRoomLabel(name: '${room.careRecipientName} 님의 돌봄 공간'),
           const SizedBox(height: 16),
           if (rooms.selectedParticipation?.isRepresentative == true)
             Align(
@@ -119,7 +128,7 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
     }
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: const Color(0xFFE8DFD7)),
       ),
@@ -226,7 +235,7 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
                     margin: const EdgeInsets.all(1),
                     decoration: BoxDecoration(
                       color: selected
-                          ? const Color(0xFFFFD6B5)
+                          ? AppColors.peachLight
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(13),
                       border: selected
@@ -316,7 +325,7 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
           (item) => Container(
             margin: const EdgeInsets.only(bottom: 14),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: const Color(0xFFE8DFD7)),
             ),
@@ -485,12 +494,39 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
     );
   }
 
-  // 목록과 같은 월별 상태를 상세 화면에서도 사용한다.
-  void detailAction(Schedule item) {
-    showDialog<void>(
+  // 편집 결과를 받아 변경한 날짜의 최신 목록을 표시한다.
+  Future<void> detailAction(Schedule item) async {
+    final previousQuery = query;
+
+    final result = await showDialog<ScheduleEditResult>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => ScheduleDetail(item: item, query: query),
+      builder: (_) => ScheduleDetail(item: item, query: previousQuery),
+    );
+
+    if (!mounted || result == null) {
+      return;
+    }
+
+    if (ref.read(familyRoomProvider).selectedRoomId != widget.familyRoomId) {
+      return;
+    }
+
+    // 변경 전 월의 조회 결과를 갱신한다.
+    ref.invalidate(scheduleListProvider(previousQuery));
+
+    setState(() {
+      selectedDate = DateUtils.dateOnly(result.date);
+      displayedMonth = DateTime(result.date.year, result.date.month);
+    });
+
+    // 다른 달로 변경했다면 해당 월도 새로 조회한다.
+    if (query != previousQuery) {
+      ref.invalidate(scheduleListProvider(query));
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(result.changed ? '일정을 변경했습니다.' : '변경된 내용이 없습니다.')),
     );
   }
 }

@@ -1,3 +1,5 @@
+import 'package:ondolbom/theme/app_colors.dart';
+import 'package:ondolbom/view/inquiries/inquiry_style.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/view/inquiries/inquiry_form_view.dart';
@@ -18,17 +20,17 @@ class _InquiriesViewState extends ConsumerState<InquiriesView> {
     final cursor = _cursors.last;
     final page = ref.watch(inquiriesProvider(cursor));
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('내 문의'),
-        actions: [
-          IconButton(
-            tooltip: '문의 새로고침',
-            onPressed: () => ref.invalidate(inquiriesProvider(cursor)),
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
+      backgroundColor: InquiryStyle.paper,
+      appBar: InquiryStyle.header(
+        context,
+        '내 문의',
+        refreshLabel: '문의 새로고침',
+        refresh: () => ref.invalidate(inquiriesProvider(cursor)),
       ),
       floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: InquiryStyle.peach,
+        foregroundColor: InquiryStyle.ink,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         icon: const Icon(Icons.edit_outlined),
         label: const Text('문의 작성'),
         onPressed: () async {
@@ -51,7 +53,9 @@ class _InquiriesViewState extends ConsumerState<InquiriesView> {
         },
       ),
       body: page.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: InquiryStyle.peach),
+        ),
         error: (error, _) => Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -64,51 +68,161 @@ class _InquiriesViewState extends ConsumerState<InquiriesView> {
             ],
           ),
         ),
-        data: (value) => ListView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 110),
-          children: [
-            const Text('작성한 문의는 본인과 관리자만 확인할 수 있습니다.'),
-            const SizedBox(height: 16),
-            if (value.items.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(32),
-                child: Text('등록한 문의가 없습니다.', textAlign: TextAlign.center),
-              ),
-            for (final item in value.items)
-              Card(
-                child: ListTile(
-                  title: Text(item.title),
-                  subtitle: Text(
-                    '${item.answered ? '답변 완료' : '답변 대기'} · ${item.createdAt.toString().substring(0, 16)}',
+        data: (value) => Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 110),
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '나와 관리자만 확인할 수 있어요',
+                            style: TextStyle(
+                              color: InquiryStyle.muted,
+                              fontSize: 12,
+                            ),
+                          ),
+                          SizedBox(height: 7),
+                          Text(
+                            '문의 내역',
+                            style: TextStyle(
+                              color: InquiryStyle.ink,
+                              fontSize: 25,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.8,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.peachSoft,
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Text(
+                        '${value.items.length}건${value.nextCursor != null || _cursors.length > 1 ? ' · 현재 페이지' : ''}',
+                        style: const TextStyle(
+                          color: Color(0xFFA46F59),
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                if (value.items.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Text('등록한 문의가 없습니다.', textAlign: TextAlign.center),
                   ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => InquiryDetailView(id: item.id),
+                for (final item in value.items)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: InquiryStyle.line),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(
+                            0xFF594135,
+                          ).withValues(alpha: 0.04),
+                          blurRadius: 24,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(22),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => InquiryDetailView(id: item.id),
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    InquiryStyle.status(item.answered),
+                                    const SizedBox(height: 14),
+                                    Text(
+                                      item.title,
+                                      style: const TextStyle(
+                                        color: InquiryStyle.ink,
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w800,
+                                        height: 1.5,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 9),
+                                    Text(
+                                      item.createdAt.toString().substring(
+                                        0,
+                                        16,
+                                      ),
+                                      style: const TextStyle(
+                                        color: InquiryStyle.muted,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              const Icon(
+                                Icons.chevron_right,
+                                color: Color(0xFFB1A59F),
+                                size: 21,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                TextButton(
-                  onPressed: _cursors.length > 1
-                      ? () => setState(() {
-                          _cursors.removeLast();
-                        })
-                      : null,
-                  child: const Text('이전'),
-                ),
-                TextButton(
-                  onPressed: value.nextCursor == null
-                      ? null
-                      : () => setState(() => _cursors.add(value.nextCursor)),
-                  child: const Text('다음'),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    TextButton(
+                      onPressed: _cursors.length > 1
+                          ? () => setState(() {
+                              _cursors.removeLast();
+                            })
+                          : null,
+                      child: const Text('이전'),
+                    ),
+                    TextButton(
+                      onPressed: value.nextCursor == null
+                          ? null
+                          : () =>
+                                setState(() => _cursors.add(value.nextCursor)),
+                      child: const Text('다음'),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );

@@ -1,3 +1,5 @@
+import 'package:ondolbom/view/widgets/family_room_label.dart';
+import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -14,8 +16,7 @@ class InviteCreate extends ConsumerStatefulWidget {
   final String recipientName;
 
   @override
-  ConsumerState<InviteCreate> createState() =>
-      _InviteCreateState();
+  ConsumerState<InviteCreate> createState() => _InviteCreateState();
 }
 
 class _InviteCreateState extends ConsumerState<InviteCreate> {
@@ -39,30 +40,17 @@ class _InviteCreateState extends ConsumerState<InviteCreate> {
         appBar: AppBar(
           title: const Text('가족 초대'),
           automaticallyImplyLeading: false,
-          leading: IconButton(
-            tooltip: '뒤로',
-            onPressed: isSaving
-                ? null
-                : () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back),
-          ),
+          leadingWidth: 62,
+          leading: AppBackLeading(enabled: !isSaving),
         ),
         body: Form(
           key: formKey,
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              Text(
-                '${widget.recipientName} 님의 돌봄 공간',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              FamilyRoomLabel(name: '${widget.recipientName} 님의 돌봄 공간'),
               const SizedBox(height: 12),
-              const Text(
-                '함께 돌볼 가족의 로그인 이메일을 입력해 주세요.',
-              ),
+              const Text('함께 돌볼 가족의 로그인 이메일을 입력해 주세요.'),
               const SizedBox(height: 24),
 
               TextFormField(
@@ -84,10 +72,7 @@ class _InviteCreateState extends ConsumerState<InviteCreate> {
               const Text(
                 '초대받은 가족은 같은 이메일로 로그인한 뒤 '
                 '‘받은 가족 초대’에서 수락할 수 있습니다.',
-                style: TextStyle(
-                  color: Color(0xFF78716A),
-                  height: 1.6,
-                ),
+                style: TextStyle(color: Color(0xFF78716A), height: 1.6),
               ),
               const SizedBox(height: 24),
 
@@ -107,16 +92,12 @@ class _InviteCreateState extends ConsumerState<InviteCreate> {
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFFF7AC82),
                   foregroundColor: const Color(0xFF553724),
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 16,
-                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: Text(
-                  isSaving ? '초대 등록 중…' : '초대 등록',
-                ),
+                child: Text(isSaving ? '초대 등록 중…' : '초대 등록'),
               ),
             ],
           ),
@@ -167,10 +148,9 @@ class _InviteCreateState extends ConsumerState<InviteCreate> {
     });
 
     try {
-            final emailSent = await ref.read(inviteVmProvider).createInvite(
-        familyRoomId: widget.familyRoomId,
-        email: email,
-      );
+      final emailSent = await ref
+          .read(inviteVmProvider)
+          .createInvite(familyRoomId: widget.familyRoomId, email: email);
 
       if (!mounted) {
         return;
@@ -192,9 +172,7 @@ class _InviteCreateState extends ConsumerState<InviteCreate> {
 
       setState(() {
         isSaving = false;
-        errorMessage = error
-            .toString()
-            .replaceFirst('Exception: ', '');
+        errorMessage = error.toString().replaceFirst('Exception: ', '');
       });
     }
   }

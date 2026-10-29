@@ -401,7 +401,19 @@ def select_medications(
                 sql += " AND m.medication_date = %s"
                 params.append(medication_date)
             sql += """
-                ORDER BY m.medication_date DESC, m.recorded_at DESC,
+                ORDER BY m.medication_date DESC,
+                    CASE
+                        WHEN TRIM(m.medication_time) LIKE '아침%%' THEN 0
+                        WHEN TRIM(m.medication_time) LIKE '점심%%' THEN 1
+                        WHEN TRIM(m.medication_time) LIKE '저녁%%' THEN 2
+                        ELSE 3
+                    END,
+                    CASE
+                        WHEN LOCATE('식전', m.medication_time) > 0 THEN 0
+                        WHEN LOCATE('식후', m.medication_time) > 0 THEN 1
+                        ELSE 2
+                    END,
+                    m.recorded_at DESC,
                     m.medication_log_seq DESC
                 LIMIT %s OFFSET %s
             """

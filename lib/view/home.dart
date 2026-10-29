@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/vm/auth/auth_vm.dart';
 import 'package:ondolbom/vm/auth/user_profile_vm.dart';
 import 'package:ondolbom/view/auth/profile_form_view.dart';
+import 'package:ondolbom/view/auth/widgets/login_loading_view.dart';
 import 'package:ondolbom/view/family_room/family_room_list.dart';
 
 class Home extends ConsumerWidget {
@@ -10,11 +11,13 @@ class Home extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authUserProvider).asData?.value;
     final operation = ref.watch(authVmProvider);
     // Firebase 로그인과 MySQL 사용자 등록은 별개이므로 서버 프로필을 추가 조회한다.
     final profile = ref.watch(userProfileProvider);
     final registration = ref.watch(profileRegistrationProvider);
+    if (profile.isLoading) {
+      return const LoginLoadingView();
+    }
     // MySQL 사용자 정보 등록까지 완료하면 공간 목록을 보여준다.
     if (profile.asData?.value != null) {
       return const FamilyRoomList();
@@ -28,9 +31,6 @@ class Home extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(user?.email ?? '로그인됨'),
-                const SizedBox(height: 12),
-                const Text('Firebase 로그인이 완료되었습니다.'),
                 profile.when(
                   loading: () => const Padding(
                     padding: EdgeInsets.all(12),
@@ -48,10 +48,7 @@ class Home extends ConsumerWidget {
                   // 서버가 미등록으로 응답한 경우에만 필수 정보 입력 폼을 표시한다.
                   data: (value) => value == null
                       ? const ProfileFormView()
-                      : Text(
-                          '${value.name ?? value.email ?? '가족'}님, 사용자 정보가 연결되었습니다.',
-                          textAlign: TextAlign.center,
-                        ),
+                      : const SizedBox.shrink(),
                 ),
                 if (operation.hasError)
                   Text(authErrorMessage(operation.error!)),

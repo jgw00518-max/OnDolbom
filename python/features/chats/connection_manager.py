@@ -41,6 +41,12 @@ class ConnectionManager:
             if not room:
                 self.rooms.pop(room_id, None)
 
+    async def close_room(self, room_id, *, code=4403):
+        # 먼저 연결 목록에서 제외해 새 브로드캐스트에 포함되지 않게 한다.
+        peers = tuple(self.rooms.pop(room_id, ()))
+        # 연결 하나의 전송 오류로 이미 확정된 공간 삭제 응답을 실패시키지 않는다.
+        await asyncio.gather(*(peer.close(code) for peer in peers), return_exceptions=True)
+
     async def broadcast(self, room_id, payload, authorize: Callable[[ChatConnection], Awaitable[None]]):
         async def deliver(connection):
             try:
