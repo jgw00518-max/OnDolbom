@@ -18,6 +18,19 @@ import 'chat_test.dart' as fixture;
 import 'memo_image_test.dart' show photo;
 import 'memo_edit_test.dart' show testContextProvider;
 
+// 읽음 요청은 사진 업로드 횟수·응답을 검증하는 핸들러와 분리한다.
+MockClient _chatMockClient(
+  Future<http.Response> Function(http.Request) handler,
+) => MockClient((request) async {
+  if (request.url.path.endsWith('/chats/read')) {
+    return http.Response(
+      jsonEncode({'last_read_chat_seq': jsonDecode(request.body)['chat_seq']}),
+      200,
+    );
+  }
+  return handler(request);
+});
+
 String requestId(http.Request request) => RegExp(
   r'name="client_message_id"\r\n\r\n([^\r]+)',
 ).firstMatch(latin1.decode(request.bodyBytes))!.group(1)!;
@@ -84,7 +97,7 @@ void main() {
     http.Request? upload;
     final harness = fixture.Harness(
       imageContext: true,
-      client: MockClient((request) async {
+      client: _chatMockClient((request) async {
         if (request.method == 'POST') {
           upload = request;
           return pending.future;
@@ -128,7 +141,7 @@ void main() {
     final uploads = <http.Request>[];
     final harness = fixture.Harness(
       imageContext: true,
-      client: MockClient((request) async {
+      client: _chatMockClient((request) async {
         if (request.method == 'POST') {
           uploads.add(request);
           if (uploads.length == 1) {
@@ -161,7 +174,7 @@ void main() {
     var count = 0;
     final harness = fixture.Harness(
       imageContext: true,
-      client: MockClient((request) async {
+      client: _chatMockClient((request) async {
         if (request.method == 'POST') {
           count++;
           upload = request;
@@ -191,7 +204,7 @@ void main() {
     final harness = fixture.Harness(
       imageContext: true,
       token: () => waiting ? token.future : Future.value('id-token'),
-      client: MockClient((request) async {
+      client: _chatMockClient((request) async {
         if (request.method == 'POST') posts++;
         return fixture.page([]);
       }),
@@ -215,7 +228,7 @@ void main() {
     http.Request? upload;
     final harness = fixture.Harness(
       imageContext: true,
-      client: MockClient((request) async {
+      client: _chatMockClient((request) async {
         if (request.method == 'POST') {
           upload = request;
           return pending.future;
@@ -241,7 +254,7 @@ void main() {
     var posts = 0;
     await mountImages(
       tester,
-      MockClient((request) async {
+      _chatMockClient((request) async {
         if (request.method == 'POST') {
           posts++;
           return uploaded(requestId(request), content: '');
@@ -305,7 +318,7 @@ void main() {
     var posts = 0;
     await mountImages(
       tester,
-      MockClient((request) async {
+      _chatMockClient((request) async {
         if (request.method == 'POST') posts++;
         return fixture.page([]);
       }),
@@ -327,7 +340,7 @@ void main() {
     var images = 0;
     await mountImages(
       tester,
-      MockClient((request) async {
+      _chatMockClient((request) async {
         if (request.url.path.endsWith('/image')) {
           return ++images == 1
               ? http.Response('failed', 503)
@@ -353,7 +366,7 @@ void main() {
   test('이미지 업로드 권한이 거절되면 연결을 차단하고 재전송용 원본을 보존한다', () async {
     final harness = fixture.Harness(
       imageContext: true,
-      client: MockClient((request) async {
+      client: _chatMockClient((request) async {
         if (request.method == 'POST') return http.Response('denied', 403);
         return fixture.page([]);
       }),
@@ -374,7 +387,7 @@ void main() {
         apiBaseUrlProvider.overrideWithValue('https://example.test/api'),
         apiTokenLoaderProvider.overrideWithValue(() async => null),
         chatHttpClientProvider.overrideWithValue(
-          MockClient((request) async {
+          _chatMockClient((request) async {
             requests++;
             return http.Response.bytes(photo, 200);
           }),
@@ -400,7 +413,7 @@ void main() {
         apiBaseUrlProvider.overrideWithValue('https://example.test/api'),
         apiTokenLoaderProvider.overrideWithValue(() async => 'id-token'),
         chatHttpClientProvider.overrideWithValue(
-          MockClient((request) async {
+          _chatMockClient((request) async {
             expect(request.url.path, '/api/chats/messages/7/image');
             expect(request.headers['Authorization'], 'Bearer id-token');
             started.complete();

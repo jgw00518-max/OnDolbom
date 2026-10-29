@@ -68,6 +68,48 @@ class TestPushPlatform implements PushPlatform {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test('열린 채팅에서 확인한 푸시는 표시하지 않고 다른 채팅은 표시한다', () async {
+    final platform = TestPushPlatform();
+    final auth = PushAuth();
+    final client = MockClient((_) async => http.Response('{}', 200));
+    addTearDown(client.close);
+    final service = PushService(
+      platform: platform,
+      auth: auth,
+      baseUrl: 'http://local',
+      preferences: MemoryPushPrefs(),
+      client: client,
+    );
+    var received = 0;
+    final subscription = service.received.stream.listen((_) => received++);
+    addTearDown(subscription.cancel);
+    service.suppressForeground = (event) =>
+        event.data['family_room_id'] == 'open';
+    await service.start();
+    platform.messageController.add(
+      const PushEvent({
+        'type': 'chat_message',
+        'user_uid': 'a',
+        'family_room_id': 'open',
+        'chat_seq': '7',
+      }),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    expect(platform.shown, 0);
+    expect(received, 1);
+    platform.messageController.add(
+      const PushEvent({
+        'type': 'chat_message',
+        'user_uid': 'a',
+        'family_room_id': 'other',
+        'chat_seq': '8',
+      }),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    expect(platform.shown, 1);
+    expect(received, 2);
+  });
+
   test('Permission denial does not register or fail authentication', () async {
     final platform = TestPushPlatform()..allowed = false;
     var calls = 0;
