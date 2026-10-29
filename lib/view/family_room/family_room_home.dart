@@ -1,3 +1,5 @@
+import 'package:ondolbom/view/family_room/today_schedule_card.dart';
+import 'package:ondolbom/vm/schedules/schedule_vm.dart';
 import 'package:ondolbom/view/widgets/family_room_label.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter/material.dart';
@@ -219,7 +221,7 @@ class FamilyRoomHome extends ConsumerWidget {
               menuButton(
                 '일정',
                 Icons.calendar_month_outlined,
-                () => scheduleAction(context, room.familyRoomId),
+                () => scheduleAction(context, ref, room.familyRoomId),
               ),
               const SizedBox(width: 10),
               menuButton(
@@ -276,57 +278,9 @@ class FamilyRoomHome extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 28),
-          Card(
-            color: AppColors.surface,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(22),
-              side: const BorderSide(color: AppColors.border),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          '오늘의 일정',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () =>
-                            scheduleAction(context, room.familyRoomId),
-                        child: const Text('전체 일정'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  const Row(
-                    children: [
-                      Icon(
-                        Icons.calendar_month_outlined,
-                        color: AppColors.sageDark,
-                      ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          '일정 조회 기능 연결 전입니다.',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+          TodayScheduleCard(
+            key: ValueKey(room.familyRoomId),
+            familyRoomId: room.familyRoomId,
           ),
         ],
       ),
@@ -391,12 +345,25 @@ class FamilyRoomHome extends ConsumerWidget {
   }
 
   // 모든 참여 가족이 일정 달력·목록으로 이동한다.
-  void scheduleAction(BuildContext context, String familyRoomId) {
-    Navigator.push(
+  Future<void> scheduleAction(
+    BuildContext context,
+    WidgetRef ref,
+    String familyRoomId,
+  ) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => ScheduleList(familyRoomId: familyRoomId),
       ),
+    );
+    if (!context.mounted) return;
+    final now = DateTime.now();
+    ref.invalidate(
+      scheduleListProvider((
+        familyRoomId: familyRoomId,
+        year: now.year,
+        month: now.month,
+      )),
     );
   }
 
