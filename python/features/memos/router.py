@@ -84,7 +84,7 @@ def like_memo(
                 (data.family_room_id, current_user_id),
             )
             if cursor.fetchone() is None:
-                raise HTTPException(403, "해당 가족 공간에 좋아요를 등록할 수 없습니다.")
+                raise HTTPException(403, "해당 돌봄 공간에 좋아요를 등록할 수 없습니다.")
 
             key = (memo_id, data.family_room_id, data.author_user_id)
             # 메모 행 잠금으로 같은 메모의 동시 요청·삭제를 직렬화한다.
@@ -155,7 +155,7 @@ def _lock_owned_memo(cursor, family_room_id: str, memo_id: str, user_id: str):
         (family_room_id, user_id),
     )
     if cursor.fetchone() is None:
-        raise HTTPException(403, "해당 가족 공간에 접근할 수 없습니다.")
+        raise HTTPException(403, "해당 돌봄 공간에 접근할 수 없습니다.")
 
     cursor.execute(
         """SELECT user_id FROM memo
@@ -281,7 +281,7 @@ def _insert_memo(memo: MemoCreate, current_user_id: str, image_data: bytes | Non
             if cursor.fetchone() is None:
                 raise HTTPException(
                     status_code=403,
-                    detail="해당 가족 공간에 메모를 작성할 수 없습니다.",
+                    detail="해당 돌봄 공간에 메모를 작성할 수 없습니다.",
                 )
 
             memo_id = str(uuid4())
@@ -392,7 +392,7 @@ def select_memo_image(
                 (family_room_id, current_user_id),
             )
             if cursor.fetchone() is None:
-                raise HTTPException(403, "해당 가족 공간에 접근할 수 없습니다.")
+                raise HTTPException(403, "해당 돌봄 공간에 접근할 수 없습니다.")
             cursor.execute(
                 """SELECT m.memo_image FROM memo AS m
                    JOIN family_room AS f ON f.family_room_id = m.family_room_id
@@ -448,7 +448,7 @@ def select_memos(
             if cursor.fetchone() is None:
                 raise HTTPException(
                     status_code=403,
-                    detail="해당 가족 공간에 접근할 수 없습니다.",
+                    detail="해당 돌봄 공간에 접근할 수 없습니다.",
                 )
             cursor.execute(
                 """

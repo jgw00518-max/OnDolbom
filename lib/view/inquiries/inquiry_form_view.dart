@@ -165,7 +165,7 @@ class _InquiryFormViewState extends ConsumerState<InquiryFormView> {
                       if (widget.familyRoomId != null)
                         CheckboxListTile(
                           contentPadding: EdgeInsets.zero,
-                          title: const Text('현재 가족 공간과 관련된 문의'),
+                          title: const Text('현재 돌봄 공간과 관련된 문의'),
                           value: _linkRoom,
                           onChanged: operation.isLoading
                               ? null

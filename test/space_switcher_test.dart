@@ -73,7 +73,7 @@ void main() {
 
   testWidgets('현재 공간 표시와 활성 공간 전환, 종료 공간 제외', (tester) async {
     final container = await mount(tester);
-    await tester.tap(find.byTooltip('가족 공간 이동'));
+    await tester.tap(find.byTooltip('돌봄 공간 이동'));
     await tester.pumpAndSettle();
     expect(find.byType(BottomSheet), findsNothing);
     expect(find.textContaining('현재 공간'), findsOneWidget);
@@ -91,9 +91,9 @@ void main() {
     await tester.tap(find.textContaining('김돌봄').first);
     await tester.pumpAndSettle();
     expect(find.byType(FamilyRoomHome), findsOneWidget);
-    await tester.tap(find.byTooltip('가족 공간 이동'));
+    await tester.tap(find.byTooltip('돌봄 공간 이동'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('가족 공간 목록으로'));
+    await tester.tap(find.text('돌봄 공간 목록으로'));
     await tester.pumpAndSettle();
     expect(find.byType(FamilyRoomHome), findsNothing);
     expect(find.byType(FamilyRoomList), findsOneWidget);
@@ -102,7 +102,7 @@ void main() {
 
   testWidgets('공간 이동 메뉴를 닫으면 선택 상태가 바뀌지 않는다', (tester) async {
     final container = await mount(tester);
-    await tester.tap(find.byTooltip('가족 공간 이동'));
+    await tester.tap(find.byTooltip('돌봄 공간 이동'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('닫기'));
     await tester.pumpAndSettle();

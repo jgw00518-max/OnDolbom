@@ -1,6 +1,7 @@
+import 'package:ondolbom/view/widgets/menu_header_icon.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/view/medications/medication_style.dart';
-import 'package:ondolbom/view/widgets/family_room_label.dart';
+import 'package:ondolbom/view/widgets/app_add_button.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -183,32 +184,22 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
             fontFamily: Theme.of(context).textTheme.titleLarge?.fontFamily,
           ),
         ),
-        actions: [
-          if (canCreate)
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: FilledButton.tonal(
-                onPressed:
-                    selected.familyRoomId.isEmpty || selected.userId.isEmpty
-                    ? null
-                    : () => _add(query),
-                child: const Text('약 추가'),
-              ),
-            ),
-        ],
+        actions: const [MenuHeaderIcon(icon: Icons.medication_outlined)],
       ),
+      floatingActionButton: canCreate
+          ? AppAddButton(
+              tooltip: '약 추가',
+              onPressed:
+                  selected.familyRoomId.isEmpty || selected.userId.isEmpty
+                  ? null
+                  : () => _add(query),
+            )
+          : null,
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 640),
           child: Column(
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: FamilyRoomLabel(name: selected.roomName),
-                ),
-              ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Row(
@@ -313,7 +304,13 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
                               }
                             },
                             child: ListView(
-                              padding: const EdgeInsets.all(20),
+                              // 마지막 항목을 추가 버튼 위까지 스크롤할 수 있도록 여백을 둔다.
+                              padding: const EdgeInsets.fromLTRB(
+                                20,
+                                20,
+                                20,
+                                104,
+                              ),
                               physics: const AlwaysScrollableScrollPhysics(),
                               children: [
                                 if (data.items.isEmpty)

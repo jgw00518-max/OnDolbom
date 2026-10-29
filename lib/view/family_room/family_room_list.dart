@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/menu_header_icon.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -45,7 +46,7 @@ class _FamilyRoomListState extends ConsumerState<FamilyRoomList> {
       floatingActionButton: FloatingActionButton(
         tooltip: '새 돌봄 공간 만들기',
         onPressed: () => createRoomAction(context),
-        backgroundColor: AppColors.primary,
+        backgroundColor: AppColors.peachLight,
         foregroundColor: AppColors.textPrimary,
         elevation: 2,
         shape: RoundedRectangleBorder(
@@ -75,25 +76,16 @@ class _FamilyRoomListState extends ConsumerState<FamilyRoomList> {
             ),
             SizedBox(height: 3),
             Text(
-              '가족 공간',
+              '돌봄 공간',
               style: TextStyle(
                 color: _ink,
-                fontSize: 22,
+                fontSize: 24,
                 fontWeight: FontWeight.w800,
               ),
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            tooltip: '새로고침',
-            onPressed: state.isLoading
-                ? null
-                : () => ref.read(familyRoomProvider.notifier).fetchRooms(),
-            icon: const Icon(Icons.refresh, size: 24),
-          ),
-          const SizedBox(width: 8),
-        ],
+        actions: const [MenuHeaderIcon(icon: Icons.home_outlined)],
       ),
       body: Builder(
         builder: (context) {

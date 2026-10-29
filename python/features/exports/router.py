@@ -75,7 +75,7 @@ def _membership(connection, room_id: str, user_id: str):
             LIMIT 1''', (room_id, user_id))
         room = cursor.fetchone()
     if room is None:
-        raise HTTPException(403, "현재 참여 중인 가족 공간의 기록만 내보낼 수 있습니다.")
+        raise HTTPException(403, "현재 참여 중인 돌봄 공간의 기록만 내보낼 수 있습니다.")
     return room
 
 

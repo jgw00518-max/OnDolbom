@@ -18,7 +18,7 @@ void main() {
       }),
       primary: true,
     );
-    await tester.tap(find.text('약 추가'));
+    await tester.tap(find.byTooltip('약 추가'));
     await tester.pumpAndSettle();
     final period = find.byKey(const ValueKey('medication-period'));
     final days = find.byKey(const ValueKey('medication-period-days'));

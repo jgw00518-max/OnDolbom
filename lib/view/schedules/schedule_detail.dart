@@ -50,7 +50,7 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
     if (!canView) {
       return AlertDialog(
         title: const Text('돌봄 일정'),
-        content: const Text('로그인 상태와 가족 공간 참여를 다시 확인해 주세요.'),
+        content: const Text('로그인 상태와 돌봄 공간 참여를 다시 확인해 주세요.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),

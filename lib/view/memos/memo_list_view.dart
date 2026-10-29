@@ -1,3 +1,5 @@
+import 'package:ondolbom/view/widgets/menu_header_icon.dart';
+import 'package:ondolbom/view/widgets/app_add_button.dart';
 import 'package:flutter/material.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,10 +24,12 @@ class MemoListView extends ConsumerWidget {
     return MemoLayout(
       roomName: selected.roomName,
       title: '메모',
+      action: const MenuHeaderIcon(icon: Icons.edit_outlined),
       onBack: Navigator.of(context).canPop()
           ? () => Navigator.of(context).pop()
           : null,
-      action: FilledButton(
+      floatingActionButton: AppAddButton(
+        tooltip: '메모 쓰기',
         onPressed: canWrite
             ? () => Navigator.of(context).push(
                 MaterialPageRoute<MemoFormResult>(
@@ -33,7 +37,6 @@ class MemoListView extends ConsumerWidget {
                 ),
               )
             : null,
-        child: const Text('메모 쓰기'),
       ),
       child: selected.familyRoomId.isEmpty
           ? const _Message(
@@ -66,7 +69,7 @@ class MemoListView extends ConsumerWidget {
                 },
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 104),
                   children: [
                     Container(
                       padding: const EdgeInsets.all(20),

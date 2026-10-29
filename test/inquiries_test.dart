@@ -120,7 +120,7 @@ void main() {
                 : Scaffold(
                     drawer: const AccountDrawer(),
                     appBar: AppBar(
-                      title: const Text('가족 공간'),
+                      title: const Text('돌봄 공간'),
                       leading: const AccountMenuButton(),
                     ),
                   ),
@@ -142,7 +142,7 @@ void main() {
     }
   });
 
-  testWidgets('내 문의 목록·상세·관리자 답변과 새로고침을 연결한다', (tester) async {
+  testWidgets('내 문의 목록·상세·관리자 답변을 표시하고 상단 새로고침은 없다', (tester) async {
     var reads = 0;
     final api = InquiryApi(
       'http://localhost',
@@ -175,9 +175,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('문의 본문'), findsOneWidget);
     expect(find.text('관리자 안내'), findsOneWidget);
-    await tester.tap(find.byTooltip('답변 새로고침'));
-    await tester.pumpAndSettle();
-    expect(reads, 3);
+    expect(find.byTooltip('답변 새로고침'), findsNothing);
+    expect(reads, 2);
   });
 
   testWidgets('작성 입력 검증·공간 선택·중복 방지·실패 입력 보존', (tester) async {
@@ -207,9 +206,9 @@ void main() {
     expect(calls, 0);
     await tester.enterText(find.byType(TextFormField).first, '제목');
     await tester.enterText(find.byType(TextFormField).last, '내용');
-    await tester.ensureVisible(find.text('현재 가족 공간과 관련된 문의'));
+    await tester.ensureVisible(find.text('현재 돌봄 공간과 관련된 문의'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('현재 가족 공간과 관련된 문의'));
+    await tester.tap(find.text('현재 돌봄 공간과 관련된 문의'));
     await tester.ensureVisible(find.text('문의 등록'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('문의 등록'));

@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/menu_header_icon.dart';
 import 'package:ondolbom/vm/activity/activity_vm.dart';
 import 'package:ondolbom/view/schedules/schedule_detail.dart';
 import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
@@ -72,13 +73,13 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
     final rooms = ref.read(familyRoomProvider);
     if (!rooms.rooms.any((room) => room.familyRoomId == schedule.spaceId) ||
         rooms.participations[schedule.spaceId]?.isActive != true) {
-      throw const NotificationsError('가족 공간 참여 상태를 확인해 주세요.');
+      throw const NotificationsError('돌봄 공간 참여 상태를 확인해 주세요.');
     }
     if (rooms.selectedRoomId != schedule.spaceId) {
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('가족 공간 전환'),
+          title: const Text('돌봄 공간 전환'),
           content: Text('${schedule.recipientName} 님의 돌봄 공간으로 이동할까요?'),
           actions: [
             TextButton(
@@ -106,7 +107,7 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
       return;
     }
     if (ref.read(familyRoomProvider).selectedRoomId != schedule.spaceId) {
-      throw const NotificationsError('선택한 가족 공간이 변경되었습니다. 다시 열어 주세요.');
+      throw const NotificationsError('선택한 돌봄 공간이 변경되었습니다. 다시 열어 주세요.');
     }
     ref.invalidate(scheduleListProvider(detail.query));
     await showDialog<void>(
@@ -335,67 +336,18 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
               '알림',
               style: TextStyle(
                 color: _ink,
-                fontSize: 22,
+                fontSize: 24,
                 fontWeight: FontWeight.w800,
               ),
             ),
           ],
         ),
         actions: [
-          Container(
-            width: 42,
-            height: 42,
-            margin: const EdgeInsets.only(right: 6),
-            decoration: BoxDecoration(
-              color: AppColors.peachLight,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                const Center(
-                  child: Icon(
-                    Icons.notifications_none,
-                    color: Color(0xFF875C49),
-                    size: 23,
-                  ),
-                ),
-                if (unread > 0)
-                  Positioned(
-                    right: -3,
-                    top: -3,
-                    child: Container(
-                      width: 21,
-                      height: 21,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: _ink,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: Text(
-                        unread > 99 ? '99+' : '$unread',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          IconButton(
-            tooltip: '새로고침',
-            onPressed: _busy
-                ? null
-                : () {
-                    ref.invalidate(notificationsVmProvider);
-                    // 사용자가 직접 새로고침하면 배지 캐시도 우회한다.
-                    ref.read(activityProvider.notifier).refresh(force: true);
-                  },
-            icon: const Icon(Icons.refresh, size: 21),
+          MenuHeaderIcon(
+            icon: Icons.notifications_none,
+            backgroundColor: AppColors.peachLight,
+            foregroundColor: const Color(0xFF875C49),
+            unreadCount: unread,
           ),
         ],
       ),

@@ -243,9 +243,9 @@ void main() {
     await tester.ensureVisible(find.text('공간 설정'));
     await tester.tap(find.text('공간 설정'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('가족 공간 삭제'));
+    await tester.ensureVisible(find.text('돌봄 공간 삭제'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('가족 공간 삭제'));
+    await tester.tap(find.text('돌봄 공간 삭제'));
     await tester.pumpAndSettle();
   }
 
@@ -259,7 +259,7 @@ void main() {
     await tester.tap(find.text('공간 설정'));
     await tester.pumpAndSettle();
     expect(find.text('메모 및 채팅 내보내기'), findsOneWidget);
-    expect(find.text('가족 공간 삭제'), findsNothing);
+    expect(find.text('돌봄 공간 삭제'), findsNothing);
   });
 
   testWidgets('대상자 이름이 일치해야 활성화되고 취소하면 요청하지 않는다', (tester) async {
@@ -272,7 +272,7 @@ void main() {
       }),
     );
     await openDialog(tester);
-    expect(find.text('가족 공간을 삭제할까요?'), findsOneWidget);
+    expect(find.text('돌봄 공간을 삭제할까요?'), findsOneWidget);
     expect(find.text('모든 가족이 이 공간을 이용할 수 없게 됩니다.'), findsOneWidget);
     final button = find.byKey(const Key('family-room-delete-confirm'));
     expect(tester.widget<FilledButton>(button).onPressed, isNull);

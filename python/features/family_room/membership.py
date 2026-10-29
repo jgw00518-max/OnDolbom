@@ -15,7 +15,7 @@ def transfer_representative(room_id: str, actor_id: str, target_user_id: str) ->
                 WHERE family_room_id=%s AND family_room_deleted_at IS NULL
                 FOR UPDATE""", (room_id,))
             if cursor.fetchone() is None:
-                raise HTTPException(404, '이용할 수 없는 가족 공간입니다.')
+                raise HTTPException(404, '이용할 수 없는 돌봄 공간입니다.')
             # 전체 활성 참여를 잠가 기존 주보호자가 한 명인지도 검증한다.
             cursor.execute("""SELECT participate_seq,user_id,is_representative
                 FROM participate WHERE family_room_id=%s
@@ -86,14 +86,14 @@ def end_membership(room_id, actor_id, participate_seq=None):
             cursor.execute("""SELECT family_room_id FROM family_room WHERE family_room_id=%s
                 AND family_room_deleted_at IS NULL FOR UPDATE""", (room_id,))
             if cursor.fetchone() is None:
-                raise HTTPException(404, '이용할 수 없는 가족 공간입니다.')
+                raise HTTPException(404, '이용할 수 없는 돌봄 공간입니다.')
             cursor.execute("""SELECT p.participate_seq,p.user_id,p.is_representative
                 FROM participate p JOIN `user` u ON u.user_id=p.user_id
                 WHERE p.family_room_id=%s AND p.user_id=%s AND p.left_at IS NULL
                 AND p.is_active=1 AND u.withdrawn_at IS NULL FOR UPDATE""", (room_id, actor_id))
             actor = cursor.fetchone()
             if actor is None:
-                raise HTTPException(403, '현재 참여 중인 가족 공간만 이용할 수 있습니다.')
+                raise HTTPException(403, '현재 참여 중인 돌봄 공간만 이용할 수 있습니다.')
             if participate_seq is None:
                 target = actor
                 if actor['is_representative'] == 1:

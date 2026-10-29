@@ -68,7 +68,7 @@ class PersonalSettingsView extends ConsumerWidget {
               '개인 설정',
               style: TextStyle(
                 color: AppColors.textPrimary,
-                fontSize: 21,
+                fontSize: 24,
                 fontWeight: FontWeight.w800,
               ),
             ),

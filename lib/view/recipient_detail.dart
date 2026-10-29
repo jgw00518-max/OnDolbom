@@ -1,3 +1,4 @@
+import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,7 +15,6 @@ class RecipientDetail extends ConsumerWidget {
     final state = ref.watch(familyRoomProvider);
     final room = state.selectedRoom;
     final participation = state.selectedParticipation;
-    final colors = Theme.of(context).colorScheme;
 
     if (room == null || participation == null) {
       return Scaffold(
@@ -36,42 +36,63 @@ class RecipientDetail extends ConsumerWidget {
         automaticallyImplyLeading: false,
         leadingWidth: 62,
         leading: const AppBackLeading(),
-        title: const Text('온돌봄'),
+        centerTitle: true,
+        title: const Text('대상자 정보'),
         actions: [
-          IconButton(
-            onPressed: () => preparingAction(context),
-            icon: const Icon(Icons.notifications_none),
+          Padding(
+            padding: const EdgeInsets.only(right: 20),
+            child: Container(
+              padding: const EdgeInsets.all(11),
+              decoration: BoxDecoration(
+                color: AppColors.sageLight,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(
+                Icons.person_outline,
+                color: AppColors.sageDark,
+              ),
+            ),
           ),
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
         children: [
           // 제목과 수정 버튼
           Row(
             children: [
               const Expanded(
                 child: Text(
-                  '대상자 정보',
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                  '돌봄 대상자',
+                  style: TextStyle(fontSize: 25, fontWeight: FontWeight.w800),
                 ),
               ),
 
               // 수정은 현재 공간의 주보호자에게만 표시한다.
               if (participation.isRepresentative)
-                FilledButton.tonal(
+                FilledButton(
                   onPressed: () => editAction(context, ref, room),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.textPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
                   child: const Text('수정'),
                 ),
             ],
           ),
           const SizedBox(height: 16),
-          const Divider(),
-          const SizedBox(height: 16),
 
           // 대상자 정보 카드
           Card(
-            color: colors.surface,
+            color: AppColors.surface,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+              side: const BorderSide(color: AppColors.border),
+            ),
             margin: EdgeInsets.zero,
             child: Padding(
               padding: const EdgeInsets.all(24),
@@ -110,8 +131,6 @@ class RecipientDetail extends ConsumerWidget {
 
   // 같은 형태의 정보 행을 반복해서 사용한다.
   Widget infoRow(BuildContext context, String title, String? value) {
-    final colors = Theme.of(context).colorScheme;
-
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Row(
@@ -121,7 +140,7 @@ class RecipientDetail extends ConsumerWidget {
             width: 100,
             child: Text(
               title,
-              style: TextStyle(fontSize: 16, color: colors.onSurfaceVariant),
+              style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
             ),
           ),
           const SizedBox(width: 12),
@@ -134,12 +153,6 @@ class RecipientDetail extends ConsumerWidget {
         ],
       ),
     );
-  }
-
-  void preparingAction(BuildContext context) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('아직 연결하지 않은 기능입니다.')));
   }
 
   // 편집 화면에서 저장하면 공간 정보를 다시 조회한다.

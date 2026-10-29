@@ -57,7 +57,7 @@ void main() {
         greaterThan(tester.getTopLeft(find.text('공간 관리')).dy),
       );
       expect(find.text('가족 초대'), guardian ? findsOneWidget : findsNothing);
-      expect(find.text('가족 공간 삭제'), guardian ? findsOneWidget : findsNothing);
+      expect(find.text('돌봄 공간 삭제'), guardian ? findsOneWidget : findsNothing);
       await tester.tap(find.text('함께하는 가족'));
       await tester.pumpAndSettle();
       expect(find.text('테스트 가족'), findsOneWidget);
@@ -86,7 +86,7 @@ void main() {
     });
   }
 
-  testWidgets('일반 가족 공간 메인에 설정이 있고 이전 관리 진입점은 없다', (tester) async {
+  testWidgets('일반 돌봄 공간 메인에 설정이 있고 이전 관리 진입점은 없다', (tester) async {
     final container = ProviderContainer(
       overrides: [
         guardianProvider.overrideWithValue(false),

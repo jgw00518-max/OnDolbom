@@ -1,4 +1,5 @@
-import 'package:ondolbom/view/widgets/family_room_label.dart';
+import 'package:ondolbom/view/widgets/menu_header_icon.dart';
+import 'package:ondolbom/view/widgets/app_add_button.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/view/schedules/schedule_detail.dart';
@@ -47,7 +48,7 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
           leading: const AppBackLeading(),
           title: const Text('돌봄 일정'),
         ),
-        body: const Center(child: Text('가족 공간을 다시 선택해 주세요.')),
+        body: const Center(child: Text('돌봄 공간을 다시 선택해 주세요.')),
       );
     }
     final schedules = ref.watch(scheduleListProvider(query));
@@ -59,35 +60,24 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
         backgroundColor: const Color(0xFFFFFBF7),
         foregroundColor: const Color(0xFF403C39),
         titleTextStyle: const TextStyle(
-          fontSize: 22,
-          fontWeight: FontWeight.bold,
+          fontSize: 24,
+          fontWeight: FontWeight.w800,
           color: Color(0xFF403C39),
         ),
         title: const Text('돌봄 일정'),
-        actions: [
-          IconButton(
-            tooltip: '새로고침',
-            onPressed: () => ref.invalidate(scheduleListProvider(query)),
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
+        actions: const [MenuHeaderIcon(icon: Icons.calendar_month_outlined)],
       ),
+      floatingActionButton:
+          rooms.selectedParticipation?.isRepresentative == true
+          ? AppAddButton(
+              key: const ValueKey('schedule-add'),
+              tooltip: '일정 등록',
+              onPressed: () => createAction(room.careRecipientName),
+            )
+          : null,
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(12, 18, 12, 28),
+        padding: const EdgeInsets.fromLTRB(12, 18, 12, 104),
         children: [
-          FamilyRoomLabel(name: '${room.careRecipientName} 님의 돌봄 공간'),
-          const SizedBox(height: 16),
-          if (rooms.selectedParticipation?.isRepresentative == true)
-            Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton.tonalIcon(
-                key: const ValueKey('schedule-add'),
-                onPressed: () => createAction(room.careRecipientName),
-                icon: const Icon(Icons.add),
-                label: const Text('일정 등록'),
-              ),
-            ),
-          const SizedBox(height: 12),
           calendar(schedules.asData?.value ?? const []),
           const SizedBox(height: 24),
           schedules.when(

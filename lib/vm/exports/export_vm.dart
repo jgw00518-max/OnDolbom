@@ -102,10 +102,10 @@ class ExportVm extends Notifier<ExportState> {
 
   void _checkContext() {
     if (!ref.mounted || ref.read(familyContextProvider) != selected) {
-      throw const ExportFailure('계정 또는 가족 공간이 변경됐어요. 화면을 다시 열어 주세요.');
+      throw const ExportFailure('계정 또는 돌봄 공간이 변경됐어요. 화면을 다시 열어 주세요.');
     }
     if (selected.familyRoomId.isEmpty || selected.userId.isEmpty) {
-      throw const ExportFailure('로그인 후 가족 공간을 선택해 주세요.');
+      throw const ExportFailure('로그인 후 돌봄 공간을 선택해 주세요.');
     }
   }
 

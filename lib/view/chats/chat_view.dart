@@ -1,6 +1,6 @@
+import 'package:ondolbom/view/widgets/menu_header_icon.dart';
 import 'dart:async';
 import 'package:ondolbom/vm/chats/chat_notifications_vm.dart';
-import 'package:ondolbom/view/widgets/family_room_label.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'dart:typed_data';
 
@@ -290,8 +290,9 @@ class _ChatViewState extends ConsumerState<ChatView>
           leadingWidth: 62,
           leading: const AppBackLeading(),
           title: const Text('가족 채팅'),
+          actions: const [MenuHeaderIcon(icon: Icons.chat_bubble_outline)],
         ),
-        body: const Center(child: Text('로그인 후 가족 공간을 선택해 주세요.')),
+        body: const Center(child: Text('로그인 후 돌봄 공간을 선택해 주세요.')),
       );
     }
     final provider = chatVmProvider(selected);
@@ -317,6 +318,7 @@ class _ChatViewState extends ConsumerState<ChatView>
         leadingWidth: 62,
         leading: const AppBackLeading(),
         title: const Text('가족 채팅'),
+        actions: const [MenuHeaderIcon(icon: Icons.chat_bubble_outline)],
       ),
       body: SafeArea(
         top: false,
@@ -332,8 +334,7 @@ class _ChatViewState extends ConsumerState<ChatView>
                   ),
                   child: Row(
                     children: [
-                      Expanded(child: FamilyRoomLabel(name: selected.roomName)),
-                      const SizedBox(width: 8),
+                      const Spacer(),
                       Text(label, style: TextStyle(color: colors.primary)),
                     ],
                   ),
