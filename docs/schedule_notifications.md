@@ -2,6 +2,8 @@
 
 2026-10-27 실제 구현 기준. 정책상 필요한 항목과 현재 코드에 연결된 항목을 구분한다. 삭제 세부 처리와 실제 확인 결과는 [삭제 연동 안내](schedule_delete.md)를 함께 참고한다.
 
+> 최신 후속: [9. 2026-10-29 자동 만료 알림 A/B 인수인계](#9-2026-10-29-자동-만료-알림-ab-인수인계)를 우선 참고한다. 아래 2026-10-27의 공통 알림함 미통합 설명은 당시 기록이며, 현재 V2 연결 상태는 9절과 `notification-v2-integration.md`로 구분한다.
+
 ## 담당 범위
 
 - B: 일정 변경·재수락·응답·만료·삭제 처리, 변경 이력, 알림 대상 계산, Firestore 준비·발행, 일정 전용 알림 조회/읽음 API.
@@ -128,3 +130,47 @@ python -m python.features.schedules.reconfirm_expiry_worker
 - 앱/DB/Firestore 수동 확인: 메모만 변경 시 배정 유지·담당자 알림, 종료시간 변경과 재수락·거절·재모집, 대기 중 메모/시간 추가 변경과 이전 요청 409, 일반 만료 처리, 긴급 미확인 자동 안내 및 배정 유지, 실제 일정 삭제.
 - 실제 삭제 확인: 일정 8번, 삭제 이력 23번, `schedule_deleted_8_23` published, 수신자 4명, 담당 배정 NULL.
 - 기기 알림·배지·72시간 예약·A의 전체 알림함 통합 검증은 별도이다. 날짜/시작 변경의 모든 조합이나 정확한 12시간 경계를 실제 앱에서 전부 확인했다고 보고하지 않는다.
+
+
+## 9. 2026-10-29 자동 만료 알림 A/B 인수인계
+
+### B 완료 및 이번 수정
+
+- 공유 DB의 일정 40번에서 재수락 응답 기한 2026-10-29 16:45 경과 후 담당자 `accepted_by=NULL`을 읽기 전용 조회로 확인했다. 자동 배정 해제는 동작한다.
+- 수정 전 Firestore 확인: `schedule_reconfirm_expired_40_111`, `_40_114` 및 `schedule_reconfirm_unanswered_40_111`, `_40_114`는 pending, `schedule_recruitment_40_111`, `_40_114`는 published였다. 이는 확인 당시 상태이며 수정 후 복구 완료를 뜻하지 않는다.
+- `python/features/schedules/change_notifications.py`의 `publish_reconfirm_expiry_notification()`에서 긴급 여부로 제외하던 조건을 `response_due_at is None`으로 변경했다. 12시간 초과~24시간 이하 요청은 기한이 있으므로 기한 도달 후 발행한다. 12시간 이하는 자동 만료하지 않는다. 일반 요청·기한 전 발행 차단·문서 및 이력 검증은 유지한다.
+- `python/tests/test_expiry_publication.py` 4개 검사 통과: 기한 있는 긴급 요청의 담당자/주보호자 안내, 기한 없는 긴급 제외, 기한 직전 제외, 일반 만료 발행. 실제 공유 Firestore 발행을 호출하지 않는 대체 연결 검사이다.
+- 이번 수정으로 A 담당 공통 알림 저장·푸시, V2 필터, Flutter 제목 매핑은 변경하지 않았다.
+
+### A 후속 연결 — 아직 완료되지 않음
+
+| 위치 | 필요한 작업 |
+| --- | --- |
+| `python/features/schedules/notification_router.py`의 `visible_v2()` | `schedule_reconfirm_expired`, `schedule_reconfirm_unanswered`를 허용 유형에 추가하고 `request_history_seq`가 있는 자동 만료 `schedule_recruitment`를 제외하는 조건을 해제. 기존 현재 참여·계정·공간·일정 접근 검사는 유지 |
+| `lib/model/notifications/schedule_notification.dart` | 만료·미응답 전용 제목 추가. 기존 담당자에게 응답 기한 초과에 따른 배정 해제, 현재 주보호자에게 담당 가족 미응답 안내. 현재 기본 제목인 신규 일정 등록으로 표시하지 않기 |
+| 알림함·`/activity/badges` | 동일 `visible_v2` 기준으로 목록과 미읽음 개수 일치. 기존 문자열 ID·개별 읽음 상태 유지 |
+| `python/features/notifications/store.py`의 `PUSH_TYPES`, `supports_push()` 및 푸시 문구 | 만료·미응답 유형과 자동 만료 재모집이 현재 푸시 대상에서 제외됨. 기기 푸시를 연결할 때 유형·문구·라우팅을 함께 추가하고 기존 수신자 경계 유지 |
+
+수신자 계약: `schedule_reconfirm_expired`는 기존 담당자, `schedule_reconfirm_unanswered`는 현재 주보호자, 자동 만료 `schedule_recruitment`는 현재 전체 참여 가족이다. 문서의 `recipient_ids`를 임의로 확대하지 않는다.
+
+위 V2 필터는 schedules 폴더에 있지만 공통 알림함·배지 통합 경로이므로 이번에는 A 연결 항목으로 남겼다. B는 만료 처리와 발행 조건을 수정한다.
+
+### 실행 및 통합 검수
+
+1. API 서버와 별도로, 동일 DB를 보는 담당자 한 명만 `python -m python.features.schedules.reconfirm_expiry_worker`를 실행한다. 72시간 재알림 worker와 구분한다.
+2. 코드 반영 후 API 서버와 재수락 worker를 각각 재시작한다. 기존 pending은 worker 재시도 대상이지만 최신 이력·문서 검증을 통과해야 published로 전환된다. Firestore 상태를 수동으로 published로 바꾸지 않는다.
+3. 새 만료 검수 요청으로 자동 배정 해제, 담당자/주보호자 안내와 전체 가족 재모집 문서의 published 상태를 확인한다.
+4. 각 역할의 앱 알림함·문구·배지·읽음·최신 상세 연결을 확인한다. 다른 가족은 재모집 안내를 받되 기존 담당자 전용 만료 안내를 받지 않아야 한다.
+5. 푸시를 연결한 경우 실제 기기 도착은 앱 알림함 및 Firestore published와 별도로 검수한다. 재시도 시 중복 알림·읽음 초기화도 확인한다.
+
+GitHub 업로드/PR 전달 문안: [2026-10-29 인수인계](schedule_handoff_2026-10-29.md).
+
+
+### 후속 실제 검수 완료 — 2026-10-29
+
+사용자 제공 Firestore 화면으로 worker 재시작 후 기존 pending 복구를 확인했다. 같은 일정 40번·자동 해제 이력 114번·요청 이력 113번·응답 기한 2026-10-29 16:55:00의 두 문서가 발행됐다.
+
+- `schedule_reconfirm_expired_40_114`: published, published_at 2026-10-29 17:00:11 (UTC+9), 기존 담당자 수신자 1명.
+- `schedule_reconfirm_unanswered_40_114`: published, published_at 2026-10-29 17:00:12 (UTC+9), 주보호자 수신자 1명.
+
+B의 자동 배정 해제 및 이번 긴급 만료 알림 발행 조건 수정의 실제 검수는 완료했다. A의 V2 알림함·배지·푸시 연결과 기기 수신 검수는 별도로 남는다. 위의 수정 후 발행 확인 필요 문구는 이 후속 기록으로 갱신한다.

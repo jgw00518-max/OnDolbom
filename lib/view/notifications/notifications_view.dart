@@ -37,6 +37,37 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
   static const _ink = AppColors.textPrimary;
   static const _muted = AppColors.textSecondary;
 
+  // 서버에서 받은 삭제 당시 일시를 읽기 쉽게 표시한다.
+  String _deletedTime(String value) {
+    final match = RegExp(r'^(\d{1,2}):(\d{2})').firstMatch(value);
+    return match == null ? value : '${match[1]!.padLeft(2, '0')}:${match[2]}';
+  }
+
+  Widget _deletedInfoRow(String label, String value) => Padding(
+    padding: const EdgeInsets.only(bottom: 16),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 86,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 15,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(fontSize: 15, color: AppColors.textPrimary),
+          ),
+        ),
+      ],
+    ),
+  );
+
   // 조회 권한 재검사·읽음 처리·현재 일정 상세 표시는 기존 VM 흐름을 유지한다.
   void _open(ScheduleNotification item) => _perform(() async {
     final uid = ref.read(authUserProvider).asData?.value?.uid;
@@ -47,17 +78,122 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
     if (schedule.type == 'schedule_deleted') {
       await showDialog<void>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('일정 삭제 안내'),
-          content: Text(
-            '${schedule.scheduleName ?? '돌봄 일정'} 일정이 삭제되었습니다.\n${schedule.date} ${schedule.startTime} ~ ${schedule.endTime}',
+        builder: (context) => Dialog(
+          backgroundColor: AppColors.background,
+          surfaceTintColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 24,
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('닫기'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 540),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ColoredBox(
+                    color: AppColors.surface,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(22, 16, 10, 16),
+                      child: Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              '일정 삭제 안내',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: '닫기',
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(
+                              Icons.close,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.all(22),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 7,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFFB87568,
+                              ).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            child: const Text(
+                              '삭제된 일정',
+                              style: TextStyle(
+                                color: Color(0xFF9B5C50),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        Text(
+                          schedule.scheduleName?.trim().isNotEmpty == true
+                              ? schedule.scheduleName!
+                              : '돌봄 일정',
+                          style: const TextStyle(
+                            fontSize: 23,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          '이 일정은 삭제되었습니다.',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 15,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        _deletedInfoRow('날짜', schedule.date),
+                        _deletedInfoRow(
+                          '시작시간',
+                          _deletedTime(schedule.startTime),
+                        ),
+                        _deletedInfoRow('종료시간', _deletedTime(schedule.endTime)),
+                        const SizedBox(height: 12),
+                        FilledButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size(0, 48),
+                          ),
+                          child: const Text('닫기'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
+          ),
         ),
       );
       return;
@@ -77,19 +213,97 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
     if (rooms.selectedRoomId != schedule.spaceId) {
       final confirmed = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('가족 공간 전환'),
-          content: Text('${schedule.recipientName} 님의 돌봄 공간으로 이동할까요?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('취소'),
+        builder: (context) => Dialog(
+          backgroundColor: AppColors.background,
+          surfaceTintColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 24,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 540),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ColoredBox(
+                    color: AppColors.surface,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(22, 16, 10, 16),
+                      child: Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              '가족 공간 전환',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: '닫기',
+                            onPressed: () => Navigator.pop(context, false),
+                            icon: const Icon(
+                              Icons.close,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.all(22),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          '${schedule.recipientName} 님의 돌봄 공간으로 이동할까요?',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            height: 1.5,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                style: OutlinedButton.styleFrom(
+                                  minimumSize: const Size(0, 48),
+                                ),
+                                child: const Text('취소'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: FilledButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                style: FilledButton.styleFrom(
+                                  minimumSize: const Size(0, 48),
+                                ),
+                                child: const Text('이동'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('이동'),
-            ),
-          ],
+          ),
         ),
       );
       if (!mounted ||

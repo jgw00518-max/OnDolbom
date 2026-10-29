@@ -9,6 +9,9 @@ from python.database import connect
 from python.features.auth.firebase_auth import require_firebase_user
 from python.features.notifications import store
 from python.features.schedules.change_notifications import list_notification_events
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/schedule-notifications", tags=["schedule-notifications"])
 
@@ -168,7 +171,11 @@ def _run(claims, action):
         connection = connect()
         return action(connection, _user_id(connection, claims))
     except (MySQLError, GoogleAPICallError, ValueError):
-        raise HTTPException(503, 'Firestore 설정·색인 및 서버 연결을 확인해 주세요.') from None
+        logger.exception("일정 알림 조회·처리 실패")
+        raise HTTPException(
+            503,
+            'Firestore 설정·색인 및 서버 연결을 확인해 주세요.',
+        ) from None
     finally:
         if connection is not None:
             connection.close()

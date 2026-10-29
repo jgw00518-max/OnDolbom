@@ -1,3 +1,4 @@
+from python.features.schedules.content_review import get_content_change
 from python.features.schedules.reminders import try_remind
 from python.features.schedules.response_notifications import prepare_response_notification, publish_response_notification
 from datetime import date, time
@@ -698,6 +699,10 @@ def get_schedules(
             schedules = cursor.fetchall()
 
             for schedule in schedules:
+                schedule["content_change"] = (
+                    get_content_change(conn, schedule["schedule_seq"], family_room_id)
+                    if schedule.get("history_seq") is not None else None
+                )
                 schedule["previous_schedule"] = None
                 schedule["reconfirm_request_history_seq"] = None
                 schedule["reconfirm_requested_at"] = None
