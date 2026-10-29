@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/discard_changes_dialog.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:ondolbom/view/medications/medication_style.dart';
@@ -76,19 +77,9 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
     if (_dirty) {
       final discard = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('작성을 취소할까요?'),
-          content: const Text('입력한 약 정보는 저장되지 않아요.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('계속 작성'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('작성 취소'),
-            ),
-          ],
+        builder: (context) => const DiscardChangesDialog(
+          title: '작성을 취소할까요?',
+          message: '입력한 약 정보는 저장되지 않아요.',
         ),
       );
       if (discard != true || !mounted) return;

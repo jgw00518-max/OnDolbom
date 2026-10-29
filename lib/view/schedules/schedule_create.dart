@@ -1,3 +1,5 @@
+import 'package:ondolbom/theme/app_colors.dart';
+import 'package:ondolbom/view/schedules/schedule_time_wheel.dart';
 import 'package:ondolbom/view/widgets/family_room_label.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:flutter/material.dart';
@@ -126,9 +128,9 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: timeDropdowns(true)),
+                Expanded(child: timeSelectionField(true)),
                 const SizedBox(width: 12),
-                Expanded(child: timeDropdowns(false)),
+                Expanded(child: timeSelectionField(false)),
               ],
             ),
             const SizedBox(height: 24),
@@ -190,21 +192,9 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
     });
   }
 
-  // 00:00부터 23:55까지 5분 간격으로 선택한다.
-  Widget timeDropdowns(bool isStart) {
-    final selectedTime = isStart ? startTime : endTime;
-    final selectedMinutes = selectedTime == null
-        ? null
-        : selectedTime.hour * 60 + selectedTime.minute;
-
-    final minutesList = List.generate(288, (index) => index * 5);
-
-    // 기존 일정이 5분 단위가 아니어도 현재 값은 그대로 표시한다.
-    if (selectedMinutes != null && !minutesList.contains(selectedMinutes)) {
-      minutesList.add(selectedMinutes);
-      minutesList.sort();
-    }
-
+  // 시작·종료는 독립 휠로 고르고 적용 버튼을 눌렀을 때만 저장한다.
+  Widget timeSelectionField(bool isStart) {
+    final selected = isStart ? startTime : endTime;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -213,63 +203,94 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
           style: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF403C39),
+            color: AppColors.textPrimary,
           ),
         ),
         const SizedBox(height: 10),
-        DropdownButtonFormField<int>(
-          key: ValueKey(isStart ? 'start-time' : 'end-time'),
-          initialValue: selectedMinutes,
-          isExpanded: true,
-          menuMaxHeight: 320,
-          dropdownColor: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          hint: const Text('시간 선택'),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 18,
-            ),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: Color(0xFFE8DFD7)),
+        FormField<TimeOfDay>(
+          key: ValueKey(
+            '${isStart ? 'start' : 'end'}-${selected?.hour}-${selected?.minute}',
+          ),
+          initialValue: selected,
+          validator: (value) => value == null ? '시간을 선택해 주세요.' : null,
+          builder: (field) => InkWell(
+            key: ValueKey(isStart ? 'start-time' : 'end-time'),
+            borderRadius: BorderRadius.circular(14),
+            onTap: isSaving
+                ? null
+                : () async {
+                    final now = TimeOfDay.now();
+                    final initial =
+                        selected ??
+                        (isStart ? null : startTime) ??
+                        TimeOfDay(hour: now.hour, minute: now.minute ~/ 5 * 5);
+                    final picked = await showModalBottomSheet<TimeOfDay>(
+                      context: context,
+                      isScrollControlled: true,
+                      useSafeArea: true,
+                      backgroundColor: AppColors.surface,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(28),
+                        ),
+                      ),
+                      builder: (_) => ScheduleTimeWheel(
+                        isStart: isStart,
+                        initialTime: initial,
+                        startTime: startTime,
+                      ),
+                    );
+                    if (!mounted || picked == null) return;
+                    setState(() {
+                      if (isStart) {
+                        startTime = picked;
+                      } else {
+                        endTime = picked;
+                      }
+                      errorMessage = null;
+                    });
+                  },
+            child: InputDecorator(
+              decoration: InputDecoration(
+                enabled: !isSaving,
+                filled: true,
+                fillColor: AppColors.surface,
+                errorText: field.errorText,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 18,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      selected == null
+                          ? '시간 선택'
+                          : '${selected.hour.toString().padLeft(2, '0')}:${selected.minute.toString().padLeft(2, '0')}',
+                      style: TextStyle(
+                        color: selected == null
+                            ? AppColors.textSecondary
+                            : AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  const Icon(
+                    Icons.schedule_rounded,
+                    size: 20,
+                    color: AppColors.sageDark,
+                  ),
+                ],
+              ),
             ),
           ),
-          items: minutesList.map((minutes) {
-            final hour = (minutes ~/ 60).toString().padLeft(2, '0');
-            final minute = (minutes % 60).toString().padLeft(2, '0');
-
-            return DropdownMenuItem<int>(
-              value: minutes,
-              child: Text('$hour:$minute'),
-            );
-          }).toList(),
-          validator: (value) => value == null ? '시간을 선택해 주세요.' : null,
-          onChanged: isSaving
-              ? null
-              : (value) {
-                  if (value == null) {
-                    return;
-                  }
-
-                  setState(() {
-                    final time = TimeOfDay(
-                      hour: value ~/ 60,
-                      minute: value % 60,
-                    );
-
-                    if (isStart) {
-                      startTime = time;
-                    } else {
-                      endTime = time;
-                    }
-
-                    errorMessage = null;
-                  });
-                },
         ),
       ],
     );

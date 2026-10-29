@@ -50,51 +50,116 @@ class _MembershipExitDialogState extends ConsumerState<MembershipExitDialog> {
     final removing = widget.target != null;
     return PopScope(
       canPop: !_busy,
-      child: AlertDialog(
-        scrollable: true,
-        title: Text(removing ? '가족을 강퇴할까요?' : '공간에서 나갈까요?'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              removing
-                  ? '${widget.target!.name ?? '선택한 가족'}님의 공간 접근이 종료됩니다.'
-                  : '이 공간의 기록을 더 이상 조회할 수 없습니다.',
+      child: Dialog(
+        backgroundColor: AppColors.background,
+        surfaceTintColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        clipBehavior: Clip.antiAlias,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ColoredBox(
+                  color: AppColors.surface,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
+                    child: Text(
+                      removing ? '가족을 강퇴할까요?' : '공간에서 나갈까요?',
+                      style: const TextStyle(
+                        fontSize: 21,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+                const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.all(22),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        removing
+                            ? '${widget.target!.name ?? '선택한 가족'}님의 공간 접근이 종료됩니다.'
+                            : '이 공간의 기록을 더 이상 조회할 수 없습니다.',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          height: 1.6,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppColors.peachSoft,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Text(
+                          '맡고 있던 미완료 일정은 담당자 없는 상태로 변경됩니다.\n'
+                          '작성한 메모·채팅과 완료 기록은 보존됩니다.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            height: 1.6,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                      if (_error != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          _error!,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: _busy
+                                  ? null
+                                  : () => Navigator.pop(context, false),
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size(0, 48),
+                              ),
+                              child: const Text('취소'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: FilledButton(
+                              onPressed: _busy ? null : _submit,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFFB87568),
+                                foregroundColor: Colors.white,
+                                minimumSize: const Size(0, 48),
+                              ),
+                              child: Text(
+                                _busy
+                                    ? '처리 중…'
+                                    : removing
+                                    ? '강퇴'
+                                    : '나가기',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            const Text(
-              '맡고 있던 미완료 일정은 담당자 없는 상태로 변경됩니다. 작성한 메모·채팅과 완료 기록은 보존됩니다.',
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                _error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ],
-          ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: _busy ? null : () => Navigator.pop(context, false),
-            child: const Text('취소'),
-          ),
-          FilledButton(
-            onPressed: _busy ? null : _submit,
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.textPrimary,
-            ),
-            child: Text(
-              _busy
-                  ? '처리 중…'
-                  : removing
-                  ? '강퇴'
-                  : '나가기',
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -10,6 +10,7 @@ class FamilyInvite {
     this.inviterName,
     this.expiresAt,
     this.canResend = false,
+    this.canCancel = false,
   });
 
   final String inviteId;
@@ -22,6 +23,7 @@ class FamilyInvite {
   final DateTime? expiresAt;
   // 재요청 권한은 기기 판단 대신 서버가 원래 발신자·현재 역할로 결정한다.
   final bool canResend;
+  final bool canCancel;
 
   // 받은 초대 API 응답을 객체로 변환한다.
   factory FamilyInvite.fromJson(Map<String, dynamic> json) {
@@ -35,6 +37,7 @@ class FamilyInvite {
       inviterName: json['inviter_name'] as String?,
       expiresAt: DateTime.tryParse(json['expires_at']?.toString() ?? ''),
       canResend: json['can_resend'] == true || json['can_resend'] == 1,
+      canCancel: json['can_cancel'] == true || json['can_cancel'] == 1,
     );
   }
 }

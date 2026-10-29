@@ -9,6 +9,7 @@ FamilyInvite invite(String id, String status, {bool canResend = false}) =>
     FamilyInvite(
       inviteId: id,
       canResend: canResend,
+      canCancel: true,
       familyRoomId: 'room',
       inviteEmail: 'family@example.com',
       inviteAt: DateTime(2026, 10, 27, 14, 30),

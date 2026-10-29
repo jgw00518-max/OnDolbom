@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/discard_changes_dialog.dart';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -56,21 +57,11 @@ class _MemoFormViewState extends ConsumerState<MemoFormView> {
     if (_saved || !_dirty) return true;
     return await showDialog<bool>(
           context: context,
-          builder: (context) => AlertDialog(
-            title: Text(_editing ? '수정을 취소할까요?' : '작성을 취소할까요?'),
-            content: Text(
-              _editing ? '변경한 내용은 저장되지 않아요.' : '작성 중인 메모는 저장되지 않아요.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text(_editing ? '계속 수정' : '계속 작성'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: Text(_editing ? '수정 취소' : '작성 취소'),
-              ),
-            ],
+          builder: (context) => DiscardChangesDialog(
+            title: _editing ? '수정을 취소할까요?' : '작성을 취소할까요?',
+            message: _editing ? '변경한 내용은 저장되지 않아요.' : '작성 중인 메모는 저장되지 않아요.',
+            continueLabel: _editing ? '계속 수정' : '계속 작성',
+            discardLabel: _editing ? '수정 취소' : '작성 취소',
           ),
         ) ??
         false;

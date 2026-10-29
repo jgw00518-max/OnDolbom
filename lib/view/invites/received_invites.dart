@@ -445,7 +445,7 @@ class _ReceivedInvitesState extends ConsumerState<ReceivedInvites> {
               style: TextStyle(color: _muted, fontSize: 12, height: 1.7),
             ),
           ],
-          if (status == '대기') ...[
+          if (status == '대기' && (!showSent || invite.canCancel)) ...[
             if (!showSent) ...[
               const SizedBox(height: 16),
               const Text(
