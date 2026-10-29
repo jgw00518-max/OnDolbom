@@ -115,7 +115,7 @@ class WithdrawalTests(unittest.TestCase):
         first, second = [call.args[0] for call in prepare.call_args_list]
         self.assertEqual(first['recipient_ids'], ['guardian'])
         self.assertEqual(first['notification_type'], 'schedule_withdrawn')
-        self.assertEqual(set(second['recipient_ids']), {'guardian', 'member', 'other'})
+        self.assertEqual(set(second['recipient_ids']), {'guardian', 'other'})
         self.assertEqual(second['reason'], 'participation_withdrawal')
 
     def test_missing_auth_is_rejected(self):

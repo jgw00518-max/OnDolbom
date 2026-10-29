@@ -189,3 +189,8 @@ Firebase ID 토큰 검증과 `GET /auth/me` 사용자 조회를 구현했습니�
 python -m pip install -r python/requirements-dev.txt
 python -m unittest discover -s python/tests -p "test_*.py" -v
 ```
+
+
+## 알림 worker
+
+알림 담당자 한 명만 별도 터미널에서 `python -m python.features.schedules.reminder_worker`를 실행합니다. 72시간 재알림·일정/채팅 푸시·재수락 만료·미발행 재시도를 한 명령으로 시작합니다. API의 기본 실행은 바뀌지 않습니다. 기존 별도 재수락 worker는 종료한 뒤 전환하세요. 자세한 내용은 [통합 실행 안내](../docs/notification-worker.md)를 참고합니다.

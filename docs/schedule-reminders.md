@@ -74,3 +74,8 @@ python -B -m unittest python.tests.features.test_schedule_reminders
 - DB 서버 시각 기준 시작까지 남은 시간이 0시간 초과~72시간 이하이면 일반 새 일정 등록 알림은 생성하지 않고 72시간 알림만 발행한다. 앱 내 알림과 FCM 푸시에 동일하게 적용한다.
 - 72시간을 초과하면 기존 등록 알림을 발행하고, 이후 72시간 구간에 진입할 때 재알림을 발행한다.
 - 재알림 장애 시 일반 등록 알림으로 대체하지 않으며, worker가 기존 재시도 방식으로 처리한다. 이미 발행된 과거 알림은 삭제하지 않는다.
+
+
+## 통합 실행 안내
+
+기존 `python -m python.features.schedules.reminder_worker` 명령이 재수락 기한 만료·긴급 미확인 검사와 미발행 재시도까지 함께 시작한다. 별도 재수락 worker는 중복 실행하지 않는다. 작업별 주기·종료·전환 방법은 [통합 알림 worker](notification-worker.md)를 따른다.

@@ -56,7 +56,7 @@ class ResponseNotificationsTests(unittest.TestCase):
             cursor.fetchone.side_effect = [dict(created_at='created'), dict(is_representative=representative)]
             event = dict(status='published', recipient_ids=['member'], notification_type='schedule_recruitment',
                 schedule_seq=7, family_room_id='room', schedule_created_at='created', created_at='now', notification_id='schedule_recruitment_7_12')
-            with patch.object(inbox.store, 'read_at', return_value=None):
+            with patch.object(inbox.store, 'inbox_state', return_value={}):
                 self.assertEqual(inbox._visible(connection, 'member', event)['notification_type'], expected)
 
     def test_reconfirmation_publishes_guardian_result_after_commit(self):

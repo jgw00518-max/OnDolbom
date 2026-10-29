@@ -142,7 +142,7 @@ python -m python.features.schedules.reconfirm_expiry_worker
 - `python/tests/test_expiry_publication.py` 4개 검사 통과: 기한 있는 긴급 요청의 담당자/주보호자 안내, 기한 없는 긴급 제외, 기한 직전 제외, 일반 만료 발행. 실제 공유 Firestore 발행을 호출하지 않는 대체 연결 검사이다.
 - 이번 수정으로 A 담당 공통 알림 저장·푸시, V2 필터, Flutter 제목 매핑은 변경하지 않았다.
 
-### A 후속 연결 — 아직 완료되지 않음
+### 당시 A 후속 인수인계 — 현재 연결은 아래 최신 절 참고
 
 | 위치 | 필요한 작업 |
 | --- | --- |
@@ -157,8 +157,8 @@ python -m python.features.schedules.reconfirm_expiry_worker
 
 ### 실행 및 통합 검수
 
-1. API 서버와 별도로, 동일 DB를 보는 담당자 한 명만 `python -m python.features.schedules.reconfirm_expiry_worker`를 실행한다. 72시간 재알림 worker와 구분한다.
-2. 코드 반영 후 API 서버와 재수락 worker를 각각 재시작한다. 기존 pending은 worker 재시도 대상이지만 최신 이력·문서 검증을 통과해야 published로 전환된다. Firestore 상태를 수동으로 published로 바꾸지 않는다.
+1. API 서버와 별도로, 동일 DB를 보는 담당자 한 명만 `python -m python.features.schedules.reminder_worker`를 실행한다. 현재는 재수락 검사까지 통합되었으므로 별도 `reconfirm_expiry_worker`를 동시에 켜지 않는다. [통합 실행 안내](notification-worker.md)를 따른다.
+2. 코드 반영 후 API 서버와 통합 알림 worker를 각각 재시작한다. 기존 pending은 worker 재시도 대상이지만 최신 이력·문서 검증을 통과해야 published로 전환된다. Firestore 상태를 수동으로 published로 바꾸지 않는다.
 3. 새 만료 검수 요청으로 자동 배정 해제, 담당자/주보호자 안내와 전체 가족 재모집 문서의 published 상태를 확인한다.
 4. 각 역할의 앱 알림함·문구·배지·읽음·최신 상세 연결을 확인한다. 다른 가족은 재모집 안내를 받되 기존 담당자 전용 만료 안내를 받지 않아야 한다.
 5. 푸시를 연결한 경우 실제 기기 도착은 앱 알림함 및 Firestore published와 별도로 검수한다. 재시도 시 중복 알림·읽음 초기화도 확인한다.
@@ -179,3 +179,8 @@ B의 자동 배정 해제 및 이번 긴급 만료 알림 발행 조건 수정�
 ## 10. 담당 가족의 일정 참여 철회 후속
 
 새 B 구현과 A의 새 유형·재모집 문구 연결은 [일정 참여 철회 인수인계](schedule_withdrawal.md)를 따른다. 주보호자 철회 안내와 전체 가족 재모집을 별도 이벤트로 준비한다. 자동 만료와 구분하며 이번 범위에서 A 공통 모델·푸시는 변경하지 않았다.
+
+
+## 11. 2026-10-29 자동 만료·긴급 미확인 A 연결 완료
+
+`schedule_reconfirm_expired`, `schedule_reconfirm_unanswered`, 자동 만료 `schedule_recruitment`, `schedule_reconfirm_unverified`를 공통 V2 알림함·배지·제목·아이콘·FCM에 연결했다. 기존 수신자 경계와 B의 기한/배정 처리는 유지했다. 최신 동작과 실제 검수 순서는 [공통 알림함 연결 문서의 자동 처리 절](notification-v2-integration.md#자동-처리-알림-수신표시푸시)을 따른다. 위 9절의 미연결 설명은 인수인계 당시 기록이다.

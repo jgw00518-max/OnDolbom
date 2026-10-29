@@ -8,20 +8,19 @@ from python.features.schedules import notification_router as api
 
 
 class NotificationV2Tests(unittest.TestCase):
-    def test_scope_keeps_created_changed_reconfirm_and_declined_recruitment(self):
+    def test_scope_includes_automatic_expiry_and_urgent_notices(self):
+        kinds = ['schedule_created', 'schedule_changed', 'schedule_reconfirm', 'schedule_recruitment',
+                 'schedule_accepted', 'schedule_reconfirmed', 'schedule_deleted', 'schedule_reminder',
+                 'schedule_withdrawn', 'schedule_reconfirm_expired', 'schedule_reconfirm_unanswered',
+                 'schedule_reconfirm_unverified']
         with patch.object(api, '_visible', return_value={'read_at': None}) as visible:
-            for kind in ['schedule_created', 'schedule_changed', 'schedule_reconfirm', 'schedule_recruitment', 'schedule_accepted', 'schedule_reconfirmed', 'schedule_deleted']:
+            for kind in kinds:
                 self.assertIsNotNone(api.visible_v2(None, 'user', {'notification_type': kind}))
             self.assertIsNotNone(api.visible_v2(None, 'user', {}))
-            self.assertEqual(visible.call_count, 8)
-            for event in [
-                {'notification_type': 'schedule_reconfirm_expired'},
-                {'notification_type': 'schedule_reconfirm_unanswered'},
-                {'notification_type': 'schedule_reconfirm_unverified'},
-                {'notification_type': 'schedule_recruitment', 'request_history_seq': 12},
-            ]:
-                self.assertIsNone(api.visible_v2(None, 'user', event))
-            self.assertEqual(visible.call_count, 8)
+            self.assertIsNotNone(api.visible_v2(None, 'user', {'notification_type': 'schedule_recruitment', 'request_history_seq': 12}))
+            self.assertEqual(visible.call_count, len(kinds) + 2)
+            self.assertIsNone(api.visible_v2(None, 'user', {'notification_type': 'unknown'}))
+            self.assertEqual(visible.call_count, len(kinds) + 2)
 
     def test_filtered_page_advances_string_cursor_and_preserves_access_check(self):
         app = FastAPI()

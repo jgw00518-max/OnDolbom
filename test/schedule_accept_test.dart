@@ -14,6 +14,12 @@ http.Response jsonResponse(Object body, [int status = 200]) => http.Response(
   headers: {'content-type': 'application/json; charset=utf-8'},
 );
 
+// 요약 정보와 이름이 중복되더라도 아바타가 있는 담당 가족 카드만 검증한다.
+Finder assigneeCard() => find.byWidgetPredicate(
+  (widget) =>
+      widget is Row && widget.children.any((child) => child is CircleAvatar),
+);
+
 void main() {
   testWidgets('일반 가족 수락 성공 후 상세·목록을 갱신하고 미완료를 유지한다', (tester) async {
     var accepted = false;
@@ -44,8 +50,12 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('schedule-accept')));
     await tester.pumpAndSettle();
     expect(posts, 1);
+    // 상세의 요약 정보와 담당 가족 카드에 이름이 각각 표시되므로 카드만 검증한다.
     expect(find.text('담당 중'), findsOneWidget);
-    expect(find.text('테스트 가족'), findsOneWidget);
+    expect(
+      find.descendant(of: assigneeCard(), matching: find.text('테스트 가족')),
+      findsOneWidget,
+    );
     expect(
       find.descendant(of: find.byType(Dialog), matching: find.text('미완료')),
       findsOneWidget,
@@ -116,7 +126,10 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('schedule-accept')));
     await tester.pumpAndSettle();
     expect(find.text('이미 담당 가족이 등록된 일정입니다.'), findsOneWidget);
-    expect(find.text('다른 가족'), findsOneWidget);
+    expect(
+      find.descendant(of: assigneeCard(), matching: find.text('다른 가족')),
+      findsOneWidget,
+    );
     expect(find.byKey(const ValueKey('schedule-accept')), findsNothing);
   });
 
@@ -189,13 +202,17 @@ void main() {
       );
       await tester.tap(find.text('test4가 수락한 일정'));
       await tester.pumpAndSettle();
-      expect(find.text('test4'), findsOneWidget);
+      expect(
+        find.descendant(of: assigneeCard(), matching: find.text('test4')),
+        findsOneWidget,
+      );
       expect(find.text('나'), viewer == '수락자' ? findsOneWidget : findsNothing);
       expect(
         find.text('담당 중'),
         viewer == '수락자' ? findsOneWidget : findsNothing,
       );
-      expect(find.text('담당 가족 1명'), findsOneWidget);
+      expect(find.text('담당 가족'), findsOneWidget);
+      expect(assigneeCard(), findsOneWidget);
     });
   }
 }

@@ -37,6 +37,42 @@ Map<String, dynamic> item() => {
 };
 
 void main() {
+  test('자동 만료·미응답·긴급 미확인 알림은 전용 제목과 읽음 상태를 유지한다', () {
+    const titles = {
+      'schedule_reconfirm_expired': '재수락 기한이 지나 담당 배정이 해제됐어요',
+      'schedule_reconfirm_unanswered': '담당 가족이 재수락 요청에 응답하지 않았어요',
+      'schedule_recruitment': '돌봄 담당자를 다시 모집해요',
+      'schedule_reconfirm_unverified': '긴급 변경 일정의 재수락을 확인해 주세요',
+    };
+    for (final entry in titles.entries) {
+      final notification = ScheduleNotification.fromJson({
+        ...item(),
+        'notification_type': entry.key,
+        'notification_id': '${entry.key}_7_13',
+      });
+      expect(notification.title, entry.value);
+      expect(notification.withReadAt('read').type, entry.key);
+      expect(notification.withReadAt('read').readAt, 'read');
+    }
+  });
+
+  test('참여 철회·재모집 알림은 서로 다른 제목과 이벤트 ID를 유지한다', () {
+    final withdrawn = ScheduleNotification.fromJson({
+      ...item(),
+      'notification_id': 'schedule_withdrawn_7_13',
+      'notification_type': 'schedule_withdrawn',
+    });
+    final recruitment = ScheduleNotification.fromJson({
+      ...item(),
+      'notification_id': 'schedule_recruitment_7_13',
+      'notification_type': 'schedule_recruitment',
+    });
+    expect(withdrawn.title, '담당 가족이 일정 참여를 취소했어요');
+    expect(recruitment.title, '돌봄 담당자를 다시 모집해요');
+    expect(withdrawn.id, isNot(recruitment.id));
+    expect(withdrawn.withReadAt('read').type, 'schedule_withdrawn');
+  });
+
   test('중복 응답·겹친 페이지는 ID로 합치고 다른 이벤트와 읽음은 보존한다', () async {
     final pendingPage = Completer<http.Response>();
     final pageRequested = Completer<void>();

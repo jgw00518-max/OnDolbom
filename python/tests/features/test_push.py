@@ -120,8 +120,8 @@ class PushTests(unittest.TestCase):
                 self.assertIn(word, message.notification.body)
                 self.assertEqual(set(message.data), {'notification_id', 'user_uid', 'type'})
 
-    def test_automatic_recruitment_is_not_pushed(self):
-        self.assertFalse(store.supports_push(dict(notification_type='schedule_recruitment', request_history_seq=1)))
+    def test_automatic_recruitment_is_supported_for_push(self):
+        self.assertTrue(store.supports_push(dict(notification_type='schedule_recruitment', request_history_seq=1)))
         self.assertTrue(store.supports_push(dict(notification_type='schedule_recruitment')))
         self.assertTrue(store.supports_push(dict(notification_type='schedule_reminder')))
 

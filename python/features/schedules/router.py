@@ -51,6 +51,9 @@ router = APIRouter(
     prefix="/schedules",
     tags=["schedules"],
 )
+# 고정 알림 경로를 /{schedule_seq}보다 먼저 등록해 전체 삭제가 일정 삭제로 해석되지 않게 한다.
+router.include_router(schedule_notifications_router)
+
 logger = logging.getLogger(__name__)
 
 
@@ -1448,6 +1451,3 @@ def withdraw_schedule_participation(payload: ScheduleWithdrawal,
             logger.exception('참여 철회 완료, 알림 발행 재시도 필요')
     return dict(result='OK', schedule_seq=schedule_seq, history_seq=history_seq,
                 notification_published=published)
-
-# 일정 관련 알림 API를 연결한다.
-router.include_router(schedule_notifications_router)
