@@ -48,19 +48,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('공지 본문'), findsOneWidget);
     expect(find.text('수정 2026-10-26 13:00'), findsOneWidget);
-    final backToList = find.widgetWithText(FilledButton, '목록으로 돌아가기');
-    await tester.ensureVisible(backToList);
-    expect(
-      tester
-          .widget<FilledButton>(backToList)
-          .style!
-          .backgroundColor!
-          .resolve({}),
-      const Color(0xFFF6B08A),
-    );
-    await tester.tap(backToList);
-    await tester.pumpAndSettle();
-    expect(find.text('꼭 확인해 주세요'), findsOneWidget);
   });
 
   testWidgets('오류를 자동 재요청하지 않고 수동 재시도 후 빈 목록을 표시한다', (tester) async {

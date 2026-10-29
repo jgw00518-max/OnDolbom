@@ -101,7 +101,7 @@ class MemoTests(unittest.TestCase):
             {key: value for key, value in valid.items() if key != "memo_content"},
             {**valid, "family_room_id": "   "},
             {**valid, "memo_content": " \n\t "},
-            {**valid, "memo_content": "가" * 2001},
+            {**valid, "memo_content": "가" * 10001},
         ]
         for payload in invalid:
             with self.subTest(fields=list(payload)), patch(
@@ -281,7 +281,7 @@ class MemoMutationTests(unittest.TestCase):
             {**valid, "family_room_id": "a" * 51},
             {**valid, "memo_content": " \n\t "},
             {**valid, "memo_content": None},
-            {**valid, "memo_content": "가" * 2001},
+            {**valid, "memo_content": "가" * 10001},
             {**valid, "user_id": "other-user"},
             {**valid, "likes": 100},
         )

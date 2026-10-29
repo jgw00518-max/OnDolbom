@@ -64,8 +64,7 @@ void main() {
     );
     controller.add(const AppUser(uid: 'test', email: 'family@example.com'));
     await tester.pumpAndSettle();
-    expect(find.text('가족 사용자 정보 등록'), findsOneWidget);
-    expect(find.text('Firebase 로그인이 완료되었습니다.'), findsNothing);
+    expect(find.text('family@example.com'), findsOneWidget);
     await tester.tap(find.text('로그아웃'));
     await tester.pumpAndSettle();
     expect(auth.logouts, 1);

@@ -1,20 +1,9 @@
-"""Firestore 알림 저장. 클라이언트는 API를 통해서만 접근한다."""
+﻿"""Firestore 알림 저장. 클라이언트는 API를 통해서만 접근한다."""
 from hashlib import sha256
 
 from firebase_admin import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
 from python.features.auth.firebase_auth import get_firebase_app
-
-
-PUSH_TYPES = frozenset({'schedule_created', 'schedule_changed', 'schedule_deleted', 'schedule_reconfirm',
-                        'schedule_accepted', 'schedule_reconfirmed', 'schedule_recruitment', 'schedule_reminder'})
-
-
-def supports_push(event):
-    """자동 만료에 따른 재모집은 제외하고 거절 후 재모집만 연결한다."""
-    return (event.get('notification_type', 'schedule_created') in PUSH_TYPES
-            and not (event.get('notification_type') == 'schedule_recruitment'
-                     and event.get('request_history_seq') is not None))
 
 
 def collection():
@@ -56,18 +45,7 @@ def mark_read(identifier, user_id):
     return read_at(identifier, user_id)
 
 
-def exclude_actor(payload):
-    """직접 작업한 사용자는 제외하고 자동 재알림 대상은 유지한다."""
-    # 앱 내 알림과 푸시가 같은 수신자 목록을 사용하도록 저장 전에 작업자를 제외한다.
-    actor = payload.get('actor_id')
-    if actor and payload.get('notification_type') != 'schedule_reminder':
-        return {**payload, 'recipient_ids': [
-            user_id for user_id in payload['recipient_ids'] if user_id != actor]}
-    return payload
-
-
 def _prepare(transaction, ref, payload):
-    payload = exclude_actor(payload)
     snapshot = ref.get(transaction=transaction)
     if snapshot.exists:
         old = snapshot.to_dict()
@@ -90,11 +68,7 @@ def _publish(transaction, ref, fingerprint):
     if event['schedule_created_at'] != fingerprint:
         return False
     if event['status'] == 'pending':
-        values = {'status': 'published', 'published_at': firestore.SERVER_TIMESTAMP}
-        # 일정 안내·재수락 요청이 처음 발행될 때만 큐에 넣어 중복을 막는다.
-        if supports_push(event):
-            values['push_pending'] = True
-        transaction.update(ref, values)
+        transaction.update(ref, {'status': 'published', 'published_at': firestore.SERVER_TIMESTAMP})
     return True
 
 

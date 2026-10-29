@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,17 +12,6 @@ final familyRoomProvider =
     NotifierProvider<FamilyRoomNotifier, FamilyRoomState>(
       FamilyRoomNotifier.new,
     );
-
-final familyRoomHttpClientProvider = Provider<http.Client>((ref) {
-  final client = http.Client();
-  ref.onDispose(client.close);
-  return client;
-});
-
-class FamilyRoomDeleteFailure implements Exception {
-  const FamilyRoomDeleteFailure(this.message);
-  final String message;
-}
 
 class FamilyRoomNotifier extends Notifier<FamilyRoomState> {
   // 계정 변경 전의 요청 결과를 구분한다.
@@ -102,8 +90,7 @@ class FamilyRoomNotifier extends Notifier<FamilyRoomState> {
         return;
       }
 
-      final response = await ref
-          .read(familyRoomHttpClientProvider)
+      final response = await http
           .get(
             Uri.parse('$baseUrl/family-room'),
             headers: {'Authorization': 'Bearer $token'},
@@ -180,84 +167,6 @@ class FamilyRoomNotifier extends Notifier<FamilyRoomState> {
     }
 
     state = state.copyWith(selectedRoomId: familyRoomId, clearError: true);
-  }
-
-  Future<void> deleteRoom({
-    required String familyRoomId,
-    required String recipientName,
-    required String confirmationName,
-  }) async {
-    if (state.isLoading) {
-      throw const FamilyRoomDeleteFailure('다른 요청을 처리 중이에요. 잠시 후 다시 시도해 주세요.');
-    }
-    final requestKey = sessionKey;
-    final requestUid = ref.read(firebaseAuthProvider).currentUser?.uid;
-    void checkTarget() {
-      if (!isCurrentRequest(requestKey, requestUid) ||
-          requestUid == null ||
-          state.selectedRoomId != familyRoomId ||
-          state.selectedRoom?.careRecipientName != recipientName ||
-          state.selectedParticipation?.isRepresentative != true ||
-          state.selectedParticipation?.isActive != true) {
-        throw const FamilyRoomDeleteFailure(
-          '계정·공간 또는 권한이 변경됐어요. 화면을 다시 열어 주세요.',
-        );
-      }
-      if (confirmationName.trim() != recipientName) {
-        throw const FamilyRoomDeleteFailure('돌봄 대상자 이름을 정확히 입력해 주세요.');
-      }
-    }
-
-    checkTarget();
-    state = state.copyWith(isLoading: true, clearError: true);
-    try {
-      final token = await getLoginToken().timeout(const Duration(seconds: 15));
-      checkTarget();
-      final response = await ref
-          .read(familyRoomHttpClientProvider)
-          .delete(
-            Uri.parse(
-              '$baseUrl/family-room/${Uri.encodeComponent(familyRoomId)}',
-            ),
-            headers: {'Authorization': 'Bearer $token'},
-          )
-          .timeout(const Duration(seconds: 30));
-      checkTarget();
-      if (response.statusCode != 200) {
-        throw FamilyRoomDeleteFailure(
-          getErrorMessage(response, '가족 공간을 삭제하지 못했어요. 다시 시도해 주세요.'),
-        );
-      }
-      final body = jsonDecode(utf8.decode(response.bodyBytes));
-      if (body is! Map ||
-          body['result'] != 'OK' ||
-          body['family_room_id'] != familyRoomId ||
-          body['family_room_deleted_at'] == null) {
-        throw const FamilyRoomDeleteFailure(
-          '삭제 결과를 확인하지 못했어요. 다시 시도하거나 공간 목록을 새로고침해 주세요.',
-        );
-      }
-      state = FamilyRoomState(
-        rooms: state.rooms
-            .where((room) => room.familyRoomId != familyRoomId)
-            .toList(),
-        participations: Map.of(state.participations)..remove(familyRoomId),
-      );
-    } on FamilyRoomDeleteFailure {
-      rethrow;
-    } on TimeoutException {
-      throw const FamilyRoomDeleteFailure(
-        '삭제 결과 확인이 지연되고 있어요. 다시 시도하거나 공간 목록을 새로고침해 주세요.',
-      );
-    } catch (_) {
-      throw const FamilyRoomDeleteFailure(
-        '삭제 결과를 확인하지 못했어요. 연결 상태를 확인하고 다시 시도해 주세요.',
-      );
-    } finally {
-      if (isCurrentRequest(requestKey, requestUid)) {
-        state = state.copyWith(isLoading: false);
-      }
-    }
   }
 
   // 대상자를 등록하고 가족 공간을 생성한다.

@@ -3,7 +3,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pymysql import MySQLError
 from python.database import connect
 from python.features.auth.firebase_auth import require_firebase_user
-from python.features.activity.receipts import notice_token
 
 router = APIRouter(prefix="/notices", tags=["notices"], dependencies=[Depends(require_firebase_user)])
 FIELDS = "admin_id, notice_id, notice_title, notice_content, notice_created_at, notice_updated_at"
@@ -26,7 +25,7 @@ def read_notices(admin_id=None, notice_id=None, limit=30, offset=0):
             row = cursor.fetchone()
             if row is None:
                 raise HTTPException(404, "공지를 찾을 수 없습니다.")
-            return {**row, 'badge_token': notice_token(row)}
+            return row
     except (MySQLError, ValueError):
         raise HTTPException(503, "공지를 불러오지 못했습니다.") from None
     finally:

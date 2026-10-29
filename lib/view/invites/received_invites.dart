@@ -1,4 +1,3 @@
-import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -18,462 +17,376 @@ class _ReceivedInvitesState extends ConsumerState<ReceivedInvites> {
   String? errorMessage;
   bool showSent = false;
 
-  static const _ink = AppColors.textPrimary;
-  static const _muted = AppColors.textSecondary;
-  static const _line = AppColors.border;
-
-  void _refresh() {
-    ref.invalidate(showSent ? sentInvitesProvider : receivedInvitesProvider);
-  }
-
-  Widget _tab(bool sent, int pending) {
-    final selected = sent == showSent;
-    return Expanded(
-      child: TextButton(
-        onPressed: acceptingInviteId != null
-            ? null
-            : () => setState(() {
-                showSent = sent;
-                errorMessage = null;
-              }),
-        style: TextButton.styleFrom(
-          backgroundColor: selected ? AppColors.peachLight : Colors.transparent,
-          foregroundColor: selected ? const Color(0xFF754E38) : _muted,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(sent ? Icons.send_outlined : Icons.mail_outline, size: 19),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                sent ? '보낸 초대' : '받은 초대',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            if (!sent && pending > 0) ...[
-              const SizedBox(width: 7),
-              Container(
-                width: 23,
-                height: 23,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  color: AppColors.primary,
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  pending > 99 ? '99+' : '$pending',
-                  style: const TextStyle(
-                    color: _ink,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final received = ref.watch(receivedInvitesProvider);
-    final invites = showSent ? ref.watch(sentInvitesProvider) : received;
+    final invites = showSent
+        ? ref.watch(sentInvitesProvider)
+        : ref.watch(receivedInvitesProvider);
     final isAccepting = acceptingInviteId != null;
-    final pending =
-        received.asData?.value.where((i) => i.inviteStatus == '대기').length ?? 0;
+
     return PopScope(
       canPop: !isAccepting,
       child: Scaffold(
-        backgroundColor: AppColors.background,
         appBar: AppBar(
-          backgroundColor: AppColors.background,
-          surfaceTintColor: Colors.transparent,
-          foregroundColor: _ink,
-          toolbarHeight: 88,
+          title: const Text('가족 초대'),
           automaticallyImplyLeading: false,
-          leadingWidth: 68,
-          leading: Padding(
-            padding: const EdgeInsets.only(left: 20),
-            child: Center(
-              child: SizedBox.square(
-                dimension: 42,
-                child: OutlinedButton(
-                  onPressed: isAccepting ? null : () => Navigator.pop(context),
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    backgroundColor: AppColors.surface,
-                    foregroundColor: _ink,
-                    side: const BorderSide(color: _line),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(13),
-                    ),
-                  ),
-                  child: const Icon(Icons.chevron_left, semanticLabel: '뒤로'),
-                ),
-              ),
-            ),
-          ),
-          centerTitle: true,
-          title: const Column(
-            children: [
-              Text(
-                'FAMILY INVITATION',
-                style: TextStyle(
-                  color: Color(0xFFA77762),
-                  fontSize: 8,
-                  letterSpacing: 1.5,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              SizedBox(height: 3),
-              Text(
-                '가족 초대',
-                style: TextStyle(
-                  color: _ink,
-                  fontSize: 21,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
+          leading: IconButton(
+            tooltip: '뒤로',
+            onPressed: isAccepting ? null : () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back),
           ),
           actions: [
             IconButton(
               tooltip: '새로고침',
-              onPressed: isAccepting ? null : _refresh,
-              icon: const Icon(Icons.refresh, size: 22),
+              onPressed: isAccepting
+                  ? null
+                  : () {
+                      if (showSent) {
+                        ref.invalidate(sentInvitesProvider);
+                      } else {
+                        ref.invalidate(receivedInvitesProvider);
+                      }
+                    },
+              icon: const Icon(Icons.refresh),
             ),
-            const SizedBox(width: 8),
           ],
         ),
-        body: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 560),
-            child: Column(
-              children: [
-                Container(
-                  margin: const EdgeInsets.fromLTRB(20, 15, 20, 8),
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    border: Border.all(color: _line),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Row(
-                    children: [
-                      _tab(false, pending),
-                      const SizedBox(width: 4),
-                      _tab(true, pending),
-                    ],
-                  ),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 8),
+              child: SizedBox(
+                width: double.infinity,
+                child: SegmentedButton<bool>(
+                  segments: const [
+                    ButtonSegment<bool>(
+                      value: false,
+                      icon: Icon(Icons.mail_outline),
+                      label: Text('받은 초대'),
+                    ),
+                    ButtonSegment<bool>(
+                      value: true,
+                      icon: Icon(Icons.send_outlined),
+                      label: Text('보낸 초대'),
+                    ),
+                  ],
+                  selected: {showSent},
+                  showSelectedIcon: false,
+                  onSelectionChanged: isAccepting
+                      ? null
+                      : (selection) {
+                          setState(() {
+                            showSent = selection.first;
+                            errorMessage = null;
+                          });
+                        },
                 ),
-                if (errorMessage != null)
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      errorMessage!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                  ),
-                Expanded(
-                  child: invites.when(
-                    loading: () => const Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    error: (error, _) => Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              error.toString().replaceFirst('Exception: ', ''),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 12),
-                            OutlinedButton(
-                              onPressed: isAccepting ? null : _refresh,
-                              child: const Text('다시 조회'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    data: (items) => ListView(
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+              ),
+            ),
+
+            // 이 아래 기존 코드 유지
+            if (errorMessage != null)
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  errorMessage!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ),
+
+            Expanded(
+              child: invites.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stackTrace) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    showSent ? '내가 보낸 초대' : '나에게 도착한 초대',
-                                    style: const TextStyle(
-                                      color: _muted,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    '${items.length}개의 초대가 있어요',
-                                    style: const TextStyle(
-                                      color: _ink,
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: -0.8,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 7,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.peachSoft,
-                                borderRadius: BorderRadius.circular(25),
-                              ),
-                              child: Text(
-                                showSent ? '보낸 초대' : '받은 초대',
-                                style: const TextStyle(
-                                  color: Color(0xFFA46F59),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ],
+                        Text(
+                          error.toString().replaceFirst('Exception: ', ''),
+                          textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 22),
-                        if (items.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 48),
-                            child: Text(
-                              showSent
-                                  ? '주보호자로 관리하는 공간에 보낸 초대가 없습니다.'
-                                  : '받은 가족 초대가 없습니다.',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: _muted),
-                            ),
-                          ),
-                        for (final invite in items)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: inviteCard(invite),
-                          ),
+                        const SizedBox(height: 12),
+                        OutlinedButton(
+                          onPressed: isAccepting
+                              ? null
+                              : () {
+                                  if (showSent) {
+                                    ref.invalidate(sentInvitesProvider);
+                                  } else {
+                                    ref.invalidate(receivedInvitesProvider);
+                                  }
+                                },
+                          child: const Text('다시 조회'),
+                        ),
                       ],
                     ),
                   ),
                 ),
-              ],
+                data: (items) {
+                  if (items.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text(
+                          showSent
+                              ? '주보호자로 관리하는 공간에 보낸 초대가 없습니다.'
+                              : '받은 가족 초대가 없습니다.',
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    );
+                  }
+
+                  return ListView.separated(
+                    padding: const EdgeInsets.all(18),
+                    itemCount: items.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 14),
+                    itemBuilder: (context, index) {
+                      final invite = items[index];
+
+                      if (!showSent) {
+                        return inviteCard(invite);
+                      }
+
+                      final dateText =
+                          '${invite.inviteAt.year}-'
+                          '${invite.inviteAt.month.toString().padLeft(2, '0')}-'
+                          '${invite.inviteAt.day.toString().padLeft(2, '0')} '
+                          '${invite.inviteAt.hour.toString().padLeft(2, '0')}:'
+                          '${invite.inviteAt.minute.toString().padLeft(2, '0')}';
+
+                      final dateLabel =
+                          invite.inviteStatus == '발송대기' ||
+                              invite.inviteStatus == '발송실패'
+                          ? '초대 생성 시각'
+                          : '발송 시각';
+
+                      return Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFFE8DFD7)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFEBD9),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                invite.inviteStatus,
+                                style: const TextStyle(
+                                  color: Color(0xFF875634),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              '${invite.recipientName} 님의 돌봄 공간',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            Text('받는 이메일: ${invite.inviteEmail}'),
+                            const SizedBox(height: 6),
+                            Text('초대한 가족: ${invite.inviterName ?? '가족'}'),
+                            const SizedBox(height: 6),
+                            Text('$dateLabel: $dateText'),
+                            if (invite.inviteStatus == '대기') ...[
+                              const SizedBox(height: 18),
+                              SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton(
+                                  onPressed: acceptingInviteId != null
+                                      ? null
+                                      : () => cancelAction(invite),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: const Color(0xFF99522F),
+                                    side: const BorderSide(
+                                      color: Color(0xFFE8DFD7),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 15,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    acceptingInviteId == invite.inviteId
+                                        ? '처리 중…'
+                                        : '초대 취소',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _detail(IconData icon, String label, String value) => Padding(
-    padding: const EdgeInsets.only(top: 13),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Icon(icon, size: 19, color: const Color(0xFFB1765C)),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: const TextStyle(color: _muted, fontSize: 10)),
-              const SizedBox(height: 3),
-              Text(
-                value,
-                style: const TextStyle(
-                  color: Color(0xFF746A64),
-                  fontSize: 13,
-                  height: 1.5,
+  // ----- function -----
+
+  // 초대받은 공간과 초대한 가족을 표시한다.
+  Widget inviteCard(FamilyInvite invite) {
+    // 만료된 초대는 안내만 표시하고 수락·거절 버튼은 제공하지 않는다.
+    if (invite.inviteStatus == '만료') {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8F5F1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFE8DFD7)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEAE5DF),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text(
+                '만료',
+                style: TextStyle(
+                  color: Color(0xFF78716A),
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '${invite.recipientName} 님의 돌봄 공간',
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF756B60),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text('초대한 가족: ${invite.inviterName ?? '가족'}'),
+            const SizedBox(height: 6),
+            Text('받은 이메일: ${invite.inviteEmail}'),
+            const SizedBox(height: 18),
+            const Text(
+              '초대 유효기간이 지났어요.\n'
+              '참여하려면 주보호자에게 새 초대를 요청해 주세요.',
+              style: TextStyle(color: Color(0xFF78716A), height: 1.7),
+            ),
+          ],
         ),
-      ],
-    ),
-  );
+      );
+    }
+    final isAccepting = acceptingInviteId == invite.inviteId;
 
-  Widget inviteCard(FamilyInvite invite) {
-    final status = invite.inviteStatus;
-    final expired = status == '만료';
-    final busy = acceptingInviteId != null;
-    final processing = acceptingInviteId == invite.inviteId;
-    final date = invite.inviteAt;
     final dateText =
-        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-    final dateLabel = status == '발송대기' || status == '발송실패'
-        ? '초대 생성 시각'
-        : '보낸 시각';
-    final statusColor = switch (status) {
-      '수락' => const Color(0xFFE5EEDC),
-      '대기' => AppColors.peachSoft,
-      _ => const Color(0xFFF0ECE9),
-    };
-    final secondaryStyle = OutlinedButton.styleFrom(
-      foregroundColor: const Color(0xFF8F6B59),
-      backgroundColor: AppColors.surface,
-      side: const BorderSide(color: _line),
-      minimumSize: const Size.fromHeight(48),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-    );
+        '${invite.inviteAt.year}-'
+        '${invite.inviteAt.month.toString().padLeft(2, '0')}-'
+        '${invite.inviteAt.day.toString().padLeft(2, '0')}';
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: Border.all(color: _line),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF594135).withValues(alpha: 0.04),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE8DFD7)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: statusColor,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Text(
-                  status,
-                  style: TextStyle(
-                    color: status == '수락'
-                        ? AppColors.sageDark
-                        : const Color(0xFFA46F59),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFEBD9),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              invite.inviteStatus,
+              style: const TextStyle(
+                color: Color(0xFF875634),
+                fontWeight: FontWeight.bold,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  dateText,
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(color: _muted, fontSize: 10),
-                ),
-              ),
-            ],
+            ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
+
           Text(
             '${invite.recipientName} 님의 돌봄 공간',
-            style: const TextStyle(
-              color: _ink,
-              fontSize: 21,
-              fontWeight: FontWeight.w800,
-              height: 1.35,
-            ),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
+          const SizedBox(height: 14),
+
+          Text('초대한 가족: ${invite.inviterName ?? '가족'}'),
           const SizedBox(height: 6),
-          _detail(Icons.mail_outline, '초대받는 이메일', invite.inviteEmail),
-          _detail(
-            Icons.person_outline,
-            '초대를 보낸 사람',
-            invite.inviterName ?? '가족',
+          Text('받은 이메일: ${invite.inviteEmail}'),
+          const SizedBox(height: 6),
+          Text('초대 날짜: $dateText'),
+          const SizedBox(height: 18),
+
+          const Text(
+            '수락하면 이 공간의 일반 가족으로 참여합니다.',
+            style: TextStyle(color: Color(0xFF78716A)),
           ),
-          _detail(Icons.schedule, dateLabel, dateText),
-          if (expired && !showSent) ...[
-            const SizedBox(height: 18),
-            const Text(
-              '초대 유효기간이 지났어요.\n참여하려면 주보호자에게 새 초대를 요청해 주세요.',
-              style: TextStyle(color: _muted, fontSize: 12, height: 1.7),
-            ),
-          ],
-          if (status == '대기') ...[
-            if (!showSent) ...[
-              const SizedBox(height: 16),
-              const Text(
-                '수락하면 이 공간의 일반 가족으로 참여합니다.',
-                style: TextStyle(color: _muted, fontSize: 11, height: 1.5),
-              ),
-            ],
-            const Divider(color: Color(0xFFF2E8E2), height: 32),
-            if (showSent)
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: busy ? null : () => cancelAction(invite),
-                  style: secondaryStyle.copyWith(
-                    backgroundColor: const WidgetStatePropertyAll(
-                      Color(0xFFFFF9F5),
-                    ),
-                  ),
-                  child: Text(processing ? '처리 중…' : '초대 취소'),
+          const SizedBox(height: 18),
+
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: acceptingInviteId != null
+                  ? null
+                  : () => acceptAction(invite),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFF7AC82),
+                foregroundColor: const Color(0xFF553724),
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              )
-            else
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: busy ? null : () => rejectAction(invite),
-                      style: secondaryStyle,
-                      child: const Text('거절'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    flex: 2,
-                    child: FilledButton(
-                      onPressed: busy ? null : () => acceptAction(invite),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: _ink,
-                        minimumSize: const Size.fromHeight(48),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        textStyle: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      child: Text(processing ? '처리 중…' : '초대 수락'),
-                    ),
-                  ),
-                ],
               ),
-          ],
+              child: Text(isAccepting ? '처리 중…' : '초대 수락'),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: acceptingInviteId != null
+                  ? null
+                  : () => rejectAction(invite),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF78716A),
+                side: const BorderSide(color: Color(0xFFE8DFD7)),
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text('초대 거절'),
+            ),
+          ),
         ],
       ),
     );
