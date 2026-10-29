@@ -42,3 +42,31 @@ API 서버와 재수락 worker는 별도 프로세스다. 같은 DB를 보는 �
 - `schedule_reconfirm_unanswered_40_114`: published, published_at 2026-10-29 17:00:12 (UTC+9), 주보호자 수신자 1명.
 
 B의 자동 배정 해제 및 이번 긴급 만료 알림 발행 조건 수정의 실제 검수는 완료했다. A의 V2 알림함·배지·푸시 연결과 기기 수신 검수는 별도로 남는다. 위의 수정 후 발행 확인 필요 문구는 이 후속 기록으로 갱신한다.
+
+
+## 다음 업로드·PR에 추가 — 일정 참여 취소
+
+담당 가족이 본인의 미완료 일정 참여를 취소하는 버튼·확인창과 POST /schedules/{schedule_seq}/withdraw를 추가했다. 최신 일정/본인 배정/현재 참여/수락 시각을 검증한 뒤 배정을 해제하고 처리 이력을 기록한다. 주보호자용 schedule_withdrawn과 현재 전체 가족용 schedule_recruitment(reason=participation_withdrawal)를 준비·발행하며 pending 재시도를 연결했다.
+
+**실제 확인:** 서버 재시작 후 앱의 참여 취소 처리와 재모집 알림 표시를 사용자가 확인했다. 자동 검사 총 26개 및 Flutter 분석 통과. 다른 가족의 재수락 및 주보호자 전용 안내·Firestore 상세·기기 푸시는 전부 완료했다고 보고하지 않는다.
+
+**A 전달 필수:** 주보호자 참여 취소 전용 알림은 공통 앱에 아직 미연결이다. schedule_withdrawn V2 허용·전용 제목/아이콘·읽음/배지·기기 푸시를 연결한다. 재모집은 이미 앱 표시를 확인했으나 주보호자에게 schedule_declined로 오표시하지 않도록 reason 분기가 필요하다. 상세는 docs/schedule_withdrawal.md 참고.
+
+새 기능 업로드 대상:
+
+- python/features/schedules/withdraw_schedule.py (신규)
+- python/tests/test_schedule_withdrawal.py (신규)
+- docs/schedule_withdrawal.md (신규)
+- python/features/schedules/router.py
+- python/features/schedules/reconfirm_expiry_worker.py
+- lib/model/schedules/schedule.dart
+- lib/vm/schedules/schedule_vm.dart
+- lib/view/schedules/schedule_detail.dart
+- docs/schedule_notifications.md, docs/schedule_handoff_2026-10-29.md 및 V2 후속 안내 문서
+
+이 후속 기능은 앞선 525a3f6 커밋에 포함되지 않았고 아직 새 commit·push는 하지 않았다. 최종 업로드 때 git diff와 status 기준으로 포함 범위를 확인한다.
+
+
+### 참여 취소 시 24시간 미만 안내
+
+미래 일정의 시작까지 24시간 미만 남은 경우 참여 취소 확인창에 주보호자에게 연락해 새 담당 가족을 찾도록 요청하는 안내를 추가했다. 정확히 24시간 이상 또는 이미 시작한 일정에는 이 사전 안내를 표시하지 않는다. 앱 기기의 현재 시각과 표시된 일정의 시작 시각으로 판단한다. 안내 추가이며 취소 제한·승인·새 알림 수신자 정책을 도입하지 않는다. 서버는 계속 현재 배정과 최신 이력을 검증한다.

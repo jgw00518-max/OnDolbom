@@ -10,6 +10,7 @@ class Schedule {
     this.memo,
     this.creatorName,
     this.acceptedBy,
+    this.acceptedAt,
     this.acceptedName,
     this.historySeq,
     this.reconfirmRequired = false,
@@ -31,6 +32,7 @@ class Schedule {
   final String? memo;
   final String? creatorName;
   final String? acceptedBy;
+  final DateTime? acceptedAt;
   final String? acceptedName;
 
   // 최신 변경 이력 번호
@@ -86,6 +88,7 @@ class Schedule {
       memo: json['schedule_memo'] as String?,
       creatorName: json['creator_name'] as String?,
       acceptedBy: json['accepted_by'] as String?,
+      acceptedAt: DateTime.tryParse(json['accepted_at'] as String? ?? ''),
       acceptedName: json['accepted_name'] as String?,
       historySeq: (json['history_seq'] as num?)?.toInt(),
       reconfirmRequired:

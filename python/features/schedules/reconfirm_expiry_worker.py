@@ -1,3 +1,4 @@
+from python.features.schedules.withdraw_schedule import publish_withdrawal_notification
 """실행 중 1분마다 재수락 만료를 확인한다."""
 
 import logging
@@ -138,7 +139,11 @@ def retry_pending_notifications():
         notification_type = event.get("notification_type")
 
         try:
-            if notification_type in (
+            if event.get('reason') == 'participation_withdrawal':
+                if notification_type == 'schedule_recruitment' and not can_retry_recruitment(event):
+                    continue
+                published = publish_withdrawal_notification(snapshot.id)
+            elif notification_type in (
                 "schedule_reconfirm_expired",
                 "schedule_reconfirm_unanswered",
             ):

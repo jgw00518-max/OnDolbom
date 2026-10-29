@@ -1,7 +1,7 @@
 from python.features.schedules.content_review import get_content_change
 from python.features.schedules.reminders import try_remind
 from python.features.schedules.response_notifications import prepare_response_notification, publish_response_notification
-from datetime import date, time
+from datetime import date, time, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -1407,5 +1407,45 @@ def delete_schedule(
         "changed": changed,
         "notification_published": notification_published,
     }
+
+
+class ScheduleWithdrawal(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    expected_history_seq: int | None = Field(default=None, gt=0)
+    expected_accepted_at: datetime
+
+
+@router.post('/{schedule_seq}/withdraw')
+def withdraw_schedule_participation(payload: ScheduleWithdrawal,
+        schedule_seq: int = Path(gt=0), current_user_id: str = Depends(get_current_user_id)):
+    from python.features.schedules.withdraw_schedule import withdraw_schedule, publish_withdrawal_notification
+    conn = None
+    try:
+        conn = connect()
+        history_seq, identifiers = withdraw_schedule(conn, schedule_seq, current_user_id,
+            payload.expected_history_seq, payload.expected_accepted_at)
+        conn.commit()
+    except HTTPException:
+        if conn is not None:
+            conn.rollback()
+        raise
+    except Exception:
+        if conn is not None:
+            conn.rollback()
+        logger.exception('일정 참여 철회 실패')
+        raise HTTPException(503, '참여 철회를 처리하지 못했습니다. 다시 조회해 주세요.') from None
+    finally:
+        if conn is not None:
+            conn.close()
+    published = True
+    for identifier in identifiers:
+        try:
+            published = bool(publish_withdrawal_notification(identifier)) and published
+        except Exception:
+            published = False
+            logger.exception('참여 철회 완료, 알림 발행 재시도 필요')
+    return dict(result='OK', schedule_seq=schedule_seq, history_seq=history_seq,
+                notification_published=published)
+
 # 일정 관련 알림 API를 연결한다.
 router.include_router(schedule_notifications_router)

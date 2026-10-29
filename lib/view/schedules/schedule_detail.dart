@@ -25,6 +25,7 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
   bool isEditing = false;
   bool isResponding = false;
   bool isDeleting = false;
+  bool isWithdrawing = false;
   bool accepted = false;
   String? errorMessage;
   late final String? loginUid;
@@ -62,7 +63,8 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
   }
 
   // 처리 중에는 다른 버튼과 뒤로 가기를 막는다.
-  bool get isBusy => isAccepting || isEditing || isResponding || isDeleting;
+  bool get isBusy =>
+      isAccepting || isEditing || isResponding || isDeleting || isWithdrawing;
 
   @override
   void initState() {
@@ -394,6 +396,31 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                           ],
                         ),
                       ],
+                      if (item != null &&
+                          mine &&
+                          !item.reconfirmRequired &&
+                          item.state == '미완료' &&
+                          item.acceptedAt != null &&
+                          !schedules.isLoading &&
+                          !schedules.hasError) ...[
+                        const SizedBox(height: 24),
+                        Center(
+                          child: SizedBox(
+                            width: 156,
+                            child: FilledButton(
+                              onPressed: isBusy
+                                  ? null
+                                  : () => withdrawAction(item!),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFFB87568),
+                                foregroundColor: Colors.white,
+                                minimumSize: const Size(0, 48),
+                              ),
+                              child: Text(isWithdrawing ? '처리 중…' : '일정 참여 취소'),
+                            ),
+                          ),
+                        ),
+                      ],
                       if (canRespond) ...[
                         const SizedBox(height: 24),
                         Text(
@@ -583,6 +610,126 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
 
   String memoText(String? memo) {
     return memo == null || memo.isEmpty ? '등록된 메모가 없습니다.' : memo;
+  }
+
+  Future<void> withdrawAction(Schedule item) async {
+    if (isBusy) return;
+    // 취소 확인창을 여는 시점의 최신 표시 일정으로 남은 시간을 확인한다.
+    final timeParts = item.startTime.split(':');
+    final startsAt = DateTime(
+      item.date.year,
+      item.date.month,
+      item.date.day,
+      int.parse(timeParts[0]),
+      int.parse(timeParts[1]),
+    );
+    final remaining = startsAt.difference(DateTime.now());
+    final needsContact =
+        remaining > Duration.zero && remaining < const Duration(hours: 24);
+    setState(() => isWithdrawing = true);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.background,
+        surfaceTintColor: Colors.transparent,
+        title: const Text(
+          '일정 참여 취소',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '이 일정의 담당 참여를 취소할까요?\n'
+                '담당 배정이 해제되고,\n'
+                '가족에게 재모집 안내가 전달됩니다.',
+              ),
+              if (needsContact) ...[
+                const SizedBox(height: 18),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.peachSoft,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Text(
+                    '일정 시작까지 24시간이 채 남지 않았습니다.\n'
+                    '주보호자에게 알려 새로운 담당 가족을 찾도록\n'
+                    '알려주세요',
+                    style: TextStyle(
+                      color: Color(0xFF9B5C50),
+                      fontWeight: FontWeight.w600,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('취소'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFB87568),
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('참여 취소'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    if (confirmed != true) {
+      setState(() => isWithdrawing = false);
+      return;
+    }
+    try {
+      if (ref.read(firebaseAuthProvider).currentUser?.uid != loginUid ||
+          ref.read(familyRoomProvider).selectedRoomId !=
+              widget.query.familyRoomId) {
+        throw Exception('로그인 상태와 가족 공간을 다시 확인해 주세요.');
+      }
+      final published = await ref
+          .read(scheduleVmProvider)
+          .withdrawSchedule(item);
+      if (mounted) {
+        setState(() {
+          accepted = false;
+          errorMessage = published ? null : '참여 취소는 완료됐지만 알림 발행 확인이 필요합니다.';
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(
+          () => errorMessage = error.toString().replaceFirst('Exception: ', ''),
+        );
+      }
+    }
+    if (!mounted) return;
+    ref.invalidate(scheduleListProvider(widget.query));
+    try {
+      await ref.read(scheduleListProvider(widget.query).future);
+    } catch (_) {
+      /* 기존 조회 오류 안내를 사용한다. */
+    } finally {
+      if (mounted) setState(() => isWithdrawing = false);
+    }
   }
 
   // 기존 담당자가 재수락·거절하고 최신 일정으로 화면을 갱신한다.
