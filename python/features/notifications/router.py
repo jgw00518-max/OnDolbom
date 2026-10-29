@@ -36,8 +36,11 @@ def _visible(connection, user_id, event):
         row = cursor.fetchone()
     if row is None or str(row['created_at']) != event['schedule_created_at']:
         return None
+    receipt = store.inbox_state(event['schedule_seq'], user_id)
+    if receipt.get('deleted_at'):
+        return None
     return {**row, 'notification_id': event['schedule_seq'], 'created_at': event['created_at'],
-            'read_at': store.read_at(event['schedule_seq'], user_id)}
+            'read_at': receipt.get('read_at')}
 
 
 def _run(claims, action):

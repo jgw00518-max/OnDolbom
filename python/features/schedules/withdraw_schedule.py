@@ -25,12 +25,17 @@ def prepare_withdrawal_notifications(conn, schedule, history_seq, actor_id):
     payload = dict(schedule_seq=schedule['schedule_seq'], history_seq=history_seq,
         family_room_id=schedule['family_room_id'],
         schedule_created_at=str(schedule['created_at']), history_updated_at=str(updated_at),
-        former_assignee_id=actor_id, actor_name=actor_name,
+        former_assignee_id=actor_id, actor_id=actor_id, actor_name=actor_name,
         reason='participation_withdrawal')
-    # 재모집은 철회자를 포함한 현재 전체 가족에게 안내한다.
-    return [prepare_change(dict(payload, notification_type='schedule_withdrawn', recipient_ids=guardians)),
-            prepare_change(dict(payload, notification_type='schedule_recruitment',
-                                recipient_ids=list({m['user_id'] for m in members})))]
+    # 직접 참여를 취소한 사람에게는 본인의 작업 알림을 보내지 않는다.
+    # 주보호자 본인이 철회했거나 혼자 있는 공간이면 수신자 없는 이벤트도 만들지 않는다.
+    targets = [
+        ('schedule_withdrawn', [user for user in guardians if user != actor_id]),
+        ('schedule_recruitment', list({m['user_id'] for m in members if m['user_id'] != actor_id})),
+    ]
+    return [prepare_change(dict(payload, notification_type=kind, recipient_ids=recipients))
+            for kind, recipients in targets if recipients]
+
 
 
 def publish_withdrawal_notification(identifier):

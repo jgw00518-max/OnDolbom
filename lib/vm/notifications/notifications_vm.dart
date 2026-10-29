@@ -21,6 +21,7 @@ Future<Map<String, dynamic>> _request(
   Ref ref,
   String path, {
   bool post = false,
+  bool delete = false,
 }) async {
   final session = await ref.read(authUserProvider.future);
   if (session == null) throw const NotificationsError('다시 로그인해 주세요.');
@@ -43,10 +44,16 @@ Future<Map<String, dynamic>> _request(
       };
       final uri = Uri.parse('$base$path');
       final response =
-          await (post
+          await (delete
+                  ? client.delete(uri, headers: headers)
+                  : post
                   ? client.post(uri, headers: headers)
                   : client.get(uri, headers: headers))
-              .timeout(const Duration(seconds: 15));
+              .timeout(
+                Duration(
+                  seconds: delete || path.endsWith('/read-all') ? 60 : 15,
+                ),
+              );
       if (response.statusCode == 401 && attempt == 0) continue;
       if (response.statusCode != 200) {
         throw NotificationsError(switch (response.statusCode) {
@@ -153,6 +160,46 @@ class NotificationsVm extends AsyncNotifier<NotificationList> {
       }
     } finally {
       _loadingMore = false;
+    }
+  }
+
+  // 서버가 삭제를 확정한 뒤에만 목록을 바꾼다. 계정 변경·페이지 응답 역전은 무시한다.
+  Future<void> deleteNotifications({String? id}) async {
+    final generation = ++_generation;
+    await _request(
+      ref,
+      '/schedules/schedule-notifications${id == null ? '' : '/${Uri.encodeComponent(id)}'}',
+      delete: true,
+    );
+    if (!ref.mounted || generation != _generation) return;
+    final old = state.asData?.value;
+    if (old != null) {
+      state = AsyncData(
+        NotificationList(
+          id == null ? [] : old.items.where((item) => item.id != id).toList(),
+          id == null ? null : old.nextBeforeId,
+        ),
+      );
+    }
+    if (ref.exists(activityProvider)) {
+      unawaited(ref.read(activityProvider.notifier).refresh(force: true));
+    }
+  }
+
+  Future<void> markAllRead() async {
+    final generation = ++_generation;
+    await _request(
+      ref,
+      '/schedules/schedule-notifications/read-all',
+      post: true,
+    );
+    if (!ref.mounted || generation != _generation) return;
+    // 서버 재조회로 처리 도중 도착한 새 알림까지 임의로 읽음 처리하지 않는다.
+    final page = await _load();
+    if (!ref.mounted || generation != _generation) return;
+    state = AsyncData(page);
+    if (ref.exists(activityProvider)) {
+      unawaited(ref.read(activityProvider.notifier).refresh(force: true));
     }
   }
 

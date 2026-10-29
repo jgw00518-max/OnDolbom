@@ -271,7 +271,7 @@ class DeletedNotificationTests(TestCase):
         self.cursor.fetchone.return_value = saved_deletion()
         self.enterContext(patch.object(notices, 'connect', return_value=self.conn))
         self.enterContext(patch.object(notices, '_user_id', return_value='family'))
-        self.enterContext(patch.object(notices.store, 'read_at', return_value=None))
+        self.enterContext(patch.object(notices.store, 'inbox_state', return_value={}))
         self.event = deletion_event()
 
     def test_committed_deletion_is_listed_with_snapshot(self):

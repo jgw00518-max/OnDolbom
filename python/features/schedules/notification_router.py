@@ -94,6 +94,9 @@ def _visible_deleted(connection, user_id, event):
     if any(event.get(key) != value for key, value in expected.items()):
         return None
 
+    receipt = store.inbox_state(identifier, user_id)
+    if receipt.get('deleted_at'):
+        return None
     details = {key: saved[key] for key in (
         'schedule_seq', 'family_room_id', 'care_recipient_name',
         'schedule_name', 'schedule_date', 'start_time', 'end_time',
@@ -106,12 +109,16 @@ def _visible_deleted(connection, user_id, event):
         'deleted': True,
         'deleted_at': str(saved['deleted_at']),
         'created_at': event['created_at'],
-        'read_at': store.read_at(identifier, user_id),
+        'read_at': receipt.get('read_at'),
     }
 
 
 def _visible(connection, user_id, event):
     if not event or event.get('status') != 'published' or user_id not in event.get('recipient_ids', []):
+        return None
+    # 이전 버전에서 철회자까지 수신자로 저장한 문서도 앱과 푸시에서 동일하게 제외한다.
+    if (event.get('reason') == 'participation_withdrawal'
+            and event.get('former_assignee_id') == user_id):
         return None
     if event.get('notification_type') == 'schedule_reminder' and not reminder_is_current(connection, event):
         return None
@@ -139,29 +146,33 @@ def _visible(connection, user_id, event):
         return None
     kind = event.get('notification_type', 'schedule_created')
     # 한 재모집 이벤트라도 현재 역할에 맞는 안내를 반환한다.
-    if kind == 'schedule_recruitment' and event.get('request_history_seq') is None:
+    # 참여 철회·자동 만료 후 재모집은 재수락 거절과 구분한다.
+    if (kind == 'schedule_recruitment' and event.get('request_history_seq') is None
+            and event.get('reason') not in {'participation_withdrawal', 'response_timeout'}):
         with connection.cursor() as cursor:
             cursor.execute('SELECT is_representative FROM participate WHERE family_room_id=%s AND user_id=%s AND left_at IS NULL', (event['family_room_id'], user_id))
             member = cursor.fetchone()
         if member and member['is_representative'] == 1:
             kind = 'schedule_declined'
     identifier = event.get('notification_id', event['schedule_seq'])
+    receipt = store.inbox_state(identifier, user_id)
+    if receipt.get('deleted_at'):
+        return None
     return {**row, 'notification_id': str(identifier),
             'notification_type': kind,
             'actor_name': event.get('actor_name'),
             'history_seq': event.get('history_seq'),
             'created_at': event['created_at'],
-            'read_at': store.read_at(identifier, user_id)}
+            'read_at': receipt.get('read_at')}
 
 
 def visible_v2(connection, user_id, event):
     """V2 알림함과 배지가 동일한 유형·권한 기준을 사용한다."""
     kind = event.get('notification_type', 'schedule_created')
-    if kind not in {'schedule_created', 'schedule_changed', 'schedule_reconfirm', 'schedule_recruitment', 'schedule_accepted', 'schedule_reconfirmed', 'schedule_deleted', 'schedule_reminder'}:
+    if kind not in {'schedule_created', 'schedule_changed', 'schedule_reconfirm', 'schedule_recruitment', 'schedule_accepted', 'schedule_reconfirmed', 'schedule_deleted', 'schedule_reminder', 'schedule_withdrawn',
+                    'schedule_reconfirm_expired', 'schedule_reconfirm_unanswered', 'schedule_reconfirm_unverified'}:
         return None
-    # 자동 만료에 따른 재모집은 V2의 거절 후 재모집과 구분한다.
-    if kind == 'schedule_recruitment' and event.get('request_history_seq') is not None:
-        return None
+    # 자동 만료 재모집도 원래 recipient_ids와 현재 참여 권한으로 조회한다.
     return _visible(connection, user_id, event)
 
 
@@ -200,6 +211,63 @@ def _required(connection, user_id, identifier):
     if row is None:
         raise HTTPException(404, '알림이 없거나 현재 접근할 수 없습니다.')
     return row
+
+
+@router.post('/read-all')
+def read_all_notifications(claims: dict = Depends(require_firebase_user)):
+    def action(connection, user_id):
+        # 로드되지 않은 다음 페이지까지 검사하되, 현재 접근 가능한 미읽음만 처리한다.
+        identifiers, before = [], None
+        while True:
+            events = list_notification_events(user_id, before, 100)
+            for event in events:
+                row = visible_v2(connection, user_id, event)
+                if row is not None and not row.get('read_at'):
+                    identifiers.append(row['notification_id'])
+            if len(events) < 100:
+                break
+            before = str(events[-1]['notification_id'])
+        try:
+            store.mark_many_read(identifiers, user_id)
+        finally:
+            badge_cache.invalidate(claims['uid'])
+        return {'count': len(identifiers)}
+    return _run(claims, action)
+
+
+@router.delete('')
+def delete_all_notifications(claims: dict = Depends(require_firebase_user)):
+    def action(connection, user_id):
+        # 앱에서 아직 불러오지 않은 페이지도 포함한다. 삭제는 커서 원본을 지우지 않는다.
+        identifiers, before = [], None
+        while True:
+            events = list_notification_events(user_id, before, 100)
+            for event in events:
+                row = visible_v2(connection, user_id, event)
+                if row is not None:
+                    identifiers.append(row['notification_id'])
+            if len(events) < 100:
+                break
+            before = str(events[-1]['notification_id'])
+        try:
+            store.hide_many(identifiers, user_id)
+        finally:
+            # 여러 배치 중 일부만 저장된 실패에서도 배지가 예전 숫자로 남지 않게 한다.
+            badge_cache.invalidate(claims['uid'])
+        return {'count': len(identifiers)}
+    return _run(claims, action)
+
+
+@router.delete('/{notification_id}')
+def delete_notification(notification_id: str = Path(min_length=1, max_length=200, pattern=r"^[A-Za-z0-9_-]+$"),
+                        claims: dict = Depends(require_firebase_user)):
+    def action(connection, user_id):
+        # 수신자·현재 공간 참여·일정의 실제 식별 정보를 기존 상세와 똑같이 확인한다.
+        _required(connection, user_id, notification_id)
+        store.hide_many([notification_id], user_id)
+        badge_cache.invalidate(claims['uid'])
+        return {'deleted': True}
+    return _run(claims, action)
 
 
 @router.get('/{notification_id}/schedule')

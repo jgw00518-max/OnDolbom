@@ -56,3 +56,8 @@ python -m python.features.schedules.reminder_worker
 - 앱 검증: `flutter test test/chat_notifications_test.dart test/push_service_test.dart test/push_bridge_test.dart`
 - 실제 MySQL에서는 별도 연결의 임시 테이블로 미읽음 계산·단조 읽음 갱신·공간 검사·큐 임대/완료를 검증했다. 임시 데이터는 연결 종료 시 삭제되며 실제 메시지나 푸시는 생성하지 않았다.
 - 기기 확인: 같은 공간의 계정 A/B → B가 다른 화면/백그라운드일 때 A가 텍스트·사진 전송 → B의 푸시·채팅 숫자 증가 → 푸시 클릭 → 해당 채팅방 진입과 숫자 해제. A에게 자기 메시지 알림이 없는지, 읽은/삭제된/탈퇴한 대상에게 지연 푸시가 가지 않는지도 확인한다.
+
+
+## 통합 실행 안내
+
+기존 `python -m python.features.schedules.reminder_worker` 명령이 재수락 기한 만료·긴급 미확인 검사와 미발행 재시도까지 함께 시작한다. 별도 재수락 worker는 중복 실행하지 않는다. 작업별 주기·종료·전환 방법은 [통합 알림 worker](notification-worker.md)를 따른다.

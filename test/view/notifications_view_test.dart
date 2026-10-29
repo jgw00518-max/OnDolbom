@@ -102,6 +102,23 @@ class ActiveRooms extends NoRooms {
   );
 }
 
+class ManageNotifications extends OneNotification {
+  final deleted = <String?>[];
+  bool fail = false;
+  @override
+  Future<void> deleteNotifications({String? id}) async {
+    if (fail) throw const NotificationsError('삭제 실패');
+    deleted.add(id);
+    state = const AsyncData(NotificationList([], null));
+  }
+}
+
+class OtherSelectedRoom extends ActiveRooms {
+  @override
+  FamilyRoomState build() =>
+      super.build().copyWith(selectedRoomId: 'other-space');
+}
+
 void main() {
   testWidgets(
     'Notification opens existing detail with reconfirm controls for current assignee',
@@ -135,6 +152,73 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('다른 공간 알림은 확인창 없이 자동 선택 후 상세를 연다', (tester) async {
+    final container = ProviderContainer(
+      overrides: [
+        firebaseAuthProvider.overrideWithValue(NotificationTestAuth()),
+        authUserProvider.overrideWith(
+          (ref) => Stream.value(const AppUser(uid: 'verified')),
+        ),
+        userProfileProvider.overrideWith(
+          (ref) async => const UserProfile(userId: 'family'),
+        ),
+        notificationsVmProvider.overrideWith(LinkedNotification.new),
+        familyRoomProvider.overrideWith(OtherSelectedRoom.new),
+        scheduleListProvider(detailQuery).overrideWith((ref) async => [latest]),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: NotificationsView()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('대상자 · 돌봄'));
+    await tester.pumpAndSettle();
+    expect(container.read(familyRoomProvider).selectedRoomId, 'space');
+    expect(find.text('돌봄 공간 전환'), findsNothing);
+    expect(find.byType(ScheduleDetail), findsOneWidget);
+  });
+
+  for (final all in [false, true]) {
+    testWidgets('알림 ${all ? '전체' : '개별'} 삭제는 확인 후 적용하고 상세를 열지 않는다', (
+      tester,
+    ) async {
+      final vm = ManageNotifications();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authUserProvider.overrideWith(
+              (ref) => Stream.value(const AppUser(uid: 'test')),
+            ),
+            notificationsVmProvider.overrideWith(() => vm),
+          ],
+          child: const MaterialApp(home: NotificationsView()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final button = all ? find.text('전체 삭제') : find.byTooltip('알림 삭제');
+      await tester.ensureVisible(button);
+      await tester.pumpAndSettle();
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(vm.deleted, isEmpty);
+      expect(vm.opened, isNull);
+      await tester.tap(find.text('취소'));
+      await tester.pumpAndSettle();
+      expect(vm.deleted, isEmpty);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, '삭제'));
+      await tester.pumpAndSettle();
+      expect(vm.deleted, [all ? null : '1']);
+      expect(find.text('확인할 알림이 없습니다.'), findsOneWidget);
+      expect(vm.opened, isNull);
+    });
+  }
 
   testWidgets('Empty inbox shows explicit empty state', (tester) async {
     await tester.pumpWidget(
@@ -170,6 +254,13 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('대상자 · 돌봄'), findsOneWidget);
+      // 모두 읽음 버튼은 미읽음 알림이 있을 때 활성화된다.
+      expect(
+        tester
+            .widget<TextButton>(find.widgetWithText(TextButton, '모두 읽음'))
+            .onPressed,
+        isNotNull,
+      );
       expect(find.textContaining('읽지 않음'), findsOneWidget);
       await tester.tap(find.text('대상자 · 돌봄'));
       await tester.pumpAndSettle();

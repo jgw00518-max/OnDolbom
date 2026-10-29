@@ -118,3 +118,13 @@ API는 기본적으로 worker를 시작하지 않는다. 모든 팀원은 기존
 ## 채팅 푸시
 
 `chat_message`는 일반 일정 알림함 대신 해당 공간의 채팅방으로 이동한다. MySQL 읽음 상태·발송 대기 큐, 스키마 적용과 검증 방법은 [채팅 알림](chat-notifications.md)을 참고한다. 기존 worker에서 함께 처리한다.
+
+
+## 통합 실행 안내
+
+기존 `python -m python.features.schedules.reminder_worker` 명령이 재수락 기한 만료·긴급 미확인 검사와 미발행 재시도까지 함께 시작한다. 별도 재수락 worker는 중복 실행하지 않는다. 작업별 주기·종료·전환 방법은 [통합 알림 worker](notification-worker.md)를 따른다.
+
+
+## 자동 만료·긴급 미확인 푸시
+
+재수락 만료(`schedule_reconfirm_expired`), 주보호자 미응답 안내(`schedule_reconfirm_unanswered`), 자동 만료 재모집(`schedule_recruitment`), 긴급 미확인(`schedule_reconfirm_unverified`)을 FCM 허용 대상과 전용 문구에 추가했다. 원래 수신 대상·기기 계정·현재 공간 접근 검사를 유지하며 기존 알림함 이동을 재사용한다. 기존 published 알림은 재발송하지 않는다. [연동·검수 안내](notification-v2-integration.md#자동-처리-알림-수신표시푸시)를 따른다.

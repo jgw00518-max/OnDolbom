@@ -6,10 +6,14 @@ from time import monotonic, sleep
 
 from google.cloud.firestore_v1.base_query import FieldFilter
 
+from python.features.notifications.schedule_notifications import publish_schedule_notifications
+from python.features.schedules.response_notifications import retry_response_notification
 from python.database import connect
 from python.features.notifications.store import collection
 from python.features.schedules.change_notifications import (
     publish_reconfirm_expiry_notification,
+    publish_reconfirm_notification,
+    publish_schedule_change_notification,
     publish_recruitment_notification,
 )
 from python.features.schedules.reconfirm_expiry import process_reconfirm_expiry
@@ -126,7 +130,7 @@ def can_retry_recruitment(event):
         conn.close()
 
 
-# 아직 발행되지 않은 만료·재모집·삭제 알림을 재시도한다.
+# DB 커밋 후 발행에 실패한 알림을 기존 검증·발행 함수를 통해 복구한다.
 def retry_pending_notifications():
     snapshots = (
         collection()
@@ -139,7 +143,21 @@ def retry_pending_notifications():
         notification_type = event.get("notification_type")
 
         try:
-            if event.get('reason') == 'participation_withdrawal':
+            if notification_type in (None, 'schedule_created'):
+                # 기존 등록 문서는 notification_type이 없고 일정 번호를 문서 ID로 쓴다.
+                if snapshot.id != str(event.get('schedule_seq')):
+                    continue
+                published = publish_schedule_notifications(event['schedule_seq'])
+            elif notification_type in ('schedule_changed', 'schedule_reconfirm'):
+                if snapshot.id != f"{notification_type}_{event.get('schedule_seq')}_{event.get('history_seq')}":
+                    continue
+                publisher = (publish_schedule_change_notification
+                             if notification_type == 'schedule_changed'
+                             else publish_reconfirm_notification)
+                published = publisher(event['schedule_seq'], event['history_seq'])
+            elif notification_type in ('schedule_accepted', 'schedule_reconfirmed'):
+                published = retry_response_notification(snapshot.id)
+            elif event.get('reason') == 'participation_withdrawal':
                 if notification_type == 'schedule_recruitment' and not can_retry_recruitment(event):
                     continue
                 published = publish_withdrawal_notification(snapshot.id)

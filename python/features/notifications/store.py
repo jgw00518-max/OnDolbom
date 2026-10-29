@@ -7,14 +7,13 @@ from python.features.auth.firebase_auth import get_firebase_app
 
 
 PUSH_TYPES = frozenset({'schedule_created', 'schedule_changed', 'schedule_deleted', 'schedule_reconfirm',
-                        'schedule_accepted', 'schedule_reconfirmed', 'schedule_recruitment', 'schedule_reminder'})
+                        'schedule_accepted', 'schedule_reconfirmed', 'schedule_recruitment', 'schedule_reminder', 'schedule_withdrawn',
+                        'schedule_reconfirm_expired', 'schedule_reconfirm_unanswered', 'schedule_reconfirm_unverified'})
 
 
 def supports_push(event):
-    """자동 만료에 따른 재모집은 제외하고 거절 후 재모집만 연결한다."""
-    return (event.get('notification_type', 'schedule_created') in PUSH_TYPES
-            and not (event.get('notification_type') == 'schedule_recruitment'
-                     and event.get('request_history_seq') is not None))
+    """자동 만료·긴급 미확인도 저장된 수신자 그대로 푸시에 연결한다."""
+    return event.get('notification_type', 'schedule_created') in PUSH_TYPES
 
 
 def collection():
@@ -39,9 +38,14 @@ def list_events(user_id, before, limit):
         'schedule_seq', direction=firestore.Query.DESCENDING).limit(limit).stream(timeout=10)]
 
 
-def read_at(identifier, user_id):
+def inbox_state(identifier, user_id):
+    # 한 번의 문서 읽기로 읽음·개인 삭제 상태를 함께 가져온다.
     snapshot = _receipt(collection().document(str(identifier)), user_id).get(timeout=10)
-    return (snapshot.to_dict() or {}).get('read_at')
+    return snapshot.to_dict() or {}
+
+
+def read_at(identifier, user_id):
+    return inbox_state(identifier, user_id).get('read_at')
 
 
 def _mark_read(transaction, ref):
@@ -101,3 +105,28 @@ def _publish(transaction, ref, fingerprint):
 def publish(identifier, fingerprint):
     ref = collection().document(str(identifier))
     return firestore.transactional(_publish)(ref._client.transaction(), ref, fingerprint)
+
+
+def hide_many(identifiers, user_id):
+    """공용 알림·다른 가족의 읽음은 보존하고 본인 문서만 병합 갱신한다."""
+    identifiers = list(identifiers)
+    for offset in range(0, len(identifiers), 400):
+        target = collection()
+        batch = target._client.batch()
+        for identifier in identifiers[offset:offset + 400]:
+            batch.set(_receipt(target.document(str(identifier)), user_id),
+                      {'deleted_at': firestore.SERVER_TIMESTAMP}, merge=True)
+        batch.commit(timeout=10)
+
+
+def mark_many_read(identifiers, user_id):
+    """조회에서 확인한 미읽음 항목의 개인 수신 기록만 갱신한다."""
+    identifiers = list(identifiers)
+    for offset in range(0, len(identifiers), 400):
+        target = collection()
+        batch = target._client.batch()
+        for identifier in identifiers[offset:offset + 400]:
+            # 삭제 표시와 다른 가족의 읽음 기록은 그대로 둔다.
+            batch.set(_receipt(target.document(str(identifier)), user_id),
+                      {'read_at': firestore.SERVER_TIMESTAMP}, merge=True)
+        batch.commit(timeout=10)
