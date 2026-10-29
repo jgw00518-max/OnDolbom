@@ -76,6 +76,23 @@ Future<Map<String, dynamic>> _request(
   }
 }
 
+// 같은 이벤트가 응답·페이지에 겹쳐도 한 번만 표시한다. 내용이 같더라도
+// ID가 다른 실제 변경·재수락 알림은 합치지 않고 읽음 상태도 보존한다.
+List<ScheduleNotification> _uniqueNotifications(
+  Iterable<ScheduleNotification> items,
+) {
+  final byId = <String, ScheduleNotification>{};
+  for (final item in items) {
+    final previous = byId[item.id];
+    if (previous == null) {
+      byId[item.id] = item;
+    } else if (previous.readAt == null && item.readAt != null) {
+      byId[item.id] = previous.withReadAt(item.readAt);
+    }
+  }
+  return byId.values.toList();
+}
+
 class NotificationList {
   const NotificationList(this.items, this.nextBeforeId);
   final List<ScheduleNotification> items;
@@ -105,12 +122,11 @@ class NotificationsVm extends AsyncNotifier<NotificationList> {
       '/schedules/schedule-notifications?scope=v2${before == null ? '' : '&before_id=${Uri.encodeQueryComponent(before)}'}',
     );
     return NotificationList(
-      (body['results'] as List)
-          .map(
-            (item) =>
-                ScheduleNotification.fromJson(item as Map<String, dynamic>),
-          )
-          .toList(),
+      _uniqueNotifications(
+        (body['results'] as List).map(
+          (item) => ScheduleNotification.fromJson(item as Map<String, dynamic>),
+        ),
+      ),
       body['next_before_id']?.toString(),
     );
   }
@@ -125,10 +141,14 @@ class NotificationsVm extends AsyncNotifier<NotificationList> {
       final page = await _load(before: previous!.nextBeforeId);
       if (ref.mounted && generation == _generation) {
         state = AsyncData(
-          NotificationList([
-            ...previous.items,
-            ...page.items,
-          ], page.nextBeforeId),
+          NotificationList(
+            // 추가 조회 중 읽음 처리가 끝났다면 요청 전 목록으로 되돌리지 않는다.
+            _uniqueNotifications([
+              ...?state.asData?.value.items,
+              ...page.items,
+            ]),
+            page.nextBeforeId,
+          ),
         );
       }
     } finally {

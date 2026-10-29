@@ -496,12 +496,13 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('가족 공간 우측 상단 메뉴에서 내보내기 화면으로 이동한다', (tester) async {
+  testWidgets('공간 설정에서 내보내기 화면으로 이동한다', (tester) async {
     await mount(tester, home: true);
-    expect(find.text('메모·채팅 내보내기'), findsNothing);
-    await tester.tap(find.byTooltip('가족 공간 메뉴'));
+    expect(find.text('메모 및 채팅 내보내기'), findsNothing);
+    await tester.ensureVisible(find.text('공간 설정'));
+    await tester.tap(find.text('공간 설정'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('메모·채팅 내보내기'));
+    await tester.tap(find.text('메모 및 채팅 내보내기'));
     await tester.pumpAndSettle();
     expect(find.byType(ExportView), findsOneWidget);
     expect(find.byType(CheckboxListTile), findsNWidgets(2));

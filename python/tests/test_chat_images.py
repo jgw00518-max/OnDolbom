@@ -64,7 +64,7 @@ class ChatImageTests(unittest.TestCase):
         self.assertEqual(response.status_code, 201, response.text)
         self.assertEqual(response.json()['message']['author_name'], '김가족')
         self.assertFalse(response.json()['duplicate'])
-        member, duplicate, insert, result = self.cursor.execute.call_args_list
+        member, duplicate, insert, result, outbox = self.cursor.execute.call_args_list
         self.assertEqual(member.args[1], ('room-a', 'db-user'))
         self.assertIn('FOR UPDATE', member.args[0])
         self.assertIn('chat_image', insert.args[0])
@@ -75,6 +75,8 @@ class ChatImageTests(unittest.TestCase):
             self.assertEqual(dict(image.getexif()), {})
         self.assertNotIn('image_digest', response.json()['message'])
         self.assertEqual(result.args[1], (7, 'room-a', 'db-user'))
+        self.assertIn('INSERT INTO chat_push_outbox',outbox.args[0])
+        self.assertEqual(outbox.args[1],(7,'room-a','db-user'))
         self.broadcast.assert_awaited_once()
         self.db.rollback.assert_not_called()
         self.db.close.assert_called_once()

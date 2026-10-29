@@ -2,7 +2,7 @@
 
 ## 구현 범위
 
-목업의 시간별 그룹 목록과 약 추가 입력창을 참고했습니다.
+목업의 시간별 그룹 목록과 약 추가 전용 화면을 참고했습니다.
 색상을 별도로 지정하지 않고 `main.dart`의 `colorScheme`, `appBarTheme`,
 `cardTheme`와 Material 버튼 테마를 사용합니다. `main.dart`는 변경하지 않습니다.
 
@@ -41,7 +41,7 @@ VM은 토큰 조회 후 요청 전에도 작성 권한을 재검사하고 서버
 | `lib/model/medications/medication.dart` | JSON 모델, 날짜와 용량 표시·검증 |
 | `lib/vm/medications/medication_vm.dart` | Riverpod 상태, 조회·작성·수정 API와 주보호자 UI 권한·페이지 처리 |
 | `lib/view/medications/medication_list_view.dart` | 날짜·시간별 목록과 상세 |
-| `lib/view/medications/medication_form_view.dart` | 약 추가 입력창 |
+| `lib/view/medications/medication_form_view.dart` | 약 추가 전용 화면 |
 | `lib/view/medications/medication_edit_view.dart` | 기존 값 입력, 날짜 변경, 검증·취소 확인·실패 시 입력 보존 |
 | `lib/vm/family_context.dart` | 두 기능이 공유하는 선택 공간·사용자·서버 주소와 인증 토큰 연결 지점 |
 | `lib/view/home.dart` | 메모·투약일지 진입 메뉴 |
@@ -265,3 +265,7 @@ flutter test test/medication_test.dart test/medication_edit_test.dart
 최초 체크 사용자의 이름·시간 표시, 중복 요청·오류 재시도, 계정 변경,
 페이지 추가 조회와 체크의 경합을 검증합니다. 과거 확인자 정보가 없는 기록은
 사용자 ID 대신 `확인자 정보 없음`으로 표시하고 체크 시간은 유지합니다.
+
+## 약 추가 화면 구성
+
+약 추가는 다이얼로그 대신 별도 페이지로 열린다. 시작일 카드에서 날짜를 선택하고 기간·복약 시간·약 정보를 입력한다. 저장 후 목록은 선택한 시작일로 이동한다. 기존 기간 옵션(2·3·5·7·30·90일), 직접 입력 1~365일, 용량·단위 검증과 권한 검사는 유지한다. 별도 저장 필드가 없는 복약 메모는 추가하지 않는다. 작성 중 취소 확인과 저장 실패 시 입력 보존도 유지한다.

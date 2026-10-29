@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:ondolbom/vm/chats/chat_notifications_vm.dart';
 import 'package:ondolbom/view/widgets/family_room_label.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'dart:typed_data';
@@ -25,15 +27,96 @@ class _ChatViewState extends ConsumerState<ChatView>
   Uint8List? _image;
   bool _picking = false;
   bool _actionsOpen = false;
+  Timer? _readTimer;
+  bool _reading = false;
+  bool _readFailed = false;
+  int _readThrough = -1;
+  ModalRoute<dynamic>? _route;
+  late ChatVisibility _visibility;
+
+  bool _isVisible(String roomId, int seq) {
+    final selected = _selected;
+    if (!mounted ||
+        selected == null ||
+        selected.familyRoomId != roomId ||
+        _route?.isCurrent != true ||
+        (WidgetsBinding.instance.lifecycleState != null &&
+            WidgetsBinding.instance.lifecycleState !=
+                AppLifecycleState.resumed) ||
+        ref.read(familyContextProvider) != selected) {
+      return false;
+    }
+    if (seq == 0) return true;
+    final state = ref.read(chatVmProvider(selected));
+    return !state.loadingHistory &&
+        state.messages.any((message) => message.seq >= seq);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _route = ModalRoute.of(context);
+    final selected = _selected;
+    if (selected != null) {
+      _scheduleRead(ref.read(chatVmProvider(selected)), selected);
+    }
+  }
+
+  // 실제 열린 채팅 화면에 반영된 번호까지만 300ms 단위로 묶어 읽음 처리한다.
+  void _scheduleRead(ChatState state, FamilyContext selected) {
+    if (_readFailed ||
+        state.loadingHistory ||
+        state.status == ChatStatus.blocked ||
+        !_isVisible(selected.familyRoomId, 0)) {
+      return;
+    }
+    final seq = state.messages.fold<int>(
+      0,
+      (value, item) => item.seq > value ? item.seq : value,
+    );
+    if (seq <= _readThrough || _reading) return;
+    _readTimer?.cancel();
+    _readTimer = Timer(const Duration(milliseconds: 300), () async {
+      if (!mounted ||
+          _selected != selected ||
+          !_isVisible(selected.familyRoomId, 0)) {
+        return;
+      }
+      _reading = true;
+      try {
+        final read = await ref
+            .read(chatNotificationsApiProvider)
+            .markRead(selected.familyRoomId, seq);
+        if (!mounted || _selected != selected) return;
+        _readThrough = read > _readThrough ? read : _readThrough;
+        if (_readFailed) setState(() => _readFailed = false);
+        ref.invalidate(chatUnreadProvider);
+      } catch (_) {
+        if (mounted && _selected == selected) {
+          setState(() => _readFailed = true);
+        }
+      } finally {
+        _reading = false;
+        if (mounted && _selected != null && !_readFailed) {
+          final current = _selected!;
+          _scheduleRead(ref.read(chatVmProvider(current)), current);
+        }
+      }
+    });
+  }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _visibility = ref.read(chatVisibilityProvider);
+    _visibility.register(this, _isVisible);
   }
 
   @override
   void dispose() {
+    _readTimer?.cancel();
+    _visibility.unregister(this);
     WidgetsBinding.instance.removeObserver(this);
     _input.dispose();
     _scroll.dispose();
@@ -52,6 +135,7 @@ class _ChatViewState extends ConsumerState<ChatView>
     final vm = ref.read(chatVmProvider(selected).notifier);
     if (lifecycle == AppLifecycleState.resumed) {
       vm.reconnect();
+      _scheduleRead(ref.read(chatVmProvider(selected)), selected);
     } else if (lifecycle == AppLifecycleState.paused ||
         lifecycle == AppLifecycleState.detached) {
       vm.pause();
@@ -195,6 +279,9 @@ class _ChatViewState extends ConsumerState<ChatView>
     if (_selected != selected) {
       _input.clear();
       _image = null;
+      _readTimer?.cancel();
+      _readThrough = -1;
+      _readFailed = false;
       _selected = selected;
     }
     if (selected.userId.isEmpty || selected.familyRoomId.isEmpty) {
@@ -209,6 +296,10 @@ class _ChatViewState extends ConsumerState<ChatView>
     }
     final provider = chatVmProvider(selected);
     final state = ref.watch(provider);
+    ref.listen(provider, (_, next) => _scheduleRead(next, selected));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _selected == selected) _scheduleRead(state, selected);
+    });
     final vm = ref.read(provider.notifier);
     final colors = Theme.of(context).colorScheme;
     final label = switch (state.status) {
@@ -266,6 +357,15 @@ class _ChatViewState extends ConsumerState<ChatView>
                         ),
                       ],
                     ),
+                  ),
+                if (_readFailed)
+                  TextButton.icon(
+                    onPressed: () {
+                      setState(() => _readFailed = false);
+                      _scheduleRead(state, selected);
+                    },
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text('읽음 처리 실패 · 다시 시도'),
                   ),
                 const Divider(height: 1),
                 Expanded(

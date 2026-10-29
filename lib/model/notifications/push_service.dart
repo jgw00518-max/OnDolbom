@@ -142,34 +142,30 @@ class AndroidPushPlatform implements PushPlatform {
   @override
   Future<void> clear() => _local.cancelAll();
   @override
-  Future<void> show(PushEvent event) => _local.show(
-    int.parse(
-          sha256
-              .convert(
-                utf8.encode(
-                  event.data['notification_id']?.toString() ??
-                      event.title ??
-                      'push',
-                ),
-              )
-              .toString()
-              .substring(0, 8),
-          radix: 16,
-        ) &
-        0x7fffffff,
-    event.title ?? '온돌봄',
-    event.body ?? '새 소식이 있습니다. 앱에서 확인해 주세요.',
-    const NotificationDetails(
-      android: AndroidNotificationDetails(
-        'ondolbom_updates',
-        '온돌봄 소식',
-        icon: 'ic_stat_notification',
-        importance: Importance.high,
-        priority: Priority.high,
+  Future<void> show(PushEvent event) {
+    final chat = event.data['type'] == 'chat_message';
+    final group = chat
+        ? 'chat_${event.data['family_room_id']}'
+        : event.data['notification_id']?.toString() ?? event.title ?? 'push';
+    final tag = sha256.convert(utf8.encode(group)).toString();
+    // 같은 공간의 채팅은 하나의 기기 알림으로 갱신한다. 숫자는 서버의 미읽음 수를 사용한다.
+    return _local.show(
+      int.parse(tag.substring(0, 8), radix: 16) & 0x7fffffff,
+      event.title ?? '온돌봄',
+      event.body ?? '새 소식이 있습니다. 앱에서 확인해 주세요.',
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          'ondolbom_updates',
+          '온돌봄 소식',
+          icon: 'ic_stat_notification',
+          importance: Importance.high,
+          priority: Priority.high,
+          tag: tag,
+        ),
       ),
-    ),
-    payload: jsonEncode(event.data),
-  );
+      payload: jsonEncode(event.data),
+    );
+  }
 }
 
 class PushPreferences {
@@ -216,7 +212,8 @@ class PushService {
   final http.Client client;
   final status = ValueNotifier<String>('푸시 연결 준비 중');
   final taps = StreamController<PushEvent>.broadcast();
-  final received = StreamController<void>.broadcast();
+  final received = StreamController<PushEvent>.broadcast();
+  bool Function(PushEvent)? suppressForeground;
   Future<void> _queue = Future.value();
   Future<void>? _initializing;
   String? _sessionKey;
@@ -239,9 +236,16 @@ class PushService {
             (event.data['user_uid'] != null && event.data['user_uid'] != uid)) {
           return;
         }
-        received.add(null);
+        received.add(event);
         try {
-          await platform.show(event);
+          if (event.data['type'] == 'chat_message') {
+            // 웹소켓 메시지가 화면에 반영될 짧은 여유 후 실제 표시 여부를 확인한다.
+            await Future<void>.delayed(const Duration(milliseconds: 300));
+          }
+          if (auth.currentUser?.uid == uid &&
+              suppressForeground?.call(event) != true) {
+            await platform.show(event);
+          }
         } catch (_) {
           status.value = '기기 알림 표시 설정을 확인해 주세요.';
         }

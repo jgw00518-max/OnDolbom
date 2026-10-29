@@ -23,6 +23,15 @@ class NotificationTests(TestCase):
         app.dependency_overrides.clear()
         self.client.close()
 
+    def test_urgent_registration_skips_created_event(self):
+        self.cursor.fetchone.return_value = dict(
+            family_room_id='space', created_at='stamp', created_by='guardian',
+            within_reminder_window=1)
+        with patch(BASE + 'store.prepare') as prepare:
+            self.assertFalse(prepare_schedule_notifications(self.connection, 7))
+        prepare.assert_not_called()
+        self.cursor.fetchall.assert_not_called()
+
     def test_missing_token_rejected_before_db(self):
         app.dependency_overrides.clear()
         with patch(BASE + 'router.connect') as connect:

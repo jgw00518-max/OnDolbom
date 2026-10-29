@@ -114,3 +114,7 @@ flutter test test/push_service_test.dart test/push_bridge_test.dart
 ## 개발 worker 담당자
 
 API는 기본적으로 worker를 시작하지 않는다. 모든 팀원은 기존 uvicorn 명령을 사용하고, 알림 담당자만 별도 터미널에서 `python -m python.features.schedules.reminder_worker`를 실행한다. 동일 공유 DB의 모든 기기에 발송하며 API와 별도로 종료·재시작한다. 이전 `ONDOLBOM_REMINDER_WORKER=1` 설정이 남아 있다면 실행 터미널에서 제거해야 한다.
+
+## 채팅 푸시
+
+`chat_message`는 일반 일정 알림함 대신 해당 공간의 채팅방으로 이동한다. MySQL 읽음 상태·발송 대기 큐, 스키마 적용과 검증 방법은 [채팅 알림](chat-notifications.md)을 참고한다. 기존 worker에서 함께 처리한다.

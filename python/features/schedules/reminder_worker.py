@@ -4,6 +4,7 @@ import logging
 from time import monotonic, sleep
 from python.features.schedules.reminders import check_reminders
 from python.features.notifications.push import check_push_notifications
+from python.features.chats.push_outbox import check_chat_pushes
 
 
 def next_push_interval(current, pending):
@@ -18,6 +19,7 @@ def main():
     logging.basicConfig(level=logging.INFO)
     next_reminder_check = 0
     next_push_check = 0
+    next_chat_check = 0
     push_interval = 5
     try:
         while True:
@@ -38,10 +40,17 @@ def main():
                     logging.error('푸시 큐 조회 실패; 15초 후 재시도')
                     push_interval = 15
                 next_push_check = monotonic() + push_interval
+            # Firestore 일정 큐 장애와 별개로 MySQL 채팅 큐를 검사한다.
+            if monotonic() >= next_chat_check:
+                try:
+                    check_chat_pushes()
+                except Exception:
+                    logging.warning('채팅 푸시 큐 검사 실패; 다음 주기에 재시도')
+                next_chat_check = monotonic() + 5
             if args.once:
                 return
             # 재알림의 60초 주기는 푸시 큐의 대기 간격과 별도로 유지한다.
-            sleep(max(0, min(next_push_check, next_reminder_check) - monotonic()))
+            sleep(max(0, min(next_push_check, next_reminder_check, next_chat_check) - monotonic()))
     except KeyboardInterrupt:
         logging.info('72시간 재알림 확인 종료')
 

@@ -1,5 +1,6 @@
 import logging
-from datetime import date
+from datetime import date, timedelta
+from uuid import uuid4
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
@@ -49,6 +50,17 @@ class MedicationCreate(BaseModel):
     medication_time: str = Field(min_length=1, max_length=20)
     dosage_unit: str = Field(min_length=1, max_length=20)
     dosage: Decimal = Field(gt=0, max_digits=10, decimal_places=3)
+
+    # 시작일을 포함해 날짜별로 생성하며 과도한 행 생성을 제한한다.
+    duration_days: int = Field(default=1, ge=1, le=365, strict=True)
+
+    @model_validator(mode="after")
+    def validate_period(self):
+        try:
+            self.medication_date + timedelta(days=self.duration_days - 1)
+        except OverflowError:
+            raise ValueError("복용 기간의 종료일을 확인해 주세요.") from None
+        return self
 
 
 class MedicationUpdate(BaseModel):
@@ -251,18 +263,32 @@ def insert_medication(
                     detail="현재 공간의 주보호자만 투약일지를 작성할 수 있습니다.",
                 )
 
-            cursor.execute(
-                """
-                INSERT INTO medication_log
+            if medication.duration_days == 1:
+                cursor.execute(
+                    """
+                    INSERT INTO medication_log
+                        (family_room_id, user_id, medication_info, medication_date,
+                         medication_time, dosage_unit, dosage)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (medication.family_room_id, current_user_id,
+                     medication.medication_info, medication.medication_date,
+                     medication.medication_time, medication.dosage_unit, medication.dosage),
+                )
+                medication_log_seq = cursor.lastrowid
+            else:
+                # 각 날짜의 체크는 독립적으로 저장하고 같은 추가 요청만 묶음 ID를 공유한다.
+                series_id = uuid4().hex
+                cursor.executemany("""INSERT INTO medication_log
                     (family_room_id, user_id, medication_info, medication_date,
-                     medication_time, dosage_unit, dosage)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """,
-                (medication.family_room_id, current_user_id,
-                 medication.medication_info, medication.medication_date,
-                 medication.medication_time, medication.dosage_unit, medication.dosage),
-            )
-            medication_log_seq = cursor.lastrowid
+                     medication_time, dosage_unit, dosage, medication_series_id)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""", [
+                    (medication.family_room_id, current_user_id, medication.medication_info,
+                     medication.medication_date + timedelta(days=offset), medication.medication_time,
+                     medication.dosage_unit, medication.dosage, series_id)
+                    for offset in range(medication.duration_days)])
+                medication_log_seq = cursor.lastrowid
+
         conn.commit()
         return {"result": "OK", "medication_log_seq": medication_log_seq}
 
@@ -277,6 +303,52 @@ def insert_medication(
         raise HTTPException(
             status_code=500, detail="투약일지를 저장하지 못했습니다.",
         ) from None
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+@router.delete("/delete/{medication_log_seq}")
+def delete_medication_period(data: MedicationConfirm, medication_log_seq: int = Path(gt=0),
+                             current_user_id: str = Depends(get_current_user_id)):
+    """현재 주보호자가 같은 약 묶음의 오늘·미래 항목을 삭제 처리한다."""
+    conn = None
+    try:
+        conn = connect()
+        with conn.cursor() as cursor:
+            # 작성·체크와 동일하게 공간 참여를 먼저 잠가 역할 변경과 직렬화한다.
+            cursor.execute("""SELECT p.participate_seq FROM participate p
+                JOIN family_room f ON f.family_room_id=p.family_room_id
+                JOIN `user` u ON u.user_id=p.user_id
+                WHERE p.family_room_id=%s AND p.user_id=%s AND p.is_representative=1
+                AND p.is_active=1 AND p.left_at IS NULL AND f.family_room_deleted_at IS NULL
+                AND u.withdrawn_at IS NULL LIMIT 1 FOR UPDATE""", (data.family_room_id, current_user_id))
+            if cursor.fetchone() is None:
+                raise HTTPException(403, "현재 공간의 주보호자만 약을 삭제할 수 있습니다.")
+            cursor.execute("""SELECT medication_series_id FROM medication_log
+                WHERE medication_log_seq=%s AND family_room_id=%s
+                AND record_deleted_at IS NULL FOR UPDATE""", (medication_log_seq, data.family_room_id))
+            item = cursor.fetchone()
+            if item is None:
+                raise HTTPException(404, "투약 정보를 찾을 수 없습니다.")
+            # 약 이름·작성 시각으로 추측하지 않아 같은 이름으로 별도 등록한 약을 보호한다.
+            series = item['medication_series_id']
+            where = 'medication_series_id=%s' if series else 'medication_log_seq=%s'
+            cursor.execute(f"""UPDATE medication_log SET record_deleted_at=CURRENT_TIMESTAMP,
+                record_updated_at=CURRENT_TIMESTAMP WHERE family_room_id=%s AND {where}
+                AND medication_date>=CURRENT_DATE AND record_deleted_at IS NULL""",
+                (data.family_room_id, series if series else medication_log_seq))
+            deleted_count = cursor.rowcount
+        conn.commit()
+        return {'result': 'OK', 'deleted_count': deleted_count}
+    except HTTPException:
+        if conn is not None:
+            conn.rollback()
+        raise
+    except (pymysql.MySQLError, ValueError):
+        if conn is not None:
+            conn.rollback()
+        raise HTTPException(503, "약을 삭제하지 못했습니다. 다시 시도해 주세요.") from None
     finally:
         if conn is not None:
             conn.close()

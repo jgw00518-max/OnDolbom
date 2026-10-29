@@ -348,7 +348,7 @@ class _ReceivedInvitesState extends ConsumerState<ReceivedInvites> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: expired && !showSent ? AppColors.peachSoft : AppColors.surface,
         border: Border.all(color: _line),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
@@ -412,6 +412,32 @@ class _ReceivedInvitesState extends ConsumerState<ReceivedInvites> {
             invite.inviterName ?? '가족',
           ),
           _detail(Icons.schedule, dateLabel, dateText),
+          if (invite.expiresAt != null)
+            _detail(
+              Icons.event_busy_outlined,
+              '유효기간',
+              '${invite.expiresAt!.year}-${invite.expiresAt!.month.toString().padLeft(2, '0')}-${invite.expiresAt!.day.toString().padLeft(2, '0')} ${invite.expiresAt!.hour.toString().padLeft(2, '0')}:${invite.expiresAt!.minute.toString().padLeft(2, '0')}까지 (7일)',
+            ),
+          // 받은 만료 초대에는 처리 버튼을 두지 않고, 발신자에게만 재요청을 제공한다.
+          if (expired && showSent && invite.canResend) ...[
+            const Divider(color: _line, height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: busy ? null : () => resendAction(invite),
+                icon: const Icon(Icons.forward_to_inbox_outlined, size: 19),
+                label: Text(processing ? '발송 중…' : '재요청'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: _ink,
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+            ),
+          ],
           if (expired && !showSent) ...[
             const SizedBox(height: 18),
             const Text(
@@ -477,6 +503,41 @@ class _ReceivedInvitesState extends ConsumerState<ReceivedInvites> {
         ],
       ),
     );
+  }
+
+  // 발송 중 다른 초대 작업을 막고, 새 초대와 만료 이력을 다시 조회한다.
+  Future<void> resendAction(FamilyInvite invite) async {
+    if (acceptingInviteId != null) return;
+    setState(() {
+      acceptingInviteId = invite.inviteId;
+      errorMessage = null;
+    });
+    try {
+      final sent = await ref
+          .read(inviteVmProvider)
+          .resendInvite(invite.inviteId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            sent
+                ? '새 초대장을 이메일로 보냈습니다. 발송 후 7일 동안 유효합니다.'
+                : '새 초대는 생성했지만 이메일 발송에 실패했습니다. 메일 설정을 확인해 주세요.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(
+        () => errorMessage = error.toString().replaceFirst('Exception: ', ''),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => acceptingInviteId = null);
+        ref.invalidate(sentInvitesProvider);
+        ref.invalidate(receivedInvitesProvider);
+      }
+    }
   }
 
   // 초대를 수락하고 이전 화면에 성공 여부를 전달한다.

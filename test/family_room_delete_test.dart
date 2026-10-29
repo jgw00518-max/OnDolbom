@@ -240,7 +240,10 @@ void main() {
   }
 
   Future<void> openDialog(WidgetTester tester) async {
-    await tester.tap(find.byTooltip('가족 공간 메뉴'));
+    await tester.ensureVisible(find.text('공간 설정'));
+    await tester.tap(find.text('공간 설정'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('가족 공간 삭제'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('가족 공간 삭제'));
     await tester.pumpAndSettle();
@@ -252,9 +255,10 @@ void main() {
       MockClient((_) async => deletedResponse()),
       guardian: false,
     );
-    await tester.tap(find.byTooltip('가족 공간 메뉴'));
+    await tester.ensureVisible(find.text('공간 설정'));
+    await tester.tap(find.text('공간 설정'));
     await tester.pumpAndSettle();
-    expect(find.text('메모·채팅 내보내기'), findsOneWidget);
+    expect(find.text('메모 및 채팅 내보내기'), findsOneWidget);
     expect(find.text('가족 공간 삭제'), findsNothing);
   });
 

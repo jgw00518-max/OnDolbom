@@ -292,7 +292,7 @@ def create_schedule(
             schedule_seq = cursor.lastrowid
 
         # A의 함수: 현재 전체 참여 가족의 알림을 준비한다.
-        prepare_schedule_notifications(conn, schedule_seq)
+        registration_notification_prepared = prepare_schedule_notifications(conn, schedule_seq)
 
         # 일정 저장과 알림 준비가 성공하면 확정한다.
         conn.commit()
@@ -321,9 +321,11 @@ def create_schedule(
     notification_published = False
 
     try:
-        notification_published = bool(
-            publish_schedule_notifications(schedule_seq)
-        )
+        # 72시간 이내 등록은 일반 등록 이벤트를 생략하고 아래 재알림만 발행한다.
+        if registration_notification_prepared is not False:
+            notification_published = bool(
+                publish_schedule_notifications(schedule_seq)
+            )
 
     except Exception:
         # 일정은 이미 저장되었으므로 등록 실패로 응답하지 않는다.

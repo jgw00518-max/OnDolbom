@@ -198,6 +198,27 @@ class InviteVm {
     return body['email_sent'] == true;
   } // build
 
+  // 만료된 원본 ID로 요청하며 서버가 새 초대 ID와 7일 유효기간을 부여한다.
+  Future<bool> resendInvite(String inviteId) async {
+    final user = ref.read(firebaseAuthProvider).currentUser;
+    if (user == null) throw Exception('로그인이 필요합니다.');
+    final uid = user.uid;
+    final token = await getLoginToken(uid);
+    final response = await ref
+        .read(inviteHttpClientProvider)
+        .post(
+          Uri.parse('$baseUrl/invites/${Uri.encodeComponent(inviteId)}/resend'),
+          headers: {'Authorization': 'Bearer $token'},
+        )
+        .timeout(const Duration(seconds: 45));
+    checkLoginUser(uid);
+    if (response.statusCode != 201) {
+      throw Exception(getErrorMessage(response, '초대를 재요청하지 못했습니다.'));
+    }
+    final body = jsonDecode(utf8.decode(response.bodyBytes));
+    return body['email_sent'] == true;
+  }
+
   // 본인에게 온 초대를 거절한다.
   Future<void> rejectInvite(String inviteId) async {
     final user = ref.read(firebaseAuthProvider).currentUser;
