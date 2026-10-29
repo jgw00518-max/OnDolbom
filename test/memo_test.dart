@@ -149,7 +149,7 @@ void main() {
 
     await tester.tap(find.byTooltip('이전 화면'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('메모 쓰기'));
+    await tester.tap(find.byTooltip('메모 쓰기'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('메모 등록'));
     await tester.pumpAndSettle();
@@ -178,7 +178,7 @@ void main() {
         return result.future;
       }),
     );
-    await tester.tap(find.text('메모 쓰기'));
+    await tester.tap(find.byTooltip('메모 쓰기'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField), '저장할 내용');
     await tester.tap(find.text('메모 등록'));
@@ -218,7 +218,7 @@ void main() {
     await mount(tester, MockClient((_) async => listResponse([])));
     tester.view.physicalSize = const Size(320, 640);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('메모 쓰기'));
+    await tester.tap(find.byTooltip('메모 쓰기'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField), '작성 중인 내용');
     FocusManager.instance.primaryFocus?.unfocus();

@@ -88,10 +88,10 @@ class _FamilyRoomCreateState extends ConsumerState<FamilyRoomCreate> {
             ),
             SizedBox(height: 3),
             Text(
-              '가족 공간 만들기',
+              '돌봄 공간 만들기',
               style: TextStyle(
                 color: AppColors.textPrimary,
-                fontSize: 20,
+                fontSize: 24,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -166,10 +166,9 @@ class _FamilyRoomCreateState extends ConsumerState<FamilyRoomCreate> {
             controller: nameController,
             enabled: !state.isLoading,
             maxLength: 30,
-            decoration: inputDecoration(context).copyWith(
-              counterText: '',
-              hintText: '이름을 입력해 주세요',
-            ),
+            decoration: inputDecoration(
+              context,
+            ).copyWith(counterText: '', hintText: '이름을 입력해 주세요'),
           ),
           const SizedBox(height: 24),
 

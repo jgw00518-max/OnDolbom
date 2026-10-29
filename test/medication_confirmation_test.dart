@@ -46,7 +46,7 @@ void main() {
         return fixture.response([fixture.medicationJson(42, '체크할 약')]);
       }),
     );
-    expect(find.text('약 추가'), findsNothing);
+    expect(find.byTooltip('약 추가'), findsNothing);
     expect(find.text('0/1 완료'), findsOneWidget);
     await tester.tap(find.byTooltip('복약 완료 체크'));
     await tester.pumpAndSettle();

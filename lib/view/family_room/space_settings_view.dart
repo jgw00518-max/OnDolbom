@@ -185,7 +185,7 @@ class SpaceSettingsView extends ConsumerWidget {
             if (guardian)
               _action(
                 context,
-                '가족 공간 삭제',
+                '돌봄 공간 삭제',
                 '공간을 삭제 처리하고 가족의 접근을 종료해요',
                 Icons.delete_outline,
                 AppColors.peachSoft,

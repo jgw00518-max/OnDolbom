@@ -90,7 +90,7 @@ def _membership(cursor, room_id, user_id, *, lock=False):
         sql += ' FOR UPDATE'
     cursor.execute(sql, (room_id, user_id))
     if cursor.fetchone() is None:
-        raise HTTPException(403, '현재 참여 중인 가족 공간의 채팅만 이용할 수 있습니다.')
+        raise HTTPException(403, '현재 참여 중인 돌봄 공간의 채팅만 이용할 수 있습니다.')
 
 
 # 이력·실시간 전달에는 이미지 존재 여부만 포함하고 BLOB는 별도로 조회한다.
@@ -390,7 +390,7 @@ async def create_image_message(
     """한 장의 이미지와 선택적 텍스트를 저장한다. 같은 UUID 재요청은 원본을 반환한다."""
     room_id = family_room_id.strip()
     if not room_id:
-        raise HTTPException(422, '가족 공간 ID를 확인해 주세요.')
+        raise HTTPException(422, '돌봄 공간 ID를 확인해 주세요.')
     message = ImageMessageCreate(client_message_id=client_message_id, content=content)
     image_data = await run_in_threadpool(read_image, [image])
     row, duplicate = await run_in_threadpool(_save, room_id, current_user_id, message, image_data)
@@ -406,7 +406,7 @@ def get_message_image(
     family_room_id: str = Query(min_length=1, max_length=50),
     current_user_id: str = Depends(get_current_user_id),
 ):
-    """현재 가족 공간 참여자에게만 삭제되지 않은 메시지의 이미지를 반환한다."""
+    """현재 돌봄 공간 참여자에게만 삭제되지 않은 메시지의 이미지를 반환한다."""
     connection = None
     try:
         connection = connect()
@@ -452,7 +452,7 @@ async def chat_socket(socket: WebSocket, family_room_id: str):
     peer = None
     try:
         if not 1 <= len(family_room_id) <= 50:
-            raise HTTPException(422, '가족 공간 ID를 확인해 주세요.')
+            raise HTTPException(422, '돌봄 공간 ID를 확인해 주세요.')
         first = Authenticate.model_validate(await asyncio.wait_for(_receive(socket), timeout=10))
         user_id, expires_at = await run_in_threadpool(_session, first.token, family_room_id)
         peer = ChatConnection(socket, first.token, user_id, expires_at)

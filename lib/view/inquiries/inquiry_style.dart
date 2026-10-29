@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/menu_header_icon.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
@@ -12,8 +13,6 @@ abstract final class InquiryStyle {
   static AppBar header(
     BuildContext context,
     String title, {
-    VoidCallback? refresh,
-    String? refreshLabel,
     bool busy = false,
   }) => AppBar(
     backgroundColor: paper,
@@ -59,34 +58,13 @@ abstract final class InquiryStyle {
           title,
           style: const TextStyle(
             color: ink,
-            fontSize: 21,
+            fontSize: 24,
             fontWeight: FontWeight.w800,
           ),
         ),
       ],
     ),
-    actions: [
-      Container(
-        width: 42,
-        height: 42,
-        margin: const EdgeInsets.only(right: 8),
-        decoration: BoxDecoration(
-          color: AppColors.sageLight,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: const Icon(
-          Icons.help_outline,
-          color: AppColors.sageDark,
-          size: 23,
-        ),
-      ),
-      if (refresh != null)
-        IconButton(
-          tooltip: refreshLabel,
-          onPressed: refresh,
-          icon: const Icon(Icons.refresh, size: 21),
-        ),
-    ],
+    actions: const [MenuHeaderIcon(icon: Icons.help_outline)],
   );
 
   static Widget status(bool answered) => Container(

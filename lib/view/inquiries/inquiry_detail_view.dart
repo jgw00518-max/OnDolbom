@@ -13,12 +13,7 @@ class InquiryDetailView extends ConsumerWidget {
     final inquiry = ref.watch(inquiryDetailProvider(id));
     return Scaffold(
       backgroundColor: InquiryStyle.paper,
-      appBar: InquiryStyle.header(
-        context,
-        '문의 상세',
-        refreshLabel: '답변 새로고침',
-        refresh: () => ref.invalidate(inquiryDetailProvider(id)),
-      ),
+      appBar: InquiryStyle.header(context, '문의 상세'),
       body: inquiry.when(
         loading: () => const Center(
           child: CircularProgressIndicator(color: InquiryStyle.peach),
@@ -84,7 +79,7 @@ class InquiryDetailView extends ConsumerWidget {
                     const Padding(
                       padding: EdgeInsets.only(top: 10),
                       child: Text(
-                        '가족 공간 관련 문의',
+                        '돌봄 공간 관련 문의',
                         style: TextStyle(
                           color: InquiryStyle.muted,
                           fontSize: 12,

@@ -61,7 +61,7 @@ class _FamilyRoomDeleteDialogState
       child: AlertDialog(
         scrollable: true,
         title: const Text(
-          '가족 공간을 삭제할까요?',
+          '돌봄 공간을 삭제할까요?',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         content: Column(

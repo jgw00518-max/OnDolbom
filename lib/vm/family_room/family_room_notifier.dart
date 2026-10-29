@@ -94,7 +94,7 @@ class FamilyRoomNotifier extends Notifier<FamilyRoomState> {
     return '$defaultMessage (${response.statusCode})';
   }
 
-  // 현재 사용자가 참여 중인 가족 공간을 조회한다.
+  // 현재 사용자가 참여 중인 돌봄 공간을 조회한다.
   Future<void> fetchRooms() => _fetchRooms();
 
   // 역할 변경이 확정된 뒤 재조회 실패로 확정된 로컬 상태를 지우지 않는다.
@@ -189,7 +189,7 @@ class FamilyRoomNotifier extends Notifier<FamilyRoomState> {
     }
   }
 
-  // 현재 사용할 가족 공간을 선택한다.
+  // 현재 사용할 돌봄 공간을 선택한다.
   void selectRoom(String familyRoomId) {
     final exists = state.rooms.any((room) => room.familyRoomId == familyRoomId);
 
@@ -428,7 +428,7 @@ class FamilyRoomNotifier extends Notifier<FamilyRoomState> {
       checkTarget();
       if (response.statusCode != 200) {
         throw FamilyRoomDeleteFailure(
-          getErrorMessage(response, '가족 공간을 삭제하지 못했어요. 다시 시도해 주세요.'),
+          getErrorMessage(response, '돌봄 공간을 삭제하지 못했어요. 다시 시도해 주세요.'),
         );
       }
       final body = jsonDecode(utf8.decode(response.bodyBytes));
@@ -463,7 +463,7 @@ class FamilyRoomNotifier extends Notifier<FamilyRoomState> {
     }
   }
 
-  // 대상자를 등록하고 가족 공간을 생성한다.
+  // 대상자를 등록하고 돌봄 공간을 생성한다.
   Future<bool> createRoom({
     required String name,
     required int gender,
@@ -509,7 +509,7 @@ class FamilyRoomNotifier extends Notifier<FamilyRoomState> {
       }
 
       if (response.statusCode != 201) {
-        throw Exception(getErrorMessage(response, '가족 공간을 생성하지 못했습니다.'));
+        throw Exception(getErrorMessage(response, '돌봄 공간을 생성하지 못했습니다.'));
       }
 
       // 목록 재조회는 입력 화면에서 돌아온 뒤 실행한다.

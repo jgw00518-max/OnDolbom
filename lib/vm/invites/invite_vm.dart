@@ -160,7 +160,7 @@ class InviteVm {
     }
   } // build
 
-  // 주보호자가 가족 공간에 초대를 등록한다.
+  // 주보호자가 돌봄 공간에 초대를 등록한다.
   Future<bool> createInvite({
     required String familyRoomId,
     required String email,

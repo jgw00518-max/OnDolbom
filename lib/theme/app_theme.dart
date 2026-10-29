@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 
-/// 앱 기본 색상을 최근 디자인으로 맞춘다. 화면별 크기·배치는 변경하지 않는다.
+/// 앱의 공통 색상·글꼴·헤더 높이를 관리한다.
 abstract final class AppTheme {
   static const fontFamily = 'Pretendard';
+  // 돌봄 공간 목록과 같은 헤더 높이로 상태 표시줄 아래 간격을 통일한다.
+  static const toolbarHeight = 88.0;
 
   static final light = ThemeData(
     // 앱에 포함한 글꼴을 사용해 네트워크 없이 동일한 글꼴을 표시한다.
@@ -131,6 +133,8 @@ abstract final class AppTheme {
       ),
     ),
     appBarTheme: const AppBarTheme(
+      toolbarHeight: toolbarHeight,
+      centerTitle: true,
       backgroundColor: AppColors.background,
       foregroundColor: AppColors.textPrimary,
       surfaceTintColor: Colors.transparent,
@@ -138,8 +142,8 @@ abstract final class AppTheme {
       titleTextStyle: TextStyle(
         fontFamily: fontFamily,
         color: AppColors.textPrimary,
-        fontSize: 28,
-        fontWeight: FontWeight.bold,
+        fontSize: 24,
+        fontWeight: FontWeight.w800,
       ),
     ),
     cardTheme: CardThemeData(
@@ -168,7 +172,7 @@ abstract final class AppTheme {
       ),
     ),
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
-      backgroundColor: AppColors.primary,
+      backgroundColor: AppColors.peachLight,
       foregroundColor: AppColors.textPrimary,
     ),
     dividerTheme: const DividerThemeData(color: AppColors.border),

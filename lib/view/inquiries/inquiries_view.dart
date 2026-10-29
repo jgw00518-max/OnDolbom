@@ -21,14 +21,8 @@ class _InquiriesViewState extends ConsumerState<InquiriesView> {
     final page = ref.watch(inquiriesProvider(cursor));
     return Scaffold(
       backgroundColor: InquiryStyle.paper,
-      appBar: InquiryStyle.header(
-        context,
-        '내 문의',
-        refreshLabel: '문의 새로고침',
-        refresh: () => ref.invalidate(inquiriesProvider(cursor)),
-      ),
+      appBar: InquiryStyle.header(context, '내 문의'),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: InquiryStyle.peach,
         foregroundColor: InquiryStyle.ink,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         icon: const Icon(Icons.edit_outlined),

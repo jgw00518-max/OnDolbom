@@ -1,4 +1,4 @@
-import 'package:ondolbom/view/widgets/family_room_label.dart';
+import 'package:ondolbom/theme/app_theme.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:ondolbom/theme/app_colors.dart';
@@ -19,6 +19,7 @@ class MemoLayout extends StatelessWidget {
     required this.child,
     this.action,
     this.footer,
+    this.floatingActionButton,
     this.onBack,
   });
   final String roomName;
@@ -26,11 +27,13 @@ class MemoLayout extends StatelessWidget {
   final Widget child;
   final Widget? action;
   final Widget? footer;
+  final Widget? floatingActionButton;
   final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: AppColors.background,
+    floatingActionButton: floatingActionButton,
     bottomNavigationBar: footer == null
         ? null
         : SafeArea(
@@ -52,32 +55,17 @@ class MemoLayout extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 640),
           child: Column(
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 20, 8),
-                child: Row(
-                  children: [
-                    if (onBack != null) ...[
-                      AppBackButton(onPressed: onBack),
-                      const SizedBox(width: 12),
-                    ] else
-                      const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ),
-                    ?action,
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-                child: FamilyRoomLabel(name: roomName),
+              // 공통 AppBar를 사용해 좌우 버튼 너비와 관계없이 제목을 중앙에 배치한다.
+              AppBar(
+                primary: false,
+                toolbarHeight: AppTheme.toolbarHeight,
+                automaticallyImplyLeading: false,
+                leadingWidth: 62,
+                leading: onBack == null
+                    ? null
+                    : AppBackLeading(onPressed: onBack),
+                title: Text(title),
+                actions: action == null ? null : [action!],
               ),
               Expanded(child: child),
             ],

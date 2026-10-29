@@ -1,4 +1,4 @@
-// 현재 가족 공간에 참여 중인 가족 정보
+// 현재 돌봄 공간에 참여 중인 가족 정보
 class FamilyMember {
   const FamilyMember({
     required this.participateSeq,

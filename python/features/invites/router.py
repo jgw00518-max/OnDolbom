@@ -115,7 +115,7 @@ def check_inviter(conn, family_room_id: str, user_id: str):
         if cursor.fetchone() is None:
             raise HTTPException(
                 status_code=403,
-                detail="이용할 수 없는 가족 공간입니다.",
+                detail="이용할 수 없는 돌봄 공간입니다.",
             )
 
         cursor.execute(
@@ -470,7 +470,7 @@ def accept_invite(
         conn = connect()
 
         with conn.cursor() as cursor:
-            # 잠글 가족 공간을 먼저 확인한다.
+            # 잠글 돌봄 공간을 먼저 확인한다.
             cursor.execute(
                 """
                 SELECT family_room_id
@@ -507,7 +507,7 @@ def accept_invite(
             if cursor.fetchone() is None:
                 raise HTTPException(
                     status_code=403,
-                    detail="이용할 수 없는 가족 공간입니다.",
+                    detail="이용할 수 없는 돌봄 공간입니다.",
                 )
 
             # 동시 수락 요청을 순서대로 처리한다.
@@ -589,7 +589,7 @@ def accept_invite(
             if cursor.fetchone() is not None:
                 raise HTTPException(
                     status_code=409,
-                    detail="이미 참여 중인 가족 공간입니다.",
+                    detail="이미 참여 중인 돌봄 공간입니다.",
                 )
 
             # 초대받은 계정을 일반 가족으로 등록한다.
@@ -719,7 +719,7 @@ def reject_invite(
             if cursor.fetchone() is None:
                 raise HTTPException(
                     status_code=403,
-                    detail="이용할 수 없는 가족 공간입니다.",
+                    detail="이용할 수 없는 돌봄 공간입니다.",
                 )
 
             # 수락·거절 요청이 동시에 처리되지 않도록 초대를 잠근다.

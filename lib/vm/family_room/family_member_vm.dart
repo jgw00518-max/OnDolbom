@@ -46,7 +46,7 @@ class FamilyMemberVm {
     }
   }
 
-  // 선택한 가족 공간의 현재 참여 가족을 조회한다.
+  // 선택한 돌봄 공간의 현재 참여 가족을 조회한다.
   Future<List<FamilyMember>> fetchMembers(String familyRoomId) async {
     final user = ref.read(firebaseAuthProvider).currentUser;
 

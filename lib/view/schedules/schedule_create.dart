@@ -1,6 +1,5 @@
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/view/schedules/schedule_time_wheel.dart';
-import 'package:ondolbom/view/widgets/family_room_label.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -95,9 +94,6 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            FamilyRoomLabel(name: '${widget.recipientName} 님의 돌봄 공간'),
-            const SizedBox(height: 24),
-
             // 일정명
             TextFormField(
               enabled: !isSaving,
