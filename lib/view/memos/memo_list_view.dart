@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/care_menu_read.dart';
 import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/view/widgets/menu_header_icon.dart';
 import 'package:ondolbom/view/widgets/app_add_button.dart';
@@ -19,6 +20,13 @@ class MemoListView extends ConsumerWidget {
     final selected = ref.watch(memoContextProvider);
     final provider = memoVmProvider(selected);
     final feed = ref.watch(provider);
+    watchCareMenuRead(
+      context,
+      ref,
+      selected.familyRoomId,
+      'memos',
+      feed.hasValue && !feed.isLoading && !feed.hasError,
+    );
     final canWrite =
         selected.familyRoomId.isNotEmpty && selected.userId.isNotEmpty;
 

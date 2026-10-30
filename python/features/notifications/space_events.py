@@ -1,13 +1,15 @@
 """공간·기록 알림: MySQL 확정 여부와 수신 권한을 검사하고 기존 수신함을 재사용한다."""
 import logging
 from uuid import uuid4
+from hashlib import sha256
 from firebase_admin import firestore
-from google.api_core.exceptions import GoogleAPICallError
+from google.api_core.exceptions import AlreadyExists, GoogleAPICallError
 from fastapi import HTTPException
 from python.database import connect
 from python.features.notifications import store
 
 TITLES = {
+    'member_joined': '새 가족이 돌봄 공간에 참여했어요',
     'representative_transferred': '주보호자가 변경되었어요',
     'member_left': '가족이 돌봄 공간에서 나갔어요',
     'member_removed': '가족의 돌봄 공간 참여가 종료되었어요',
@@ -26,13 +28,20 @@ def prepare(connection, room_id, actor_id, kind, source_id, *, target_id=None):
         recipients = [r['user_id'] for r in cursor.fetchall()]
     if kind != 'member_left':
         recipients = [u for u in recipients if u != actor_id]
-    identifier = 'space_' + uuid4().hex
+    # 수락 재시도와 rollback 후 재요청이 같은 가입 알림을 중복 발행하지 않게 초대별 고정 ID를 쓴다.
+    identifier = ('member_joined_' + sha256(f'{room_id}|{source_id}'.encode()).hexdigest()
+                  if kind == 'member_joined' else 'space_' + uuid4().hex)
     payload = dict(notification_id=identifier, notification_type=kind, family_room_id=room_id,
         actor_id=actor_id, target_id=target_id, source_id=str(source_id), recipient_ids=recipients,
         status='pending', created_at=firestore.SERVER_TIMESTAMP)
     # 먼저 pending으로 남겨 API 발행 실패는 기존 worker가 재시도할 수 있게 한다.
     try:
         store.collection().document(identifier).create(payload, timeout=10)
+    except AlreadyExists:
+        old = store.get_event(identifier) or {}
+        if any(old.get(key) != payload[key] for key in ('family_room_id', 'actor_id', 'source_id', 'notification_type')):
+            raise HTTPException(409, '입장 알림 정보가 일치하지 않습니다.') from None
+        # 이미 발행한 문서와 기존 수신자·읽음 상태는 변경하지 않는다.
     except GoogleAPICallError:
         raise HTTPException(503, '알림 저장소에 연결하지 못했습니다. 다시 시도해 주세요.') from None
     return identifier
@@ -42,7 +51,9 @@ def committed(connection, event):
     """다른 연결에서 원본을 확인하므로 미확정·rollback된 작업은 발행하지 않는다."""
     kind, source, room = event['notification_type'], event['source_id'], event['family_room_id']
     with connection.cursor() as cursor:
-        if kind == 'memo_created':
+        if kind == 'member_joined':
+            cursor.execute("SELECT invite_id FROM invite WHERE invite_id=%s AND family_room_id=%s AND invite_status='수락' AND accepter_id=%s", (source, room, event['actor_id']))
+        elif kind == 'memo_created':
             cursor.execute('SELECT memo_id FROM memo WHERE memo_id=%s AND family_room_id=%s', (source, room))
         elif kind == 'medication_created':
             cursor.execute('SELECT medication_log_seq FROM medication_log WHERE medication_log_seq=%s AND family_room_id=%s', (source, room))

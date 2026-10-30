@@ -26,7 +26,8 @@ class ScheduleReminderTests(unittest.TestCase):
         row = schedule()
         self.assertTrue(api.is_due(row))
         self.assertFalse(api.is_due(schedule(server_now=row['server_now'] - timedelta(seconds=1))))
-        self.assertTrue(api.is_due(schedule(server_now=datetime(2026, 10, 31, 8, 59, 59))))
+        # 24시간 이하 구간은 긴급 알림이 담당하므로 72시간 재알림에서 제외한다.
+        self.assertFalse(api.is_due(schedule(server_now=datetime(2026, 10, 31, 8, 59, 59))))
         self.assertFalse(api.is_due(schedule(server_now=datetime(2026, 10, 31, 9))))
         self.assertFalse(api.is_due(schedule(server_now=datetime(2026, 10, 31, 10))))
         for changes in [dict(accepted_by='family'), dict(schedule_state='완료'), dict(deleted_at='deleted')]:

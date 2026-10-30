@@ -58,7 +58,8 @@ def is_due(current):
         return False
     start_date, start_time = start_key(current)
     remaining = datetime.combine(start_date, start_time) - current['server_now']
-    return timedelta(0) < remaining <= WINDOW
+    # 24시간을 포함한 긴급 구간은 urgent_schedule이 전담한다. 두 worker가 동시에 검사해도 겹치지 않는다.
+    return timedelta(hours=24) < remaining <= WINDOW
 
 
 def _publish_once(transaction, ref, payload):
@@ -154,7 +155,7 @@ def check_reminders():
                 AND s.schedule_state='미완료' AND s.accepted_by IS NULL
                 AND TIMESTAMP(CASE WHEN h.history_seq IS NULL THEN s.schedule_date ELSE h.schedule_date END,
                     CASE WHEN h.history_seq IS NULL THEN s.start_time ELSE h.updated_start_time END)
-                    > CURRENT_TIMESTAMP
+                    > DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 24 HOUR)
                 AND TIMESTAMP(CASE WHEN h.history_seq IS NULL THEN s.schedule_date ELSE h.schedule_date END,
                     CASE WHEN h.history_seq IS NULL THEN s.start_time ELSE h.updated_start_time END)
                     <= DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 72 HOUR)

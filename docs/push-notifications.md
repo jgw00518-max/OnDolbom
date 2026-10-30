@@ -129,3 +129,10 @@ API는 기본적으로 worker를 시작하지 않는다. 모든 팀원은 기존
 ## 자동 만료·긴급 미확인 푸시
 
 재수락 만료(`schedule_reconfirm_expired`), 주보호자 미응답 안내(`schedule_reconfirm_unanswered`), 자동 만료 재모집(`schedule_recruitment`), 긴급 미확인(`schedule_reconfirm_unverified`)을 FCM 허용 대상과 전용 문구에 추가했다. 원래 수신 대상·기기 계정·현재 공간 접근 검사를 유지하며 기존 알림함 이동을 재사용한다. 기존 published 알림은 재발송하지 않는다. [연동·검수 안내](notification-v2-integration.md#자동-처리-알림-수신표시푸시)를 따른다.
+
+
+## 가족 입장·24시간 긴급 알림 연결
+
+초대 수락으로 신규 가족이 입장하면 본인을 제외한 현재 가족에게 `member_joined` 알림·푸시를 보냅니다. 초대별 고정 알림 ID를 사용해 수락 재시도에도 중복 생성하지 않습니다. 돌봄 공간 삭제는 기존 `family_room_deleted`를 유지하며 삭제 실행자는 제외합니다.
+
+기존 `schedule_urgent`와 `schedule_reconfirm_urgent` 이벤트를 FCM 지원 목록 및 유형별 문구에 연결했습니다. 새로운 긴급 생성 로직은 추가하지 않았습니다. 24시간/72시간 경계는 [72시간 재알림](schedule-reminders.md)의 구간 분리를 따릅니다.

@@ -956,4 +956,21 @@ const englishStrings = <String, String>{
   "삭제 시각": "Deleted at",
   "공간 삭제 알림이 없거나 현재 접근할 수 없습니다.":
       "The space deletion notification is unavailable or you no longer have access.",
+  "새 가족이 돌봄 공간에 참여했어요": "A new family member has joined the care space",
+  "시작까지 24시간 이내, 긴급 돌봄 담당자가 필요해요":
+      "Urgent care starts within 24 hours. A caregiver is needed",
+  "긴급 변경 일정의 담당 가족과 재수락 여부를 확인해 주세요":
+      "Contact the assigned family member to confirm the urgent schedule change",
+  "가족이 새로운 메모를 남겼어요. 메모 메뉴에서 내용을 확인해 주세요.":
+      "A family member added a memo. Open Memos to view it.",
+  "새로운 약이 추가되었어요. 투약일지에서 복용 정보를 확인해 주세요.":
+      "A new medication was added. Open the medication log for details.",
+  "새로운 가족이 함께하게 되었어요. 공간 설정에서 함께하는 가족을 확인할 수 있어요.":
+      "A new family member has joined. View the family list in Space settings.",
+  "돌봄 공간의 주보호자가 변경되었어요. 공간 설정에서 현재 역할을 확인해 주세요.":
+      "The primary guardian has changed. Check the current roles in Space settings.",
+  "가족이 돌봄 공간에서 나갔어요. 나간 가족은 이 공간에 접근할 수 없어요.":
+      "A family member left this care space and can no longer access it.",
+  "가족의 공간 참여가 종료되었어요. 참여가 종료된 가족은 이 공간에 접근할 수 없어요.":
+      "A family member\u2019s membership ended. They can no longer access this care space.",
 };

@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/care_menu_read.dart';
 import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/view/widgets/menu_header_icon.dart';
 import 'package:ondolbom/view/widgets/app_add_button.dart';
@@ -53,6 +54,13 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
       );
     }
     final schedules = ref.watch(scheduleListProvider(query));
+    watchCareMenuRead(
+      context,
+      ref,
+      widget.familyRoomId,
+      'schedules',
+      schedules.hasValue && !schedules.isLoading && !schedules.hasError,
+    );
     return Scaffold(
       backgroundColor: AppColors.resolve(context, const Color(0xFFFFFBF7)),
       appBar: AppBar(

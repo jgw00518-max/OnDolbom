@@ -79,3 +79,15 @@ python -B -m unittest python.tests.features.test_schedule_reminders
 ## 통합 실행 안내
 
 기존 `python -m python.features.schedules.reminder_worker` 명령이 재수락 기한 만료·긴급 미확인 검사와 미발행 재시도까지 함께 시작한다. 별도 재수락 worker는 중복 실행하지 않는다. 작업별 주기·종료·전환 방법은 [통합 알림 worker](notification-worker.md)를 따른다.
+
+
+## 24시간 긴급 알림과 구간 분리
+
+- 서버 MySQL 시각 기준 `0 < 시작까지 남은 시간 <= 24시간`: 기존 `schedule_urgent` 이벤트만 생성합니다.
+- `24시간 < 남은 시간 <= 72시간`: `schedule_reminder`만 생성합니다.
+- `남은 시간 > 72시간`: 기존 일반 등록 알림을 사용합니다.
+- 시작했거나 담당자가 있거나 완료·삭제된 일정은 자동 긴급 모집 대상이 아닙니다.
+- 정확히 24시간은 긴급 구간, 정확히 72시간은 72시간 구간입니다. 일반 등록 이벤트는 기존대로 72시간 이하 등록 시 준비하지 않습니다.
+- 72시간 worker의 후보 SQL과 발행 직전 검사 모두 24시간 이하를 제외합니다. 과거 72시간 알림도 기존 현재 유효성 검사를 통과해야 조회·푸시되므로 긴급 구간에서는 숨겨집니다. Firestore 원본을 삭제하지는 않습니다.
+- 기존 긴급 모집 식별자와 worker를 재사용합니다. 별도의 긴급 이벤트 생성 루프는 추가하지 않습니다.
+- `schedule_urgent`, `schedule_reconfirm_urgent`의 앱 제목·아이콘·FCM 문구를 연결했습니다. 담당 가족과 전화로 확인하는 긴급 재수락 안내의 기존 수신자 규칙은 유지합니다.
