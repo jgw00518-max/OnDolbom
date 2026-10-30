@@ -142,7 +142,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('개인 설정에서 로그인 옵션을 기존 저장소에 반영한다', (tester) async {
+  testWidgets('개인 설정에서는 로그인 옵션을 표시하거나 변경하지 않는다', (tester) async {
     final preferences = MemoryPreferences();
     await tester.pumpWidget(
       ProviderScope(
@@ -164,21 +164,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('아이디 저장'), 250);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('아이디 저장'));
-    await tester.pumpAndSettle();
-    expect(preferences.email, 'family@example.com');
-    await tester.scrollUntilVisible(find.text('자동 로그인'), 150);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('자동 로그인'));
-    await tester.pumpAndSettle();
-    expect(preferences.autoLogin, true);
-    await tester.scrollUntilVisible(find.text('아이디 저장'), 250);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('아이디 저장'));
-    await tester.pumpAndSettle();
+    expect(find.text('아이디 저장'), findsNothing);
+    expect(find.text('자동 로그인'), findsNothing);
     expect(preferences.email, isNull);
+    expect(preferences.autoLogin, false);
   });
 
   test('로그인 계정 이메일을 확인할 수 없으면 아이디 저장을 허용하지 않는다', () async {

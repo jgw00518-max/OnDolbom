@@ -22,6 +22,14 @@ class PushAuth extends Fake implements FirebaseAuth {
 }
 
 class MemoryPushPrefs extends PushPreferences {
+  bool enabled = true;
+  @override
+  Future<bool> readEnabled() async => enabled;
+  @override
+  Future<void> saveEnabled(bool value) async {
+    enabled = value;
+  }
+
   int generation = 0;
   @override
   Future<Map<String, dynamic>> installation() async => {
@@ -67,6 +75,63 @@ class TestPushPlatform implements PushPlatform {
 }
 
 void main() {
+  test('푸시 끄기는 서버 해제 후 유지되며 다시 켜야 등록한다', () async {
+    final paths = <String>[];
+    final prefs = MemoryPushPrefs();
+    final client = MockClient((request) async {
+      paths.add(request.url.path);
+      return http.Response('{}', 200);
+    });
+    addTearDown(client.close);
+    final platform = TestPushPlatform();
+    final service = PushService(
+      platform: platform,
+      auth: PushAuth(),
+      baseUrl: 'http://test',
+      preferences: prefs,
+      client: client,
+    );
+    service.setSession('a', true);
+    await service.reconnect();
+    await service.setEnabled(false);
+    expect(paths.last, '/push/devices/unregister');
+    expect(service.enabled, false);
+    expect(prefs.enabled, false);
+    final count = paths.length;
+    await service.reconnect();
+    expect(paths.length, count);
+    final restored = PushService(
+      platform: TestPushPlatform(),
+      auth: PushAuth(),
+      baseUrl: 'http://test',
+      preferences: prefs,
+      client: client,
+    );
+    restored.setSession('a', true);
+    await restored.reconnect();
+    expect(restored.enabled, false);
+    expect(paths.length, count);
+    await service.setEnabled(true);
+    expect(service.enabled, true);
+    expect(paths.last, '/push/devices');
+  });
+  test('서버 해제 실패는 알림 꺼짐으로 저장하지 않는다', () async {
+    final prefs = MemoryPushPrefs();
+    final client = MockClient((request) async => http.Response('{}', 503));
+    addTearDown(client.close);
+    final service = PushService(
+      platform: TestPushPlatform(),
+      auth: PushAuth(),
+      baseUrl: 'http://test',
+      preferences: prefs,
+      client: client,
+    );
+    await service.setEnabled(false);
+    expect(service.enabled, true);
+    expect(prefs.enabled, true);
+    expect(service.status.value, contains('실패'));
+  });
+
   TestWidgetsFlutterBinding.ensureInitialized();
   test('열린 채팅에서 확인한 푸시는 표시하지 않고 다른 채팅은 표시한다', () async {
     final platform = TestPushPlatform();

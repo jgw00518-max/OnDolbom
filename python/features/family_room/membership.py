@@ -77,20 +77,24 @@ def transfer_representative(room_id: str, actor_id: str, target_user_id: str) ->
             connection.close()
 
 
-def end_membership(room_id, actor_id, participate_seq=None):
-    connection = None
+def end_membership(room_id, actor_id, participate_seq=None, *, connection=None, allow_inactive=False):
+    # 회원 탈퇴는 모든 공간 종료와 계정 처리를 한 트랜잭션으로 묶는다.
+    owns_connection = connection is None
     try:
-        connection = connect()
+        if owns_connection:
+            connection = connect()
         with connection.cursor() as cursor:
             # 초대·일정 변경·공간 삭제와 같은 순서로 공간부터 잠근다.
             cursor.execute("""SELECT family_room_id FROM family_room WHERE family_room_id=%s
                 AND family_room_deleted_at IS NULL FOR UPDATE""", (room_id,))
             if cursor.fetchone() is None:
                 raise HTTPException(404, '이용할 수 없는 돌봄 공간입니다.')
+            # allow_inactive는 인증 API 입력이 아니며 30일 경과 정리 worker만 사용한다.
+            active_check = '' if allow_inactive else ' AND u.withdrawn_at IS NULL'
             cursor.execute("""SELECT p.participate_seq,p.user_id,p.is_representative
                 FROM participate p JOIN `user` u ON u.user_id=p.user_id
                 WHERE p.family_room_id=%s AND p.user_id=%s AND p.left_at IS NULL
-                AND p.is_active=1 AND u.withdrawn_at IS NULL FOR UPDATE""", (room_id, actor_id))
+                AND p.is_active=1""" + active_check + " FOR UPDATE", (room_id, actor_id))
             actor = cursor.fetchone()
             if actor is None:
                 raise HTTPException(403, '현재 참여 중인 돌봄 공간만 이용할 수 있습니다.')
@@ -143,17 +147,18 @@ def end_membership(room_id, actor_id, participate_seq=None):
                 (target['participate_seq'], room_id))
             if cursor.rowcount != 1:
                 raise ValueError('참여 정보가 변경되었습니다.')
-        connection.commit()
+        if owns_connection:
+            connection.commit()
         return dict(result='OK',family_room_id=room_id,user_id=target['user_id'],
                     participate_seq=target['participate_seq'],released_schedules=len(schedules))
     except HTTPException:
-        if connection is not None:
+        if owns_connection and connection is not None:
             connection.rollback()
         raise
     except (MySQLError, ValueError):
-        if connection is not None:
+        if owns_connection and connection is not None:
             connection.rollback()
         raise HTTPException(503, '공간 참여 종료를 처리하지 못했습니다. 목록을 확인한 뒤 다시 시도해 주세요.') from None
     finally:
-        if connection is not None:
+        if owns_connection and connection is not None:
             connection.close()
