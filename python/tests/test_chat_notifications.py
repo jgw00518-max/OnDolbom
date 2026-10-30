@@ -144,6 +144,7 @@ class ChatPushTests(unittest.TestCase):
              patch.object(reminder_worker,'check_push_notifications',side_effect=ValueError('offline')), \
              patch.object(reminder_worker,'check_chat_pushes') as chat, \
              patch.object(reminder_worker,'check_expired_requests'), \
+             patch.object(reminder_worker,'check_account_cleanup'), \
              patch.object(reminder_worker,'retry_pending_notifications'), \
              patch('sys.argv',['worker','--once']):
             reminder_worker.main()

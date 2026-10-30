@@ -11,18 +11,22 @@ class FamilyRoomLabel extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Padding(
+      Padding(
         padding: EdgeInsets.only(top: 2),
-        child: Icon(Icons.home_outlined, size: 18, color: AppColors.sageDark),
+        child: Icon(
+          Icons.home_outlined,
+          size: 18,
+          color: AppColors.of(context).sageDark,
+        ),
       ),
       const SizedBox(width: 7),
       Expanded(
         child: Text(
           name,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w700,
-            color: AppColors.sageDark,
+            color: AppColors.of(context).sageDark,
             height: 1.4,
           ),
         ),

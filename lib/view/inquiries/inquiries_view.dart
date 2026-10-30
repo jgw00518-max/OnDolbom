@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/view/inquiries/inquiry_style.dart';
 import 'package:flutter/material.dart';
@@ -20,13 +21,13 @@ class _InquiriesViewState extends ConsumerState<InquiriesView> {
     final cursor = _cursors.last;
     final page = ref.watch(inquiriesProvider(cursor));
     return Scaffold(
-      backgroundColor: InquiryStyle.paper,
-      appBar: InquiryStyle.header(context, '내 문의'),
+      backgroundColor: AppColors.resolve(context, InquiryStyle.paper),
+      appBar: InquiryStyle.header(context, AppStrings.tr(context, '내 문의')),
       floatingActionButton: FloatingActionButton.extended(
-        foregroundColor: InquiryStyle.ink,
+        foregroundColor: AppColors.resolve(context, InquiryStyle.ink),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         icon: const Icon(Icons.edit_outlined),
-        label: const Text('문의 작성'),
+        label: Text(AppStrings.tr(context, '문의 작성')),
         onPressed: () async {
           final id = await Navigator.of(context).push<int>(
             MaterialPageRoute(
@@ -47,17 +48,19 @@ class _InquiriesViewState extends ConsumerState<InquiriesView> {
         },
       ),
       body: page.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: InquiryStyle.peach),
+        loading: () => Center(
+          child: CircularProgressIndicator(
+            color: AppColors.resolve(context, InquiryStyle.peach),
+          ),
         ),
         error: (error, _) => Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(error.toString()),
+              Text(AppStrings.error(context, error.toString())),
               TextButton(
                 onPressed: () => ref.invalidate(inquiriesProvider(cursor)),
-                child: const Text('다시 시도'),
+                child: Text(AppStrings.tr(context, '다시 시도')),
               ),
             ],
           ),
@@ -72,22 +75,28 @@ class _InquiriesViewState extends ConsumerState<InquiriesView> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '나와 관리자만 확인할 수 있어요',
+                            AppStrings.tr(context, '나와 관리자만 확인할 수 있어요'),
                             style: TextStyle(
-                              color: InquiryStyle.muted,
+                              color: AppColors.resolve(
+                                context,
+                                InquiryStyle.muted,
+                              ),
                               fontSize: 12,
                             ),
                           ),
                           SizedBox(height: 7),
                           Text(
-                            '문의 내역',
+                            AppStrings.tr(context, '문의 내역'),
                             style: TextStyle(
-                              color: InquiryStyle.ink,
+                              color: AppColors.resolve(
+                                context,
+                                InquiryStyle.ink,
+                              ),
                               fontSize: 25,
                               fontWeight: FontWeight.w800,
                               letterSpacing: -0.8,
@@ -103,13 +112,18 @@ class _InquiriesViewState extends ConsumerState<InquiriesView> {
                         vertical: 7,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.peachSoft,
+                        color: AppColors.of(context).peachSoft,
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child: Text(
-                        '${value.items.length}건${value.nextCursor != null || _cursors.length > 1 ? ' · 현재 페이지' : ''}',
-                        style: const TextStyle(
-                          color: Color(0xFFA46F59),
+                        AppStrings.format(context, "{0}건{1}", [
+                          value.items.length,
+                          value.nextCursor != null || _cursors.length > 1
+                              ? ' · 현재 페이지'
+                              : '',
+                        ]),
+                        style: TextStyle(
+                          color: AppColors.resolve(context, Color(0xFFA46F59)),
                           fontSize: 11,
                         ),
                       ),
@@ -118,21 +132,27 @@ class _InquiriesViewState extends ConsumerState<InquiriesView> {
                 ),
                 const SizedBox(height: 24),
                 if (value.items.isEmpty)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.all(32),
-                    child: Text('등록한 문의가 없습니다.', textAlign: TextAlign.center),
+                    child: Text(
+                      AppStrings.tr(context, '등록한 문의가 없습니다.'),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 for (final item in value.items)
                   Container(
                     margin: const EdgeInsets.only(bottom: 14),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
+                      color: AppColors.of(context).surface,
                       borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: InquiryStyle.line),
+                      border: Border.all(
+                        color: AppColors.resolve(context, InquiryStyle.line),
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(
-                            0xFF594135,
+                          color: AppColors.resolve(
+                            context,
+                            const Color(0xFF594135),
                           ).withValues(alpha: 0.04),
                           blurRadius: 24,
                           offset: const Offset(0, 8),
@@ -157,12 +177,15 @@ class _InquiriesViewState extends ConsumerState<InquiriesView> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    InquiryStyle.status(item.answered),
+                                    InquiryStyle.status(context, item.answered),
                                     const SizedBox(height: 14),
                                     Text(
                                       item.title,
-                                      style: const TextStyle(
-                                        color: InquiryStyle.ink,
+                                      style: TextStyle(
+                                        color: AppColors.resolve(
+                                          context,
+                                          InquiryStyle.ink,
+                                        ),
                                         fontSize: 17,
                                         fontWeight: FontWeight.w800,
                                         height: 1.5,
@@ -174,8 +197,11 @@ class _InquiriesViewState extends ConsumerState<InquiriesView> {
                                         0,
                                         16,
                                       ),
-                                      style: const TextStyle(
-                                        color: InquiryStyle.muted,
+                                      style: TextStyle(
+                                        color: AppColors.resolve(
+                                          context,
+                                          InquiryStyle.muted,
+                                        ),
                                         fontSize: 11,
                                       ),
                                     ),
@@ -183,9 +209,12 @@ class _InquiriesViewState extends ConsumerState<InquiriesView> {
                                 ),
                               ),
                               const SizedBox(width: 10),
-                              const Icon(
+                              Icon(
                                 Icons.chevron_right,
-                                color: Color(0xFFB1A59F),
+                                color: AppColors.resolve(
+                                  context,
+                                  Color(0xFFB1A59F),
+                                ),
                                 size: 21,
                               ),
                             ],
@@ -203,14 +232,14 @@ class _InquiriesViewState extends ConsumerState<InquiriesView> {
                               _cursors.removeLast();
                             })
                           : null,
-                      child: const Text('이전'),
+                      child: Text(AppStrings.tr(context, '이전')),
                     ),
                     TextButton(
                       onPressed: value.nextCursor == null
                           ? null
                           : () =>
                                 setState(() => _cursors.add(value.nextCursor)),
-                      child: const Text('다음'),
+                      child: Text(AppStrings.tr(context, '다음')),
                     ),
                   ],
                 ),

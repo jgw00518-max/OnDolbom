@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/view/widgets/app_date_picker.dart';
 import 'package:ondolbom/view/widgets/discard_changes_dialog.dart';
 import 'package:ondolbom/theme/app_colors.dart';
@@ -78,9 +79,9 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
     if (_dirty) {
       final discard = await showDialog<bool>(
         context: context,
-        builder: (context) => const DiscardChangesDialog(
-          title: '작성을 취소할까요?',
-          message: '입력한 약 정보는 저장되지 않아요.',
+        builder: (context) => DiscardChangesDialog(
+          title: AppStrings.tr(context, '작성을 취소할까요?'),
+          message: AppStrings.tr(context, '입력한 약 정보는 저장되지 않아요.'),
         ),
       );
       if (discard != true || !mounted) return;
@@ -114,9 +115,12 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            error is MedicationFailure
-                ? error.message
-                : '저장하지 못했어요. 다시 시도해 주세요.',
+            AppStrings.error(
+              context,
+              error is MedicationFailure
+                  ? error.message
+                  : AppStrings.tr(context, '저장하지 못했어요. 다시 시도해 주세요.'),
+            ),
           ),
         ),
       );
@@ -124,13 +128,16 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
   }
 
   InputDecoration _field({String? hint, String? suffix}) {
-    final common = MedicationStyle.field('', hint: hint);
+    final common = MedicationStyle.field(context, '', hint: hint);
     return InputDecoration(
       hintText: hint,
       suffixText: suffix,
-      hintStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+      hintStyle: TextStyle(
+        color: AppColors.of(context).textSecondary,
+        fontSize: 13,
+      ),
       filled: true,
-      fillColor: AppColors.background,
+      fillColor: AppColors.of(context).background,
       border: common.border,
       enabledBorder: common.enabledBorder,
       focusedBorder: common.focusedBorder,
@@ -143,12 +150,12 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
   Widget _card(Widget child) => Container(
     padding: const EdgeInsets.all(18),
     decoration: BoxDecoration(
-      color: AppColors.surface,
+      color: AppColors.of(context).surface,
       borderRadius: BorderRadius.circular(24),
-      border: Border.all(color: AppColors.border),
+      border: Border.all(color: AppColors.of(context).border),
       boxShadow: [
         BoxShadow(
-          color: AppColors.textPrimary.withValues(alpha: .035),
+          color: AppColors.of(context).textPrimary.withValues(alpha: .035),
           blurRadius: 22,
           offset: const Offset(0, 8),
         ),
@@ -161,10 +168,10 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
     padding: const EdgeInsets.only(top: 28, bottom: 14),
     child: Text(
       title,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 18,
         fontWeight: FontWeight.w800,
-        color: AppColors.textPrimary,
+        color: AppColors.of(context).textPrimary,
       ),
     ),
   );
@@ -173,11 +180,11 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Text(
-        label,
-        style: const TextStyle(
+        AppStrings.tr(context, label),
+        style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w700,
-          color: AppColors.textSecondary,
+          color: AppColors.of(context).textSecondary,
         ),
       ),
       const SizedBox(height: 10),
@@ -198,16 +205,16 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
             }),
       style: TextButton.styleFrom(
         foregroundColor: _customPeriod == custom
-            ? AppColors.textPrimary
-            : AppColors.textSecondary,
+            ? AppColors.of(context).textPrimary
+            : AppColors.of(context).textSecondary,
         backgroundColor: _customPeriod == custom
-            ? AppColors.surface
+            ? AppColors.of(context).surface
             : Colors.transparent,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 15),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
         textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
       ),
-      child: Text(label),
+      child: Text(AppStrings.tr(context, label)),
     ),
   );
 
@@ -221,7 +228,7 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
     ref.watch(medicationVmProvider(_query).select((_) => null));
     final colors = Theme.of(context).colorScheme;
     final meal = _control(
-      '식사',
+      AppStrings.tr(context, '식사'),
       DropdownButtonFormField<String>(
         key: const ValueKey('medication-meal'),
         initialValue: _meal,
@@ -230,7 +237,12 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
         style: Theme.of(context).textTheme.bodyMedium,
         icon: const Icon(Icons.keyboard_arrow_down, size: 20),
         items: ['아침', '점심', '저녁']
-            .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+            .map(
+              (value) => DropdownMenuItem(
+                value: value,
+                child: Text(AppStrings.tr(context, value)),
+              ),
+            )
             .toList(),
         onChanged: _saving
             ? null
@@ -241,7 +253,7 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
       ),
     );
     final timing = _control(
-      '복약 시점',
+      AppStrings.tr(context, '복약 시점'),
       DropdownButtonFormField<String>(
         key: const ValueKey('medication-timing'),
         initialValue: _timing,
@@ -250,7 +262,12 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
         style: Theme.of(context).textTheme.bodyMedium,
         icon: const Icon(Icons.keyboard_arrow_down, size: 20),
         items: ['식전', '식후']
-            .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+            .map(
+              (value) => DropdownMenuItem(
+                value: value,
+                child: Text(AppStrings.tr(context, value)),
+              ),
+            )
             .toList(),
         onChanged: _saving
             ? null
@@ -261,17 +278,17 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
       ),
     );
     final minutes = _control(
-      '간격',
+      AppStrings.tr(context, '간격'),
       TextFormField(
         key: const ValueKey('medication-minutes'),
         controller: _minutes,
         enabled: !_saving,
-        decoration: _field(suffix: '분'),
+        decoration: _field(suffix: AppStrings.tr(context, '분')),
         keyboardType: TextInputType.number,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         validator: (value) =>
             int.tryParse(value ?? '') == null || value!.length > 4
-            ? '0~9999분 입력'
+            ? AppStrings.tr(context, '0~9999분 입력')
             : null,
       ),
     );
@@ -281,27 +298,27 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
         if (!didPop) _cancel();
       },
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.of(context).background,
         appBar: AppBar(
           toolbarHeight: 88,
           leadingWidth: 70,
           leading: AppBackLeading(onPressed: _cancel, enabled: !_saving),
           centerTitle: true,
-          foregroundColor: AppColors.textPrimary,
-          title: const Column(
+          foregroundColor: AppColors.of(context).textPrimary,
+          title: Column(
             children: [
               Text(
                 'MEDICATION',
                 style: TextStyle(
                   fontSize: 9,
                   letterSpacing: 2,
-                  color: AppColors.textSecondary,
+                  color: AppColors.of(context).textSecondary,
                   fontWeight: FontWeight.w700,
                 ),
               ),
               SizedBox(height: 4),
               Text(
-                '약 추가',
+                AppStrings.tr(context, '약 추가'),
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
               ),
             ],
@@ -313,12 +330,12 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: AppColors.sageLight,
+                  color: AppColors.of(context).sageLight,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.medication_outlined,
-                  color: AppColors.sageDark,
+                  color: AppColors.of(context).sageDark,
                   size: 24,
                 ),
               ),
@@ -345,7 +362,7 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Material(
-                        color: AppColors.peachLight,
+                        color: AppColors.of(context).peachLight,
                         borderRadius: BorderRadius.circular(24),
                         clipBehavior: Clip.antiAlias,
                         child: InkWell(
@@ -362,12 +379,12 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
                                   width: 40,
                                   height: 40,
                                   decoration: BoxDecoration(
-                                    color: AppColors.peachSoft,
+                                    color: AppColors.of(context).peachSoft,
                                     borderRadius: BorderRadius.circular(15),
                                   ),
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.calendar_today_outlined,
-                                    color: AppColors.sageDark,
+                                    color: AppColors.of(context).sageDark,
                                     size: 23,
                                   ),
                                 ),
@@ -377,38 +394,40 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      const Text(
-                                        '복용 시작일',
+                                      Text(
+                                        AppStrings.tr(context, '복용 시작일'),
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w700,
-                                          color: AppColors.sageDark,
+                                          color: AppColors.of(context).sageDark,
                                         ),
                                       ),
                                       const SizedBox(height: 5),
                                       Text(
                                         medicationDateKey(_startDate),
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 19,
                                           fontWeight: FontWeight.w800,
-                                          color: AppColors.textPrimary,
+                                          color: AppColors.of(
+                                            context,
+                                          ).textPrimary,
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                const Icon(
+                                Icon(
                                   Icons.calendar_month_outlined,
                                   size: 22,
-                                  color: AppColors.textPrimary,
+                                  color: AppColors.of(context).textPrimary,
                                 ),
                               ],
                             ),
                           ),
                         ),
                       ),
-                      _section('복용 기간'),
+                      _section(AppStrings.tr(context, '복용 기간')),
                       _card(
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -416,13 +435,13 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
                             Container(
                               padding: const EdgeInsets.all(4),
                               decoration: BoxDecoration(
-                                color: AppColors.background,
+                                color: AppColors.of(context).background,
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               child: Row(
                                 children: [
-                                  _mode(false, '기간 선택'),
-                                  _mode(true, '직접 입력'),
+                                  _mode(false, AppStrings.tr(context, '기간 선택')),
+                                  _mode(true, AppStrings.tr(context, '직접 입력')),
                                 ],
                               ),
                             ),
@@ -430,37 +449,41 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
                             // 디자인은 탭으로 바꾸고 기존 기간·직접 입력 값과 검증 규칙은 유지한다.
                             if (!_customPeriod)
                               _control(
-                                '복용 기간',
+                                AppStrings.tr(context, '복용 기간'),
                                 DropdownButtonFormField<int>(
                                   key: const ValueKey('medication-period'),
                                   initialValue: _periodDays,
                                   isExpanded: true,
                                   decoration: _field(),
                                   icon: const Icon(Icons.keyboard_arrow_down),
-                                  items: const [
+                                  items: [
                                     DropdownMenuItem(
                                       value: 2,
-                                      child: Text('2일'),
+                                      child: Text(AppStrings.tr(context, '2일')),
                                     ),
                                     DropdownMenuItem(
                                       value: 3,
-                                      child: Text('3일'),
+                                      child: Text(AppStrings.tr(context, '3일')),
                                     ),
                                     DropdownMenuItem(
                                       value: 5,
-                                      child: Text('5일'),
+                                      child: Text(AppStrings.tr(context, '5일')),
                                     ),
                                     DropdownMenuItem(
                                       value: 7,
-                                      child: Text('7일'),
+                                      child: Text(AppStrings.tr(context, '7일')),
                                     ),
                                     DropdownMenuItem(
                                       value: 30,
-                                      child: Text('1개월 (30일)'),
+                                      child: Text(
+                                        AppStrings.tr(context, '1개월 (30일)'),
+                                      ),
                                     ),
                                     DropdownMenuItem(
                                       value: 90,
-                                      child: Text('3개월 (90일)'),
+                                      child: Text(
+                                        AppStrings.tr(context, '3개월 (90일)'),
+                                      ),
                                     ),
                                   ],
                                   onChanged: _saving
@@ -473,12 +496,14 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
                               )
                             else
                               _control(
-                                '복용 일수',
+                                AppStrings.tr(context, '복용 일수'),
                                 TextFormField(
                                   key: const ValueKey('medication-period-days'),
                                   controller: _days,
                                   enabled: !_saving,
-                                  decoration: _field(suffix: '일'),
+                                  decoration: _field(
+                                    suffix: AppStrings.tr(context, '일'),
+                                  ),
                                   keyboardType: TextInputType.number,
                                   inputFormatters: [
                                     FilteringTextInputFormatter.digitsOnly,
@@ -489,24 +514,27 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
                                     return days == null ||
                                             days < 1 ||
                                             days > 365
-                                        ? '1~365일 입력'
+                                        ? AppStrings.tr(context, '1~365일 입력')
                                         : null;
                                   },
                                 ),
                               ),
                             const SizedBox(height: 14),
-                            const Text(
-                              '선택한 시작일을 포함해 매일 투약 일정이 추가돼요.\n직접 입력은 최대 365일까지 가능해요.',
+                            Text(
+                              AppStrings.tr(
+                                context,
+                                '선택한 시작일을 포함해 매일 투약 일정이 추가돼요.\n직접 입력은 최대 365일까지 가능해요.',
+                              ),
                               style: TextStyle(
                                 fontSize: 11,
                                 height: 1.6,
-                                color: AppColors.textSecondary,
+                                color: AppColors.of(context).textSecondary,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      _section('복약 시간'),
+                      _section(AppStrings.tr(context, '복약 시간')),
                       _card(
                         LayoutBuilder(
                           builder: (context, constraints) {
@@ -543,32 +571,37 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
                           },
                         ),
                       ),
-                      _section('약 정보'),
+                      _section(AppStrings.tr(context, '약 정보')),
                       _card(
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             _control(
-                              '약 이름 · 정보',
+                              AppStrings.tr(context, '약 이름 · 정보'),
                               TextFormField(
                                 key: const ValueKey('medication-info'),
                                 controller: _info,
                                 enabled: !_saving,
-                                decoration: _field(hint: '예: 혈압약, 흰색 원형 알약'),
+                                decoration: _field(
+                                  hint: AppStrings.tr(
+                                    context,
+                                    '예: 혈압약, 흰색 원형 알약',
+                                  ),
+                                ),
                                 maxLength: 100,
                                 validator: (value) =>
                                     (value ?? '').trim().isEmpty
-                                    ? '약 정보를 입력해 주세요.'
+                                    ? AppStrings.tr(context, '약 정보를 입력해 주세요.')
                                     : null,
                               ),
                             ),
                             const SizedBox(height: 20),
-                            const Text(
-                              '1회 복용량',
+                            Text(
+                              AppStrings.tr(context, '1회 복용량'),
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.textSecondary,
+                                color: AppColors.of(context).textSecondary,
                               ),
                             ),
                             const SizedBox(height: 10),
@@ -580,7 +613,9 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
                                     key: const ValueKey('medication-dosage'),
                                     controller: _dosage,
                                     enabled: !_saving,
-                                    decoration: _field(hint: '용량 · 예: 1'),
+                                    decoration: _field(
+                                      hint: AppStrings.tr(context, '용량 · 예: 1'),
+                                    ),
                                     keyboardType:
                                         const TextInputType.numberWithOptions(
                                           decimal: true,
@@ -588,7 +623,10 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
                                     validator: (value) =>
                                         isValidMedicationDosage(value ?? '')
                                         ? null
-                                        : '0보다 큰 용량을 소수점 3자리 이내로 입력해 주세요.',
+                                        : AppStrings.tr(
+                                            context,
+                                            '0보다 큰 용량을 소수점 3자리 이내로 입력해 주세요.',
+                                          ),
                                   ),
                                 ),
                                 const SizedBox(width: 12),
@@ -597,11 +635,16 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
                                     key: const ValueKey('medication-unit'),
                                     controller: _unit,
                                     enabled: !_saving,
-                                    decoration: _field(hint: '단위 · 정, 포, mL'),
+                                    decoration: _field(
+                                      hint: AppStrings.tr(
+                                        context,
+                                        '단위 · 정, 포, mL',
+                                      ),
+                                    ),
                                     maxLength: 20,
                                     validator: (value) =>
                                         (value ?? '').trim().isEmpty
-                                        ? '단위를 입력해 주세요.'
+                                        ? AppStrings.tr(context, '단위를 입력해 주세요.')
                                         : null,
                                   ),
                                 ),
@@ -614,7 +657,10 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
                         Padding(
                           padding: const EdgeInsets.only(top: 16),
                           child: Text(
-                            '선택한 공간이 변경됐어요. 닫은 후 다시 작성해 주세요.',
+                            AppStrings.tr(
+                              context,
+                              '선택한 공간이 변경됐어요. 닫은 후 다시 작성해 주세요.',
+                            ),
                             style: TextStyle(color: colors.error),
                           ),
                         ),
@@ -622,7 +668,10 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
                         Padding(
                           padding: const EdgeInsets.only(top: 16),
                           child: Text(
-                            '현재 공간의 주보호자만 투약일지를 작성할 수 있어요.',
+                            AppStrings.tr(
+                              context,
+                              '현재 공간의 주보호자만 투약일지를 작성할 수 있어요.',
+                            ),
                             style: TextStyle(color: colors.error),
                           ),
                         ),
@@ -634,14 +683,18 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
                               onPressed: _saving ? null : _cancel,
                               style: OutlinedButton.styleFrom(
                                 minimumSize: const Size.fromHeight(54),
-                                foregroundColor: AppColors.textPrimary,
-                                backgroundColor: AppColors.surface,
-                                side: const BorderSide(color: AppColors.border),
+                                foregroundColor: AppColors.of(
+                                  context,
+                                ).textPrimary,
+                                backgroundColor: AppColors.of(context).surface,
+                                side: BorderSide(
+                                  color: AppColors.of(context).border,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(18),
                                 ),
                               ),
-                              child: const Text('취소'),
+                              child: Text(AppStrings.tr(context, '취소')),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -652,10 +705,22 @@ class _MedicationFormViewState extends ConsumerState<MedicationFormView> {
                                   ? null
                                   : _save,
                               icon: const Icon(Icons.check, size: 20),
-                              label: Text(_saving ? '등록 중…' : '약 추가하기'),
+                              label: Text(
+                                _saving
+                                    ? AppStrings.tr(context, '등록 중…')
+                                    : AppStrings.tr(context, '약 추가하기'),
+                              ),
                               style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: AppColors.textPrimary,
+                                backgroundColor: AppColors.resolve(
+                                  context,
+                                  AppColors.primary,
+                                  onAccent: true,
+                                ),
+                                foregroundColor: AppColors.resolve(
+                                  context,
+                                  AppColors.textPrimary,
+                                  onAccent: true,
+                                ),
                                 minimumSize: const Size.fromHeight(54),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(18),

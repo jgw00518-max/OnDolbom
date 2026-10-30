@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/model/family/family_room.dart';
@@ -60,12 +61,12 @@ class _FamilyRoomDeleteDialogState
     return PopScope(
       canPop: !_deleting,
       child: Dialog(
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.of(context).background,
         surfaceTintColor: Colors.transparent,
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
-          side: const BorderSide(color: AppColors.border),
+          side: BorderSide(color: AppColors.of(context).border),
         ),
         clipBehavior: Clip.antiAlias,
         child: ConstrainedBox(
@@ -77,7 +78,7 @@ class _FamilyRoomDeleteDialogState
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 ColoredBox(
-                  color: AppColors.surface,
+                  color: AppColors.of(context).surface,
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
                     child: Row(
@@ -85,20 +86,20 @@ class _FamilyRoomDeleteDialogState
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: AppColors.peachSoft,
+                            color: AppColors.of(context).peachSoft,
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: Icon(Icons.delete_outline, color: errorColor),
                         ),
                         const SizedBox(width: 12),
-                        const Expanded(
+                        Expanded(
                           child: Text(
-                            '돌봄 공간을 삭제할까요?',
+                            AppStrings.tr(context, '돌봄 공간을 삭제할까요?'),
                             style: TextStyle(
                               fontSize: 21,
                               height: 1.4,
                               fontWeight: FontWeight.w800,
-                              color: AppColors.textPrimary,
+                              color: AppColors.of(context).textPrimary,
                             ),
                           ),
                         ),
@@ -106,7 +107,7 @@ class _FamilyRoomDeleteDialogState
                     ),
                   ),
                 ),
-                const Divider(height: 1, color: AppColors.border),
+                Divider(height: 1, color: AppColors.of(context).border),
                 Padding(
                   padding: const EdgeInsets.all(22),
                   child: Column(
@@ -115,25 +116,25 @@ class _FamilyRoomDeleteDialogState
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: AppColors.peachSoft,
+                          color: AppColors.of(context).peachSoft,
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Text(
-                          '모든 가족이 이 공간을 이용할 수 없게 됩니다.',
+                        child: Text(
+                          AppStrings.tr(context, '모든 가족이 이 공간을 이용할 수 없게 됩니다.'),
                           style: TextStyle(
                             fontSize: 14,
                             height: 1.6,
-                            color: AppColors.textPrimary,
+                            color: AppColors.of(context).textPrimary,
                           ),
                         ),
                       ),
                       const SizedBox(height: 20),
-                      const Text(
-                        '삭제하려면 돌봄 대상자 이름을 입력해 주세요.',
+                      Text(
+                        AppStrings.tr(context, '삭제하려면 돌봄 대상자 이름을 입력해 주세요.'),
                         style: TextStyle(
                           fontSize: 14,
                           height: 1.6,
-                          color: AppColors.textSecondary,
+                          color: AppColors.of(context).textSecondary,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -142,40 +143,40 @@ class _FamilyRoomDeleteDialogState
                         controller: _name,
                         enabled: allowed && !_deleting,
                         autocorrect: false,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
-                          color: AppColors.textPrimary,
+                          color: AppColors.of(context).textPrimary,
                         ),
                         decoration: InputDecoration(
-                          labelText: '돌봄 대상자 이름',
-                          labelStyle: const TextStyle(
-                            color: AppColors.textSecondary,
+                          labelText: AppStrings.tr(context, '돌봄 대상자 이름'),
+                          labelStyle: TextStyle(
+                            color: AppColors.of(context).textSecondary,
                           ),
-                          floatingLabelStyle: const TextStyle(
-                            color: AppColors.sageDark,
+                          floatingLabelStyle: TextStyle(
+                            color: AppColors.of(context).sageDark,
                           ),
                           filled: true,
-                          fillColor: AppColors.surface,
+                          fillColor: AppColors.of(context).surface,
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 16,
                           ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(
-                              color: AppColors.border,
+                            borderSide: BorderSide(
+                              color: AppColors.of(context).border,
                             ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(
-                              color: AppColors.border,
+                            borderSide: BorderSide(
+                              color: AppColors.of(context).border,
                             ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(
-                              color: AppColors.sageDark,
+                            borderSide: BorderSide(
+                              color: AppColors.of(context).sageDark,
                               width: 1.5,
                             ),
                           ),
@@ -188,8 +189,11 @@ class _FamilyRoomDeleteDialogState
                           liveRegion: true,
                           child: Text(
                             !allowed
-                                ? '공간 또는 권한이 변경됐어요. 화면을 다시 열어 주세요.'
-                                : _error!,
+                                ? AppStrings.tr(
+                                    context,
+                                    '공간 또는 권한이 변경됐어요. 화면을 다시 열어 주세요.',
+                                  )
+                                : AppStrings.error(context, _error!),
                             style: TextStyle(
                               color: errorColor,
                               fontSize: 13,
@@ -207,8 +211,12 @@ class _FamilyRoomDeleteDialogState
                                   ? null
                                   : () => Navigator.of(context).pop(false),
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.textPrimary,
-                                side: const BorderSide(color: AppColors.border),
+                                foregroundColor: AppColors.of(
+                                  context,
+                                ).textPrimary,
+                                side: BorderSide(
+                                  color: AppColors.of(context).border,
+                                ),
                                 minimumSize: const Size(0, 48),
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 8,
@@ -218,8 +226,8 @@ class _FamilyRoomDeleteDialogState
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                               ),
-                              child: const Text(
-                                '취소',
+                              child: Text(
+                                AppStrings.tr(context, '취소'),
                                 textAlign: TextAlign.center,
                               ),
                             ),
@@ -231,9 +239,12 @@ class _FamilyRoomDeleteDialogState
                               style: FilledButton.styleFrom(
                                 backgroundColor: AppColors.primary,
                                 foregroundColor: AppColors.textPrimary,
-                                disabledBackgroundColor: AppColors.peachSoft,
-                                disabledForegroundColor:
-                                    AppColors.textSecondary,
+                                disabledBackgroundColor: AppColors.of(
+                                  context,
+                                ).peachSoft,
+                                disabledForegroundColor: AppColors.of(
+                                  context,
+                                ).textSecondary,
                                 minimumSize: const Size(0, 48),
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 8,
@@ -252,7 +263,10 @@ class _FamilyRoomDeleteDialogState
                                   ? _delete
                                   : null,
                               child: Text(
-                                _deleting ? '삭제 중…' : '공간 삭제',
+                                AppStrings.tr(
+                                  context,
+                                  _deleting ? '삭제 중…' : '공간 삭제',
+                                ),
                                 textAlign: TextAlign.center,
                               ),
                             ),

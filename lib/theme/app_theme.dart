@@ -29,6 +29,7 @@ abstract final class AppTheme {
           outlineVariant: AppColors.border,
         ),
     scaffoldBackgroundColor: AppColors.background,
+    switchTheme: _switchTheme(false),
     datePickerTheme: DatePickerThemeData(
       backgroundColor: AppColors.background,
       surfaceTintColor: Colors.transparent,
@@ -180,6 +181,131 @@ abstract final class AppTheme {
       fillColor: AppColors.surface,
       hintStyle: TextStyle(color: AppColors.textSecondary),
     ),
+  );
+
+  /// 밝은 테마와 글꼴·치수는 공유하고 배경·텍스트·입력·팝업 색상만 변경한다.
+  static final dark = _darkTheme();
+  static ThemeData _darkTheme() {
+    const p = AppPalette.dark;
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: AppColors.primary,
+          brightness: Brightness.dark,
+        ).copyWith(
+          primary: AppColors.primary,
+          onPrimary: AppColors.textPrimary,
+          surface: p.surface,
+          onSurface: p.textPrimary,
+          onSurfaceVariant: p.textSecondary,
+          secondary: p.sageDark,
+          onSecondary: p.background,
+          secondaryContainer: p.peachSoft,
+          onSecondaryContainer: p.textPrimary,
+          outline: p.border,
+          outlineVariant: p.border,
+        );
+    final base = ThemeData(
+      useMaterial3: true,
+      fontFamily: fontFamily,
+      colorScheme: scheme,
+    );
+    return base.copyWith(
+      scaffoldBackgroundColor: p.background,
+      switchTheme: _switchTheme(true),
+      appBarTheme: light.appBarTheme.copyWith(
+        backgroundColor: p.background,
+        foregroundColor: p.textPrimary,
+        titleTextStyle: light.appBarTheme.titleTextStyle?.copyWith(
+          color: p.textPrimary,
+        ),
+      ),
+      cardTheme: light.cardTheme.copyWith(
+        color: p.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(color: p.border),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: p.surface,
+        surfaceTintColor: Colors.transparent,
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: p.surface,
+        modalBackgroundColor: p.surface,
+        surfaceTintColor: Colors.transparent,
+      ),
+      drawerTheme: DrawerThemeData(backgroundColor: p.background),
+      dividerTheme: DividerThemeData(color: p.border),
+      inputDecorationTheme: InputDecorationTheme(
+        fillColor: p.surface,
+        hintStyle: TextStyle(color: p.textSecondary),
+        labelStyle: TextStyle(color: p.textSecondary),
+      ),
+      filledButtonTheme: light.filledButtonTheme,
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(foregroundColor: p.textPrimary),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: p.textPrimary,
+          side: BorderSide(color: p.border),
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: p.peachLight,
+        foregroundColor: p.textPrimary,
+      ),
+      datePickerTheme: DatePickerThemeData(
+        backgroundColor: p.surface,
+        headerBackgroundColor: p.peachSoft,
+        headerForegroundColor: p.textPrimary,
+        dayForegroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? p.background
+              : states.contains(WidgetState.disabled)
+              ? p.textSecondary.withValues(alpha: .4)
+              : p.textPrimary,
+        ),
+        dayBackgroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? p.sageDark
+              : Colors.transparent,
+        ),
+        todayForegroundColor: WidgetStateProperty.resolveWith(
+          (states) =>
+              states.contains(WidgetState.selected) ? p.background : p.sageDark,
+        ),
+        todayBorder: BorderSide(color: p.sageDark),
+      ),
+    );
+  }
+
+  // 꺼짐은 회갈색 트랙과 밝은 손잡이, 켜짐은 살구색 트랙과 진한 손잡이로 구분한다.
+  // 설정 화면의 두 토글이 개별 색상을 덮어쓰지 않고 이 기준을 공유한다.
+  static SwitchThemeData _switchTheme(bool dark) => SwitchThemeData(
+    thumbColor: WidgetStateProperty.resolveWith((states) {
+      if (states.contains(WidgetState.disabled)) {
+        return dark ? const Color(0xFFA99B91) : const Color(0xFFF4F0EC);
+      }
+      if (states.contains(WidgetState.selected)) return AppColors.textPrimary;
+      return dark ? const Color(0xFFE2D5CC) : Colors.white;
+    }),
+    trackColor: WidgetStateProperty.resolveWith((states) {
+      if (states.contains(WidgetState.disabled)) {
+        return dark ? const Color(0xFF413A35) : const Color(0xFFDDD4CD);
+      }
+      if (states.contains(WidgetState.selected)) return AppColors.primary;
+      return dark ? const Color(0xFF544A43) : const Color(0xFFD1C4BB);
+    }),
+    trackOutlineColor: WidgetStateProperty.resolveWith((states) {
+      if (states.contains(WidgetState.disabled)) {
+        return dark ? const Color(0xFF65584E) : const Color(0xFFBDAEA3);
+      }
+      if (states.contains(WidgetState.selected)) return const Color(0xFFA66A47);
+      return dark ? const Color(0xFF9E8A7C) : const Color(0xFF88796E);
+    }),
+    trackOutlineWidth: const WidgetStatePropertyAll(1.2),
   );
 
   static Color _dateForeground(Set<WidgetState> states) {

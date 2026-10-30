@@ -1,3 +1,5 @@
+import 'package:ondolbom/vm/settings/locale_vm.dart';
+import 'package:ondolbom/vm/settings/theme_vm.dart';
 import 'package:ondolbom/model/settings/text_size_preferences.dart';
 import 'text_size_test.dart' show MemoryTextSizePreferences;
 import 'package:flutter/material.dart';
@@ -25,6 +27,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          initialThemeModeProvider.overrideWithValue(ThemeMode.light),
+          initialLocaleProvider.overrideWithValue(const Locale('ko', 'KR')),
           textSizePreferencesProvider.overrideWithValue(
             MemoryTextSizePreferences(),
           ),
@@ -55,12 +59,15 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('가족 사용자'), findsOneWidget);
-    expect(tester.widget<Switch>(find.byType(Switch).first).onChanged, isNull);
+    expect(
+      tester.widget<Switch>(find.byType(Switch).first).onChanged,
+      isNotNull,
+    );
     expect(
       tester
           .widget<DropdownButton<String>>(find.byType(DropdownButton<String>))
           .onChanged,
-      isNull,
+      isNotNull,
     );
     await tester.ensureVisible(find.text('크게'));
     await tester.pumpAndSettle();
@@ -80,6 +87,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          initialThemeModeProvider.overrideWithValue(ThemeMode.light),
+          initialLocaleProvider.overrideWithValue(const Locale('ko', 'KR')),
           firebaseAuthProvider.overrideWithValue(auth),
           authUserProvider.overrideWith(
             (ref) => Stream.value(
@@ -142,11 +151,13 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('개인 설정에서 로그인 옵션을 기존 저장소에 반영한다', (tester) async {
+  testWidgets('개인 설정에서는 로그인 옵션을 표시하거나 변경하지 않는다', (tester) async {
     final preferences = MemoryPreferences();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          initialThemeModeProvider.overrideWithValue(ThemeMode.light),
+          initialLocaleProvider.overrideWithValue(const Locale('ko', 'KR')),
           textSizePreferencesProvider.overrideWithValue(
             MemoryTextSizePreferences(),
           ),
@@ -164,27 +175,18 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('아이디 저장'), 250);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('아이디 저장'));
-    await tester.pumpAndSettle();
-    expect(preferences.email, 'family@example.com');
-    await tester.scrollUntilVisible(find.text('자동 로그인'), 150);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('자동 로그인'));
-    await tester.pumpAndSettle();
-    expect(preferences.autoLogin, true);
-    await tester.scrollUntilVisible(find.text('아이디 저장'), 250);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('아이디 저장'));
-    await tester.pumpAndSettle();
+    expect(find.text('아이디 저장'), findsNothing);
+    expect(find.text('자동 로그인'), findsNothing);
     expect(preferences.email, isNull);
+    expect(preferences.autoLogin, false);
   });
 
   test('로그인 계정 이메일을 확인할 수 없으면 아이디 저장을 허용하지 않는다', () async {
     final preferences = MemoryPreferences();
     final container = ProviderContainer(
       overrides: [
+        initialThemeModeProvider.overrideWithValue(ThemeMode.light),
+        initialLocaleProvider.overrideWithValue(const Locale('ko', 'KR')),
         loginPreferencesProvider.overrideWithValue(preferences),
         authUserProvider.overrideWith((ref) => Stream.value(null)),
       ],

@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/view/widgets/menu_header_icon.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter/material.dart';
@@ -40,35 +41,35 @@ class _FamilyRoomListState extends ConsumerState<FamilyRoomList> {
   Widget build(BuildContext context) {
     final state = ref.watch(familyRoomProvider);
     return Scaffold(
-      backgroundColor: _paper,
+      backgroundColor: AppColors.resolve(context, _paper),
       drawer: const AccountDrawer(),
       // 목록 안의 생성 카드를 대신하며 기존 공간 생성·완료 후 갱신을 재사용한다.
       floatingActionButton: FloatingActionButton(
-        tooltip: '새 돌봄 공간 만들기',
+        tooltip: AppStrings.tr(context, '새 돌봄 공간 만들기'),
         onPressed: () => createRoomAction(context),
-        backgroundColor: AppColors.peachLight,
-        foregroundColor: AppColors.textPrimary,
+        backgroundColor: AppColors.of(context).peachLight,
+        foregroundColor: AppColors.of(context).textPrimary,
         elevation: 2,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
-          side: const BorderSide(color: AppColors.border),
+          side: BorderSide(color: AppColors.of(context).border),
         ),
         child: const Icon(Icons.add, size: 32),
       ),
       appBar: AppBar(
-        backgroundColor: _paper,
-        foregroundColor: _ink,
+        backgroundColor: AppColors.resolve(context, _paper),
+        foregroundColor: AppColors.resolve(context, _ink),
         surfaceTintColor: Colors.transparent,
         toolbarHeight: 88,
         automaticallyImplyLeading: false,
         leading: const AccountMenuButton(),
         centerTitle: true,
-        title: const Column(
+        title: Column(
           children: [
             Text(
               'OUR HOME',
               style: TextStyle(
-                color: Color(0xFFA77762),
+                color: AppColors.resolve(context, Color(0xFFA77762)),
                 fontSize: 9,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 2,
@@ -76,9 +77,9 @@ class _FamilyRoomListState extends ConsumerState<FamilyRoomList> {
             ),
             SizedBox(height: 3),
             Text(
-              '돌봄 공간',
+              AppStrings.tr(context, '돌봄 공간'),
               style: TextStyle(
-                color: _ink,
+                color: AppColors.resolve(context, _ink),
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
               ),
@@ -90,8 +91,10 @@ class _FamilyRoomListState extends ConsumerState<FamilyRoomList> {
       body: Builder(
         builder: (context) {
           if (state.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+            return Center(
+              child: CircularProgressIndicator(
+                color: AppColors.of(context).primary,
+              ),
             );
           }
           if (state.errorMessage != null) {
@@ -101,12 +104,12 @@ class _FamilyRoomListState extends ConsumerState<FamilyRoomList> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(state.errorMessage!),
+                    Text(AppStrings.error(context, state.errorMessage!)),
                     const SizedBox(height: 12),
                     ElevatedButton(
                       onPressed: () =>
                           ref.read(familyRoomProvider.notifier).fetchRooms(),
-                      child: const Text('다시 조회'),
+                      child: Text(AppStrings.tr(context, '다시 조회')),
                     ),
                   ],
                 ),
@@ -123,19 +126,22 @@ class _FamilyRoomListState extends ConsumerState<FamilyRoomList> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '함께하는 공간',
-                              style: TextStyle(color: _muted, fontSize: 12),
+                              AppStrings.tr(context, '함께하는 공간'),
+                              style: TextStyle(
+                                color: AppColors.resolve(context, _muted),
+                                fontSize: 12,
+                              ),
                             ),
                             SizedBox(height: 5),
                             Text(
-                              '어느 가족과 함께할까요?',
+                              AppStrings.tr(context, '어느 가족과 함께할까요?'),
                               style: TextStyle(
-                                color: _ink,
+                                color: AppColors.resolve(context, _ink),
                                 fontSize: 23,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: -0.8,
@@ -151,13 +157,18 @@ class _FamilyRoomListState extends ConsumerState<FamilyRoomList> {
                           vertical: 7,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.peachSoft,
+                          color: AppColors.of(context).peachSoft,
                           borderRadius: BorderRadius.circular(30),
                         ),
                         child: Text(
-                          '${state.rooms.length}개의 공간',
-                          style: const TextStyle(
-                            color: Color(0xFF966B58),
+                          AppStrings.format(context, "{0}개의 공간", [
+                            state.rooms.length,
+                          ]),
+                          style: TextStyle(
+                            color: AppColors.resolve(
+                              context,
+                              Color(0xFF966B58),
+                            ),
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                           ),
@@ -167,12 +178,15 @@ class _FamilyRoomListState extends ConsumerState<FamilyRoomList> {
                   ),
                   const SizedBox(height: 22),
                   if (state.rooms.isEmpty)
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.symmetric(vertical: 48),
                       child: Text(
-                        '참여 중인 공간이 없어요',
+                        AppStrings.tr(context, '참여 중인 공간이 없어요'),
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: _muted, fontSize: 18),
+                        style: TextStyle(
+                          color: AppColors.resolve(context, _muted),
+                          fontSize: 18,
+                        ),
                       ),
                     ),
                   ...state.rooms.asMap().entries.map((entry) {
@@ -180,9 +194,9 @@ class _FamilyRoomListState extends ConsumerState<FamilyRoomList> {
                     final member = state.participations[room.familyRoomId]!;
                     final selected = state.selectedRoomId == room.familyRoomId;
                     final tone = [
-                      AppColors.peachLight,
-                      AppColors.sageLight,
-                      AppColors.peachSoft,
+                      AppColors.of(context).peachLight,
+                      AppColors.of(context).sageLight,
+                      AppColors.of(context).peachSoft,
                     ][entry.key % 3];
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
@@ -191,8 +205,9 @@ class _FamilyRoomListState extends ConsumerState<FamilyRoomList> {
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(
-                                0xFF594135,
+                              color: AppColors.resolve(
+                                context,
+                                const Color(0xFF594135),
                               ).withValues(alpha: 0.05),
                               blurRadius: 24,
                               offset: const Offset(0, 8),
@@ -200,13 +215,16 @@ class _FamilyRoomListState extends ConsumerState<FamilyRoomList> {
                           ],
                         ),
                         child: Material(
-                          color: AppColors.surface,
+                          color: AppColors.of(context).surface,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
                             side: BorderSide(
                               color: selected
-                                  ? AppColors.primary
-                                  : const Color(0xFFEEE3DC),
+                                  ? AppColors.of(context).primary
+                                  : AppColors.resolve(
+                                      context,
+                                      const Color(0xFFEEE3DC),
+                                    ),
                               width: selected ? 2 : 1,
                             ),
                           ),
@@ -239,9 +257,12 @@ class _FamilyRoomListState extends ConsumerState<FamilyRoomList> {
                                         color: tone,
                                         borderRadius: BorderRadius.circular(15),
                                       ),
-                                      child: const Icon(
+                                      child: Icon(
                                         Icons.home_outlined,
-                                        color: Color(0xFF8C5941),
+                                        color: AppColors.resolve(
+                                          context,
+                                          Color(0xFF8C5941),
+                                        ),
                                         size: 24,
                                       ),
                                     ),
@@ -252,9 +273,16 @@ class _FamilyRoomListState extends ConsumerState<FamilyRoomList> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            '${room.careRecipientName} 돌봄 공간',
-                                            style: const TextStyle(
-                                              color: _ink,
+                                            AppStrings.format(
+                                              context,
+                                              "{0} 돌봄 공간",
+                                              [room.careRecipientName],
+                                            ),
+                                            style: TextStyle(
+                                              color: AppColors.resolve(
+                                                context,
+                                                _ink,
+                                              ),
                                               fontSize: 16,
                                               fontWeight: FontWeight.w700,
                                             ),
@@ -266,16 +294,28 @@ class _FamilyRoomListState extends ConsumerState<FamilyRoomList> {
                                               vertical: 4,
                                             ),
                                             decoration: BoxDecoration(
-                                              color: const Color(0xFFF6EEE9),
+                                              color: AppColors.resolve(
+                                                context,
+                                                const Color(0xFFF6EEE9),
+                                              ),
                                               borderRadius:
                                                   BorderRadius.circular(30),
                                             ),
                                             child: Text(
                                               member.isRepresentative
-                                                  ? '주보호자'
-                                                  : '일반 가족',
-                                              style: const TextStyle(
-                                                color: Color(0xFF936B59),
+                                                  ? AppStrings.tr(
+                                                      context,
+                                                      '주보호자',
+                                                    )
+                                                  : AppStrings.tr(
+                                                      context,
+                                                      '일반 가족',
+                                                    ),
+                                              style: TextStyle(
+                                                color: AppColors.resolve(
+                                                  context,
+                                                  Color(0xFF936B59),
+                                                ),
                                                 fontSize: 11,
                                                 fontWeight: FontWeight.w700,
                                               ),
@@ -283,9 +323,22 @@ class _FamilyRoomListState extends ConsumerState<FamilyRoomList> {
                                           ),
                                           const SizedBox(height: 8),
                                           Text(
-                                            '돌봄 주소: ${room.careAddress ?? '미등록'}',
-                                            style: const TextStyle(
-                                              color: _muted,
+                                            AppStrings.format(
+                                              context,
+                                              '돌봄 주소: {0}',
+                                              [
+                                                room.careAddress ??
+                                                    AppStrings.tr(
+                                                      context,
+                                                      '미등록',
+                                                    ),
+                                              ],
+                                            ),
+                                            style: TextStyle(
+                                              color: AppColors.resolve(
+                                                context,
+                                                _muted,
+                                              ),
                                               fontSize: 13,
                                             ),
                                           ),
@@ -298,8 +351,14 @@ class _FamilyRoomListState extends ConsumerState<FamilyRoomList> {
                                           ? Icons.check_circle_outline
                                           : Icons.chevron_right,
                                       color: selected
-                                          ? const Color(0xFFA77762)
-                                          : const Color(0xFFB9AEA8),
+                                          ? AppColors.resolve(
+                                              context,
+                                              const Color(0xFFA77762),
+                                            )
+                                          : AppColors.resolve(
+                                              context,
+                                              const Color(0xFFB9AEA8),
+                                            ),
                                       size: 21,
                                     ),
                                   ],
@@ -315,7 +374,7 @@ class _FamilyRoomListState extends ConsumerState<FamilyRoomList> {
                     const SizedBox(height: 20),
                     TextButton(
                       onPressed: () => inviteAction(context),
-                      child: const Text('받은 가족 초대 확인'),
+                      child: Text(AppStrings.tr(context, '받은 가족 초대 확인')),
                     ),
                   ],
                 ],
@@ -365,9 +424,12 @@ class _FamilyRoomListState extends ConsumerState<FamilyRoomList> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          state.errorMessage == null
-              ? '초대를 수락했습니다. 참여한 공간을 선택해 주세요.'
-              : '초대를 수락했습니다. 공간 목록은 다시 새로고침해 주세요.',
+          AppStrings.error(
+            context,
+            state.errorMessage == null
+                ? AppStrings.tr(context, '초대를 수락했습니다. 참여한 공간을 선택해 주세요.')
+                : AppStrings.tr(context, '초대를 수락했습니다. 공간 목록은 다시 새로고침해 주세요.'),
+          ),
         ),
       ),
     );

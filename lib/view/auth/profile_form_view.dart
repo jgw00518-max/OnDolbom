@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/vm/auth/auth_vm.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -62,27 +63,35 @@ class _ProfileFormViewState extends ConsumerState<ProfileFormView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('가족 사용자 정보 등록', style: TextStyle(fontSize: 20)),
+            Text(
+              AppStrings.tr(context, '가족 사용자 정보 등록'),
+              style: TextStyle(fontSize: 20),
+            ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _name,
               enabled: !state.isLoading,
-              decoration: const InputDecoration(labelText: '이름 (필수)'),
+              decoration: InputDecoration(
+                labelText: AppStrings.tr(context, '이름 (필수)'),
+              ),
               autofillHints: const [AutofillHints.name],
               // 필수 여부와 실제 DB name 컬럼의 20자 제한을 먼저 안내한다.
               validator: (value) => value == null || value.trim().isEmpty
-                  ? '이름을 입력해 주세요.'
+                  ? AppStrings.tr(context, '이름을 입력해 주세요.')
                   : value.trim().runes.length > 20
-                  ? '이름은 20자 이내로 입력해 주세요.'
+                  ? AppStrings.tr(context, '이름은 20자 이내로 입력해 주세요.')
                   : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _phone,
               enabled: !state.isLoading,
-              decoration: const InputDecoration(
-                labelText: '전화번호 (필수)',
-                hintText: '01012345678 또는 010-1234-5678',
+              decoration: InputDecoration(
+                labelText: AppStrings.tr(context, '전화번호 (필수)'),
+                hintText: AppStrings.tr(
+                  context,
+                  '01012345678 또는 010-1234-5678',
+                ),
               ),
               keyboardType: TextInputType.phone,
               autofillHints: const [AutofillHints.telephoneNumber],
@@ -91,14 +100,17 @@ class _ProfileFormViewState extends ConsumerState<ProfileFormView> {
                   !RegExp(
                     r'^010(?:[0-9]{8}|-[0-9]{4}-[0-9]{4})$',
                   ).hasMatch(value?.trim() ?? '')
-                  ? '01012345678 또는 010-1234-5678로 입력해 주세요.'
+                  ? AppStrings.tr(
+                      context,
+                      '01012345678 또는 010-1234-5678로 입력해 주세요.',
+                    )
                   : null,
             ),
             if (state.hasError)
               Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: Text(
-                  state.error.toString(),
+                  AppStrings.error(context, state.error.toString()),
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ),
@@ -111,7 +123,9 @@ class _ProfileFormViewState extends ConsumerState<ProfileFormView> {
                     : _sendVerification,
                 icon: const Icon(Icons.mark_email_read_outlined),
                 label: Text(
-                  _sendingVerification ? '인증 메일 보내는 중…' : '이메일 인증 메일 보내기',
+                  _sendingVerification
+                      ? AppStrings.tr(context, '인증 메일 보내는 중…')
+                      : AppStrings.tr(context, '이메일 인증 메일 보내기'),
                 ),
               ),
             if (_verificationNotice != null)
@@ -131,7 +145,11 @@ class _ProfileFormViewState extends ConsumerState<ProfileFormView> {
                             .register(_name.text, _phone.text);
                       }
                     },
-              child: Text(state.isLoading ? '저장 중…' : '가족 사용자 정보 저장'),
+              child: Text(
+                state.isLoading
+                    ? AppStrings.tr(context, '저장 중…')
+                    : AppStrings.tr(context, '가족 사용자 정보 저장'),
+              ),
             ),
           ],
         ),

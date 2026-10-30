@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
@@ -6,8 +7,8 @@ class LoginLoadingView extends StatelessWidget {
   const LoginLoadingView({super.key});
 
   @override
-  Widget build(BuildContext context) => const Scaffold(
-    backgroundColor: AppColors.background,
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: AppColors.of(context).background,
     body: Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -16,15 +17,15 @@ class LoginLoadingView extends StatelessWidget {
             dimension: 28,
             child: CircularProgressIndicator(
               strokeWidth: 3,
-              color: AppColors.primary,
-              backgroundColor: Color(0xFFFFEBD9),
+              color: AppColors.of(context).primary,
+              backgroundColor: AppColors.resolve(context, Color(0xFFFFEBD9)),
             ),
           ),
           SizedBox(height: 20),
           Text(
-            '로그인 중',
+            AppStrings.tr(context, '로그인 중'),
             style: TextStyle(
-              color: AppColors.textPrimary,
+              color: AppColors.of(context).textPrimary,
               fontSize: 16,
               fontWeight: FontWeight.w600,
             ),

@@ -1,3 +1,5 @@
+import 'package:ondolbom/l10n/app_strings.dart';
+import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/vm/chats/chat_notifications_vm.dart';
 import 'package:ondolbom/vm/chats/chat_vm.dart';
 import 'package:ondolbom/vm/family_room/family_context.dart';
@@ -150,8 +152,13 @@ class _PushBridgeState extends ConsumerState<PushBridge>
       final context = widget.navigatorKey.currentContext;
       if (context != null && context.mounted) {
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          const SnackBar(
-            content: Text('채팅 공간에 접근할 수 없습니다. 공간 목록과 참여 상태를 확인해 주세요.'),
+          SnackBar(
+            content: Text(
+              AppStrings.tr(
+                context,
+                '채팅 공간에 접근할 수 없습니다. 공간 목록과 참여 상태를 확인해 주세요.',
+              ),
+            ),
           ),
         );
       }
@@ -203,28 +210,144 @@ class PushSettingsTile extends ConsumerWidget {
     if (service == null) return const SizedBox.shrink();
     return ValueListenableBuilder<String>(
       valueListenable: service.status,
-      builder: (context, status, _) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ListTile(
-            leading: const Icon(Icons.notifications_outlined),
-            title: const Text('기기 푸시 알림'),
-            subtitle: Text(status),
+      builder: (context, status, _) {
+        final connected = status == '푸시 알림 연결됨';
+        final connecting = status == '푸시 연결 중' || status == '푸시 설정 변경 중';
+        return Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: AppColors.of(context).surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.of(context).border),
           ),
-          Wrap(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextButton(
-                onPressed: () => service.reconnect(),
-                child: const Text('다시 연결'),
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.of(context).peachSoft,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(
+                      Icons.notifications_outlined,
+                      color: AppColors.of(context).sageDark,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          AppStrings.tr(context, '기기 푸시 알림'),
+                          style: TextStyle(
+                            color: AppColors.of(context).textPrimary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          AppStrings.tr(context, '앱을 보고 있지 않아도 소식을 받아요'),
+                          style: TextStyle(
+                            color: AppColors.of(context).textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Switch(
+                    value: service.enabled,
+                    onChanged: connecting
+                        ? null
+                        : (value) async {
+                            try {
+                              await service.setEnabled(value);
+                            } catch (_) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      AppStrings.tr(
+                                        context,
+                                        '알림 설정을 저장하지 못했습니다. 다시 시도해 주세요.',
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                  ),
+                ],
               ),
-              TextButton(
-                onPressed: () => service.sendTest(),
-                child: const Text('테스트 알림 보내기'),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: connected
+                      ? AppColors.of(context).sageLight
+                      : AppColors.of(context).peachSoft,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      connected
+                          ? Icons.check_circle_outline
+                          : Icons.info_outline,
+                      size: 18,
+                      color: AppColors.of(context).sageDark,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        !service.enabled
+                            ? AppStrings.tr(context, '이 기기의 푸시 알림을 껐어요')
+                            : connected
+                            ? AppStrings.tr(context, '알림을 받을 준비가 되었어요')
+                            : connecting
+                            ? AppStrings.tr(context, '알림 수신을 준비하고 있어요')
+                            : AppStrings.tr(context, '알림 권한과 연결 상태를 확인해 주세요'),
+                        style: TextStyle(
+                          color: AppColors.of(context).textPrimary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (service.enabled && !connected)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: connecting ? null : () => service.reconnect(),
+                    icon: const Icon(Icons.refresh, size: 16),
+                    label: Text(AppStrings.tr(context, '연결 확인')),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.of(context).sageDark,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 8),
+              Text(
+                AppStrings.tr(context, '알림 수신 권한은 휴대폰의 앱 알림 설정에서 변경할 수 있어요.'),
+                style: TextStyle(
+                  color: AppColors.of(context).textSecondary,
+                  fontSize: 11,
+                  height: 1.5,
+                ),
               ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

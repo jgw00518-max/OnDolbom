@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/model/schedules/schedule.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,10 +22,10 @@ class TodayScheduleCard extends ConsumerWidget {
     );
     final schedules = ref.watch(scheduleListProvider(query));
     return Card(
-      color: AppColors.surface,
+      color: AppColors.of(context).surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
-        side: const BorderSide(color: AppColors.border),
+        side: BorderSide(color: AppColors.of(context).border),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -33,25 +34,25 @@ class TodayScheduleCard extends ConsumerWidget {
           children: [
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
-                    '오늘의 일정',
+                    AppStrings.tr(context, '오늘의 일정'),
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
+                      color: AppColors.of(context).textPrimary,
                     ),
                   ),
                 ),
                 IconButton(
-                  tooltip: '오늘 일정 새로고침',
+                  tooltip: AppStrings.tr(context, '오늘 일정 새로고침'),
                   onPressed: schedules.isLoading
                       ? null
                       : () => ref.invalidate(scheduleListProvider(query)),
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.refresh,
                     size: 21,
-                    color: AppColors.sageDark,
+                    color: AppColors.of(context).sageDark,
                   ),
                 ),
                 TextButton(
@@ -70,21 +71,24 @@ class TodayScheduleCard extends ConsumerWidget {
                     }
                   },
                   style: TextButton.styleFrom(
-                    foregroundColor: AppColors.sageDark,
+                    foregroundColor: AppColors.of(context).sageDark,
                     textStyle: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  child: const Text('전체 일정 ›'),
+                  child: Text(AppStrings.tr(context, '전체 일정 ›')),
                 ),
               ],
             ),
             Text(
-              '${today.month}월 ${today.day}일 · 오늘의 돌봄을 함께 확인해요',
-              style: const TextStyle(
+              AppStrings.format(context, "{0}월 {1}일 · 오늘의 돌봄을 함께 확인해요", [
+                today.month,
+                today.day,
+              ]),
+              style: TextStyle(
                 fontSize: 12,
-                color: AppColors.textSecondary,
+                color: AppColors.of(context).textSecondary,
               ),
             ),
             const SizedBox(height: 18),
@@ -96,14 +100,16 @@ class TodayScheduleCard extends ConsumerWidget {
               error: (_, _) => Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    '오늘 일정을 불러오지 못했습니다.',
-                    style: TextStyle(color: AppColors.textSecondary),
+                  Text(
+                    AppStrings.tr(context, '오늘 일정을 불러오지 못했습니다.'),
+                    style: TextStyle(
+                      color: AppColors.of(context).textSecondary,
+                    ),
                   ),
                   TextButton(
                     onPressed: () =>
                         ref.invalidate(scheduleListProvider(query)),
-                    child: const Text('다시 조회'),
+                    child: Text(AppStrings.tr(context, '다시 조회')),
                   ),
                 ],
               ),
@@ -115,19 +121,19 @@ class TodayScheduleCard extends ConsumerWidget {
                         .toList()
                       ..sort((a, b) => a.startTime.compareTo(b.startTime));
                 if (entries.isEmpty) {
-                  return const Row(
+                  return Row(
                     children: [
                       Icon(
                         Icons.calendar_month_outlined,
-                        color: AppColors.sageDark,
+                        color: AppColors.of(context).sageDark,
                       ),
                       SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          '오늘 등록된 일정이 없습니다.',
+                          AppStrings.tr(context, '오늘 등록된 일정이 없습니다.'),
                           style: TextStyle(
                             fontSize: 13,
-                            color: AppColors.textSecondary,
+                            color: AppColors.of(context).textSecondary,
                           ),
                         ),
                       ),
@@ -138,7 +144,7 @@ class TodayScheduleCard extends ConsumerWidget {
                   children: [
                     for (var index = 0; index < entries.length; index++) ...[
                       if (index > 0) const SizedBox(height: 12),
-                      scheduleTile(entries[index], () async {
+                      scheduleTile(context, entries[index], () async {
                         await showDialog<void>(
                           context: context,
                           builder: (_) => ScheduleDetail(
@@ -162,24 +168,24 @@ class TodayScheduleCard extends ConsumerWidget {
   }
 
   // 시간·담당 상태·제목을 나누어 홈에서도 읽기 쉽게 표시한다.
-  Widget scheduleTile(Schedule item, VoidCallback onTap) {
+  Widget scheduleTile(BuildContext context, Schedule item, VoidCallback onTap) {
     final recruiting = item.acceptedBy == null;
     final accent = recruiting || item.reconfirmRequired
-        ? const Color(0xFFAC6B4B)
-        : AppColors.sageDark;
+        ? AppColors.resolve(context, const Color(0xFFAC6B4B))
+        : AppColors.of(context).sageDark;
     final tint = recruiting || item.reconfirmRequired
-        ? AppColors.peachSoft
-        : AppColors.sageLight.withValues(alpha: 0.45);
+        ? AppColors.of(context).peachSoft
+        : AppColors.of(context).sageLight.withValues(alpha: 0.45);
     final status = item.reconfirmRequired
         ? '재수락 요청 중'
         : recruiting
         ? '담당자 모집 중'
         : '담당자 등록 완료';
     return Material(
-      color: AppColors.background,
+      color: AppColors.of(context).background,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
-        side: const BorderSide(color: AppColors.border),
+        side: BorderSide(color: AppColors.of(context).border),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -201,10 +207,10 @@ class TodayScheduleCard extends ConsumerWidget {
                       const SizedBox(width: 6),
                       Text(
                         '${item.startTime} ~ ${item.endTime}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
+                          color: AppColors.of(context).textPrimary,
                         ),
                       ),
                     ],
@@ -219,7 +225,7 @@ class TodayScheduleCard extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      status,
+                      AppStrings.tr(context, status),
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -232,11 +238,11 @@ class TodayScheduleCard extends ConsumerWidget {
               const SizedBox(height: 14),
               Text(
                 item.title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
                   height: 1.4,
-                  color: AppColors.textPrimary,
+                  color: AppColors.of(context).textPrimary,
                 ),
               ),
               const SizedBox(height: 16),
@@ -244,8 +250,8 @@ class TodayScheduleCard extends ConsumerWidget {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(6),
-                    decoration: const BoxDecoration(
-                      color: AppColors.surface,
+                    decoration: BoxDecoration(
+                      color: AppColors.of(context).surface,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -253,34 +259,36 @@ class TodayScheduleCard extends ConsumerWidget {
                           ? Icons.groups_outlined
                           : Icons.person_outline_rounded,
                       size: 16,
-                      color: AppColors.sageDark,
+                      color: AppColors.of(context).sageDark,
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       recruiting
-                          ? '함께할 가족을 기다리고 있어요'
-                          : '담당 가족 · ${item.acceptedName ?? '가족'}',
-                      style: const TextStyle(
+                          ? AppStrings.tr(context, '함께할 가족을 기다리고 있어요')
+                          : AppStrings.format(context, "담당 가족 · {0}", [
+                              item.acceptedName ?? AppStrings.tr(context, '가족'),
+                            ]),
+                      style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textPrimary,
+                        color: AppColors.of(context).textPrimary,
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    item.state,
-                    style: const TextStyle(
+                    AppStrings.tr(context, item.state),
+                    style: TextStyle(
                       fontSize: 11,
-                      color: AppColors.textSecondary,
+                      color: AppColors.of(context).textSecondary,
                     ),
                   ),
                   const SizedBox(width: 4),
-                  const Icon(
+                  Icon(
                     Icons.chevron_right_rounded,
                     size: 18,
-                    color: AppColors.textSecondary,
+                    color: AppColors.of(context).textSecondary,
                   ),
                 ],
               ),

@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/theme/app_colors.dart';
@@ -22,12 +23,14 @@ class SpaceSwitcherButton extends ConsumerWidget {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
           child: Material(
-            color: AppColors.background,
+            color: AppColors.of(context).background,
             elevation: 8,
-            shadowColor: AppColors.textPrimary.withValues(alpha: .16),
+            shadowColor: AppColors.of(
+              context,
+            ).textPrimary.withValues(alpha: .16),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(24),
-              side: const BorderSide(color: AppColors.border),
+              side: BorderSide(color: AppColors.of(context).border),
             ),
             clipBehavior: Clip.antiAlias,
             child: Consumer(
@@ -57,18 +60,18 @@ class SpaceSwitcherButton extends ConsumerWidget {
                       children: [
                         Row(
                           children: [
-                            const Expanded(
+                            Expanded(
                               child: Text(
-                                '공간 이동',
+                                AppStrings.tr(context, '공간 이동'),
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w800,
-                                  color: AppColors.textPrimary,
+                                  color: AppColors.of(context).textPrimary,
                                 ),
                               ),
                             ),
                             IconButton(
-                              tooltip: '닫기',
+                              tooltip: AppStrings.tr(context, '닫기'),
                               onPressed: () => Navigator.pop(sheetContext),
                               icon: const Icon(Icons.close),
                             ),
@@ -76,15 +79,15 @@ class SpaceSwitcherButton extends ConsumerWidget {
                         ),
                         const SizedBox(height: 4),
                         Material(
-                          color: AppColors.peachSoft,
+                          color: AppColors.of(context).peachSoft,
                           borderRadius: BorderRadius.circular(18),
                           child: ListTile(
-                            leading: const Icon(
+                            leading: Icon(
                               Icons.home_outlined,
-                              color: AppColors.sageDark,
+                              color: AppColors.of(context).sageDark,
                             ),
-                            title: const Text(
-                              '돌봄 공간 목록으로',
+                            title: Text(
+                              AppStrings.tr(context, '돌봄 공간 목록으로'),
                               style: TextStyle(fontWeight: FontWeight.w700),
                             ),
                             trailing: const Icon(Icons.chevron_right),
@@ -99,14 +102,14 @@ class SpaceSwitcherButton extends ConsumerWidget {
                         const SizedBox(height: 16),
                         Row(
                           children: [
-                            const Expanded(
+                            Expanded(
                               child: Text(
-                                '참여 중인 공간',
+                                AppStrings.tr(context, '참여 중인 공간'),
                                 style: TextStyle(fontWeight: FontWeight.w700),
                               ),
                             ),
                             IconButton(
-                              tooltip: '공간 목록 새로고침',
+                              tooltip: AppStrings.tr(context, '공간 목록 새로고침'),
                               onPressed: state.isLoading || !sameAccount
                                   ? null
                                   : () => ref
@@ -119,16 +122,27 @@ class SpaceSwitcherButton extends ConsumerWidget {
                         if (state.isLoading) const LinearProgressIndicator(),
                         Expanded(
                           child: !sameAccount
-                              ? const Center(child: Text('로그인 계정이 변경되었습니다.'))
-                              : state.errorMessage != null
-                              ? const Center(
+                              ? Center(
                                   child: Text(
-                                    '공간 목록을 불러오지 못했습니다. 다시 새로고침해 주세요.',
+                                    AppStrings.tr(context, '로그인 계정이 변경되었습니다.'),
+                                  ),
+                                )
+                              : state.errorMessage != null
+                              ? Center(
+                                  child: Text(
+                                    AppStrings.tr(
+                                      context,
+                                      '공간 목록을 불러오지 못했습니다. 다시 새로고침해 주세요.',
+                                    ),
                                     textAlign: TextAlign.center,
                                   ),
                                 )
                               : rooms.isEmpty
-                              ? const Center(child: Text('참여 중인 공간이 없습니다.'))
+                              ? Center(
+                                  child: Text(
+                                    AppStrings.tr(context, '참여 중인 공간이 없습니다.'),
+                                  ),
+                                )
                               : ListView.separated(
                                   itemCount: rooms.length,
                                   separatorBuilder: (_, _) =>
@@ -140,14 +154,14 @@ class SpaceSwitcherButton extends ConsumerWidget {
                                         state.selectedRoomId;
                                     return Material(
                                       color: selected
-                                          ? AppColors.peachSoft
-                                          : AppColors.surface,
+                                          ? AppColors.of(context).peachSoft
+                                          : AppColors.of(context).surface,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(18),
                                         side: BorderSide(
                                           color: selected
-                                              ? AppColors.primary
-                                              : AppColors.border,
+                                              ? AppColors.of(context).primary
+                                              : AppColors.of(context).border,
                                         ),
                                       ),
                                       child: ListTile(
@@ -156,26 +170,32 @@ class SpaceSwitcherButton extends ConsumerWidget {
                                               horizontal: 12,
                                               vertical: 2,
                                             ),
-                                        leading: const Icon(
+                                        leading: Icon(
                                           Icons.home_outlined,
-                                          color: AppColors.sageDark,
+                                          color: AppColors.of(context).sageDark,
                                         ),
                                         title: Text(
-                                          '${room.careRecipientName} 님의 돌봄 공간',
+                                          AppStrings.format(
+                                            context,
+                                            "{0} 님의 돌봄 공간",
+                                            [room.careRecipientName],
+                                          ),
                                           style: const TextStyle(
                                             fontWeight: FontWeight.w700,
                                           ),
                                         ),
                                         subtitle: Text(
-                                          '${state.participations[room.familyRoomId]!.isRepresentative ? '주보호자' : '일반 가족'}${selected ? ' · 현재 공간' : ''}',
+                                          '${state.participations[room.familyRoomId]!.isRepresentative ? AppStrings.tr(context, '주보호자') : AppStrings.tr(context, '일반 가족')}${selected ? AppStrings.tr(context, ' · 현재 공간') : ''}',
                                         ),
                                         trailing: Icon(
                                           selected
                                               ? Icons.check_circle
                                               : Icons.chevron_right,
                                           color: selected
-                                              ? AppColors.sageDark
-                                              : AppColors.textSecondary,
+                                              ? AppColors.of(context).sageDark
+                                              : AppColors.of(
+                                                  context,
+                                                ).textSecondary,
                                         ),
                                         onTap: state.isLoading
                                             ? null
@@ -232,14 +252,14 @@ class SpaceSwitcherButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => FloatingActionButton(
     heroTag: null,
-    tooltip: '돌봄 공간 이동',
+    tooltip: AppStrings.tr(context, '돌봄 공간 이동'),
     onPressed: () => _open(context, ref),
-    backgroundColor: AppColors.peachLight,
-    foregroundColor: AppColors.textPrimary,
+    backgroundColor: AppColors.of(context).peachLight,
+    foregroundColor: AppColors.of(context).textPrimary,
     elevation: 2,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(18),
-      side: const BorderSide(color: AppColors.border),
+      side: BorderSide(color: AppColors.of(context).border),
     ),
     child: const Icon(Icons.home_outlined, size: 30),
   );

@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/view/family_room/today_schedule_card.dart';
 import 'package:ondolbom/vm/schedules/schedule_vm.dart';
 import 'package:ondolbom/vm/chats/chat_notifications_vm.dart';
@@ -36,10 +37,10 @@ class FamilyRoomHome extends ConsumerWidget {
         drawer: const AccountDrawer(),
         appBar: AppBar(
           automaticallyImplyLeading: false,
-          title: const Text('돌봄 공간'),
+          title: Text(AppStrings.tr(context, '돌봄 공간')),
           leading: const AccountMenuButton(),
         ),
-        body: const Center(child: Text('공간을 선택해 주세요.')),
+        body: Center(child: Text(AppStrings.tr(context, '공간을 선택해 주세요.'))),
       );
     }
 
@@ -48,9 +49,9 @@ class FamilyRoomHome extends ConsumerWidget {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         centerTitle: true,
-        foregroundColor: AppColors.textPrimary,
-        title: const Text(
-          '온돌봄',
+        foregroundColor: AppColors.of(context).textPrimary,
+        title: Text(
+          AppStrings.tr(context, '온돌봄'),
           style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
         ),
         leading: const AccountMenuButton(),
@@ -68,32 +69,32 @@ class FamilyRoomHome extends ConsumerWidget {
               final stacked =
                   constraints.maxWidth < 300 ||
                   MediaQuery.textScalerOf(context).scale(16) > 20;
-              const copy = Column(
+              final copy = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '나의 일상에,',
+                    AppStrings.tr(context, '나의 일상에,'),
                     style: TextStyle(
                       fontSize: 30,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
+                      color: AppColors.of(context).textPrimary,
                     ),
                   ),
                   Text(
-                    '안심을 더하다',
+                    AppStrings.tr(context, '안심을 더하다'),
                     style: TextStyle(
                       fontSize: 30,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.primary,
+                      color: AppColors.of(context).primary,
                     ),
                   ),
                   SizedBox(height: 12),
                   Text(
-                    '소중한 사람의 오늘도,\n온돌봄이 함께합니다.',
+                    AppStrings.tr(context, '소중한 사람의 오늘도,\n온돌봄이 함께합니다.'),
                     style: TextStyle(
                       fontSize: 14,
                       height: 1.6,
-                      color: AppColors.textSecondary,
+                      color: AppColors.of(context).textSecondary,
                     ),
                   ),
                 ],
@@ -105,7 +106,7 @@ class FamilyRoomHome extends ConsumerWidget {
                 ),
               );
               if (stacked) {
-                return const Column(
+                return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     copy,
@@ -116,7 +117,7 @@ class FamilyRoomHome extends ConsumerWidget {
                   ],
                 );
               }
-              return const Row(
+              return Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Expanded(child: copy),
@@ -128,8 +129,8 @@ class FamilyRoomHome extends ConsumerWidget {
           ),
           const SizedBox(height: 26),
 
-          const Text(
-            '돌봄 메뉴',
+          Text(
+            AppStrings.tr(context, '돌봄 메뉴'),
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
@@ -138,7 +139,8 @@ class FamilyRoomHome extends ConsumerWidget {
           Row(
             children: [
               menuButton(
-                '투약일지',
+                context,
+                AppStrings.tr(context, '투약일지'),
                 Icons.medication_outlined,
                 () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
@@ -148,7 +150,8 @@ class FamilyRoomHome extends ConsumerWidget {
               ),
               const SizedBox(width: 10),
               menuButton(
-                '실시간 채팅',
+                context,
+                AppStrings.tr(context, '실시간 채팅'),
                 Icons.chat_bubble_outline,
                 () => Navigator.of(context)
                     .push(
@@ -161,7 +164,8 @@ class FamilyRoomHome extends ConsumerWidget {
               ),
               const SizedBox(width: 10),
               menuButton(
-                '메모',
+                context,
+                AppStrings.tr(context, '메모'),
                 Icons.edit_outlined,
                 () => Navigator.of(context).push(
                   MaterialPageRoute<void>(builder: (_) => const MemoListView()),
@@ -175,13 +179,15 @@ class FamilyRoomHome extends ConsumerWidget {
           Row(
             children: [
               menuButton(
-                '일정',
+                context,
+                AppStrings.tr(context, '일정'),
                 Icons.calendar_month_outlined,
                 () => scheduleAction(context, ref, room.familyRoomId),
               ),
               const SizedBox(width: 10),
               menuButton(
-                '대상자 정보',
+                context,
+                AppStrings.tr(context, '대상자 정보'),
                 Icons.people_outline,
                 () => recipientAction(context),
               ),
@@ -189,7 +195,8 @@ class FamilyRoomHome extends ConsumerWidget {
 
               // 모든 역할에서 같은 위치로 공간 관리 기능에 접근한다.
               menuButton(
-                '공간 설정',
+                context,
+                AppStrings.tr(context, '공간 설정'),
                 Icons.settings_outlined,
                 () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
@@ -213,6 +220,7 @@ class FamilyRoomHome extends ConsumerWidget {
 
   // 반복되는 메뉴 모양을 만든다.
   Widget menuButton(
+    BuildContext context,
     String title,
     IconData icon,
     VoidCallback action, {
@@ -225,9 +233,9 @@ class FamilyRoomHome extends ConsumerWidget {
           onPressed: action,
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.all(8),
-            backgroundColor: AppColors.surface,
-            foregroundColor: AppColors.textPrimary,
-            side: const BorderSide(color: AppColors.border),
+            backgroundColor: AppColors.of(context).surface,
+            foregroundColor: AppColors.of(context).textPrimary,
+            side: BorderSide(color: AppColors.of(context).border),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
@@ -240,8 +248,8 @@ class FamilyRoomHome extends ConsumerWidget {
               Badge(
                 isLabelVisible: badge > 0,
                 label: Text(badge > 99 ? '99+' : '$badge'),
-                backgroundColor: AppColors.primary,
-                textColor: AppColors.textPrimary,
+                backgroundColor: AppColors.of(context).primary,
+                textColor: AppColors.of(context).textPrimary,
                 child: Container(
                   width: 40,
                   height: 40,
@@ -249,11 +257,15 @@ class FamilyRoomHome extends ConsumerWidget {
                   decoration: BoxDecoration(
                     color:
                         title == '일정' || title == '실시간 채팅' || title == '공간 설정'
-                        ? AppColors.sageLight
-                        : AppColors.peachSoft,
+                        ? AppColors.of(context).sageLight
+                        : AppColors.of(context).peachSoft,
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Icon(icon, size: 23, color: AppColors.sageDark),
+                  child: Icon(
+                    icon,
+                    size: 23,
+                    color: AppColors.of(context).sageDark,
+                  ),
                 ),
               ),
               const SizedBox(height: 9),
@@ -305,9 +317,9 @@ class FamilyRoomHome extends ConsumerWidget {
 
   // 아직 연결하지 않은 기능을 안내한다.
   void preparingAction(BuildContext context) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('아직 연결하지 않은 기능입니다.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppStrings.tr(context, '아직 연결하지 않은 기능입니다.'))),
+    );
   }
 }
 

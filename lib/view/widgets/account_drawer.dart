@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/vm/activity/activity_vm.dart';
 import 'package:flutter/material.dart';
@@ -20,14 +21,14 @@ class AccountDrawer extends ConsumerWidget {
   static const _accent = Color(0xFF875C49);
 
   // 메뉴의 이동 콜백은 유지하고 아이콘·문구·간격만 공통 스타일로 감싼다.
-  Widget _menuIcon(IconData icon) => Container(
+  Widget _menuIcon(BuildContext context, IconData icon) => Container(
     width: 38,
     height: 38,
     decoration: BoxDecoration(
-      color: AppColors.peachSoft,
+      color: AppColors.of(context).peachSoft,
       borderRadius: BorderRadius.circular(12),
     ),
-    child: Icon(icon, size: 20, color: _accent),
+    child: Icon(icon, size: 20, color: AppColors.resolve(context, _accent)),
   );
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -49,7 +50,7 @@ class AccountDrawer extends ConsumerWidget {
         : '가족 사용자';
     return Drawer(
       width: (MediaQuery.sizeOf(context).width * 0.88).clamp(0.0, 400.0),
-      backgroundColor: const Color(0xFFFFF8F3),
+      backgroundColor: AppColors.resolve(context, const Color(0xFFFFF8F3)),
       surfaceTintColor: Colors.transparent,
       shape: const RoundedRectangleBorder(),
       child: SafeArea(
@@ -65,22 +66,22 @@ class AccountDrawer extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
-                          const Expanded(
+                          Expanded(
                             child: Text(
-                              '온돌봄',
+                              AppStrings.tr(context, '온돌봄'),
                               style: TextStyle(
-                                color: _ink,
+                                color: AppColors.resolve(context, _ink),
                                 fontSize: 19,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
                           ),
                           IconButton(
-                            tooltip: '메뉴 닫기',
+                            tooltip: AppStrings.tr(context, '메뉴 닫기'),
                             onPressed: () => Navigator.of(context).pop(),
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.close,
-                              color: _ink,
+                              color: AppColors.resolve(context, _ink),
                               size: 22,
                             ),
                           ),
@@ -90,7 +91,7 @@ class AccountDrawer extends ConsumerWidget {
                         margin: const EdgeInsets.only(top: 27, bottom: 23),
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
-                          color: AppColors.peachLight,
+                          color: AppColors.of(context).peachLight,
                           borderRadius: BorderRadius.circular(19),
                         ),
                         child: Row(
@@ -101,16 +102,19 @@ class AccountDrawer extends ConsumerWidget {
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: AppColors.primary,
+                                color: AppColors.of(context).primary,
                                 border: Border.all(
-                                  color: const Color(0xFFFFEBD9),
+                                  color: AppColors.resolve(
+                                    context,
+                                    const Color(0xFFFFEBD9),
+                                  ),
                                   width: 3,
                                 ),
                               ),
                               child: Text(
                                 name.characters.first,
-                                style: const TextStyle(
-                                  color: Color(0xFF684331),
+                                style: TextStyle(
+                                  color: AppColors.textPrimary,
                                   fontSize: 20,
                                   fontWeight: FontWeight.w800,
                                 ),
@@ -121,18 +125,21 @@ class AccountDrawer extends ConsumerWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    '반가워요,',
+                                  Text(
+                                    AppStrings.tr(context, '반가워요,'),
                                     style: TextStyle(
-                                      color: Color(0xFF8C6553),
+                                      color: AppColors.resolve(
+                                        context,
+                                        Color(0xFF8C6553),
+                                      ),
                                       fontSize: 12,
                                     ),
                                   ),
                                   const SizedBox(height: 3),
                                   Text(
-                                    '$name 님',
-                                    style: const TextStyle(
-                                      color: _ink,
+                                    AppStrings.format(context, "{0} 님", [name]),
+                                    style: TextStyle(
+                                      color: AppColors.resolve(context, _ink),
                                       fontSize: 19,
                                       fontWeight: FontWeight.w800,
                                     ),
@@ -140,8 +147,11 @@ class AccountDrawer extends ConsumerWidget {
                                   const SizedBox(height: 6),
                                   Text(
                                     data?.email ?? user?.email ?? '',
-                                    style: const TextStyle(
-                                      color: Color(0xFF8C7770),
+                                    style: TextStyle(
+                                      color: AppColors.resolve(
+                                        context,
+                                        Color(0xFF8C7770),
+                                      ),
                                       fontSize: 12,
                                     ),
                                   ),
@@ -149,8 +159,11 @@ class AccountDrawer extends ConsumerWidget {
                                     const SizedBox(height: 4),
                                     Text(
                                       data!.phone!,
-                                      style: const TextStyle(
-                                        color: Color(0xFF8C7770),
+                                      style: TextStyle(
+                                        color: AppColors.resolve(
+                                          context,
+                                          Color(0xFF8C7770),
+                                        ),
                                         fontSize: 12,
                                       ),
                                     ),
@@ -169,9 +182,12 @@ class AccountDrawer extends ConsumerWidget {
                       if (profile.hasError)
                         TextButton(
                           onPressed: () => ref.invalidate(userProfileProvider),
-                          child: const Text('사용자 정보 다시 확인'),
+                          child: Text(AppStrings.tr(context, '사용자 정보 다시 확인')),
                         ),
-                      const Divider(color: Color(0xFFEADBD2), height: 1),
+                      Divider(
+                        color: AppColors.resolve(context, Color(0xFFEADBD2)),
+                        height: 1,
+                      ),
                       const SizedBox(height: 11),
                       ListTileTheme(
                         data: ListTileThemeData(
@@ -181,13 +197,16 @@ class AccountDrawer extends ConsumerWidget {
                           ),
                           minVerticalPadding: 12,
                           horizontalTitleGap: 10,
-                          titleTextStyle: const TextStyle(
-                            color: _ink,
+                          titleTextStyle: TextStyle(
+                            color: AppColors.resolve(context, _ink),
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
                           ),
-                          subtitleTextStyle: const TextStyle(
-                            color: Color(0xFFA1958F),
+                          subtitleTextStyle: TextStyle(
+                            color: AppColors.resolve(
+                              context,
+                              Color(0xFFA1958F),
+                            ),
                             fontSize: 11,
                             height: 1.5,
                           ),
@@ -199,10 +218,12 @@ class AccountDrawer extends ConsumerWidget {
                           children: [
                             // 기능이 늘어나면 이 아래에 메뉴 항목을 추가한다.
                             ListTile(
-                              leading: _menuIcon(Icons.mail_outline),
+                              leading: _menuIcon(context, Icons.mail_outline),
                               trailing: ActivityBadge(count: counts.invites),
-                              title: const Text('초대'),
-                              subtitle: const Text('가족을 공간에 초대해 보세요'),
+                              title: Text(AppStrings.tr(context, '초대')),
+                              subtitle: Text(
+                                AppStrings.tr(context, '가족을 공간에 초대해 보세요'),
+                              ),
                               onTap: () async {
                                 final navigator = Navigator.of(context);
                                 final activity = ref.read(
@@ -224,49 +245,74 @@ class AccountDrawer extends ConsumerWidget {
                               },
                             ),
                             ListTile(
-                              leading: _menuIcon(Icons.notifications_outlined),
+                              leading: _menuIcon(
+                                context,
+                                Icons.notifications_outlined,
+                              ),
                               trailing: ActivityBadge(
                                 count: counts.notifications,
                               ),
-                              title: const Text('알림'),
-                              subtitle: const Text('새로운 소식을 확인하세요'),
+                              title: Text(AppStrings.tr(context, '알림')),
+                              subtitle: Text(
+                                AppStrings.tr(context, '새로운 소식을 확인하세요'),
+                              ),
                               onTap: () => open(const NotificationsView()),
                             ),
                             ListTile(
-                              leading: _menuIcon(Icons.campaign_outlined),
+                              leading: _menuIcon(
+                                context,
+                                Icons.campaign_outlined,
+                              ),
                               trailing: ActivityBadge(count: counts.notices),
-                              title: const Text('공지사항'),
+                              title: Text(AppStrings.tr(context, '공지사항')),
                               onTap: () => open(const NoticesView()),
                             ),
                             ListTile(
-                              leading: _menuIcon(Icons.help_outline),
+                              leading: _menuIcon(context, Icons.help_outline),
                               trailing: ActivityBadge(count: counts.inquiries),
-                              title: const Text('문의'),
-                              subtitle: const Text('내 문의와 관리자 답변 확인'),
+                              title: Text(AppStrings.tr(context, '문의')),
+                              subtitle: Text(
+                                AppStrings.tr(context, '내 문의와 관리자 답변 확인'),
+                              ),
                               onTap: () => open(
                                 InquiriesView(familyRoomId: familyRoomId),
                               ),
                             ),
                             ListTile(
-                              leading: _menuIcon(Icons.settings_outlined),
-                              trailing: const Icon(
+                              leading: _menuIcon(
+                                context,
+                                Icons.settings_outlined,
+                              ),
+                              trailing: Icon(
                                 Icons.chevron_right,
                                 size: 18,
-                                color: Color(0xFFB1A59F),
+                                color: AppColors.resolve(
+                                  context,
+                                  Color(0xFFB1A59F),
+                                ),
                               ),
-                              title: const Text('개인 설정'),
+                              title: Text(AppStrings.tr(context, '개인 설정')),
                               onTap: () => open(const PersonalSettingsView()),
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(height: 11),
-                      const Divider(color: Color(0xFFEADBD2), height: 1),
+                      Divider(
+                        color: AppColors.resolve(context, Color(0xFFEADBD2)),
+                        height: 1,
+                      ),
                       const Spacer(),
                       const SizedBox(height: 24),
                       ListTile(
-                        textColor: const Color(0xFF9B644F),
-                        iconColor: const Color(0xFF9B644F),
+                        textColor: AppColors.resolve(
+                          context,
+                          const Color(0xFF9B644F),
+                        ),
+                        iconColor: AppColors.resolve(
+                          context,
+                          const Color(0xFF9B644F),
+                        ),
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 13,
                         ),
@@ -275,7 +321,11 @@ class AccountDrawer extends ConsumerWidget {
                           fontWeight: FontWeight.w700,
                         ),
                         leading: const Icon(Icons.logout),
-                        title: Text(operation.isLoading ? '로그아웃 중…' : '로그아웃'),
+                        title: Text(
+                          operation.isLoading
+                              ? AppStrings.tr(context, '로그아웃 중…')
+                              : AppStrings.tr(context, '로그아웃'),
+                        ),
                         enabled: !operation.isLoading,
                         onTap: () async {
                           // 로그인 스트림으로 Drawer가 사라져도 참조 가능한 객체를 먼저 확보한다.
@@ -295,7 +345,10 @@ class AccountDrawer extends ConsumerWidget {
                               messenger.showSnackBar(
                                 SnackBar(
                                   content: Text(
-                                    authErrorMessage(result.error!),
+                                    AppStrings.error(
+                                      messenger.context,
+                                      authErrorMessage(result.error!),
+                                    ),
                                   ),
                                 ),
                               );
@@ -327,9 +380,11 @@ class AccountMenuButton extends ConsumerWidget {
       activityProvider.select((value) => value.hasNews),
     );
     return IconButton(
-      tooltip: '계정 메뉴',
+      tooltip: AppStrings.tr(context, '계정 메뉴'),
       icon: Semantics(
-        label: hasNews ? '확인할 새 소식 있음' : '계정 메뉴',
+        label: hasNews
+            ? AppStrings.tr(context, '확인할 새 소식 있음')
+            : AppStrings.tr(context, '계정 메뉴'),
         child: Stack(
           clipBehavior: Clip.none,
           children: [
@@ -342,8 +397,8 @@ class AccountMenuButton extends ConsumerWidget {
                   key: const ValueKey('account-news-dot'),
                   width: 8,
                   height: 8,
-                  decoration: const BoxDecoration(
-                    color: AppColors.notificationDot,
+                  decoration: BoxDecoration(
+                    color: AppColors.of(context).notificationDot,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -369,19 +424,19 @@ class ActivityBadge extends StatelessWidget {
     children: [
       if (count > 0) ...[
         Semantics(
-          label: '확인할 소식 $count개',
+          label: AppStrings.format(context, "확인할 소식 {0}개", [count]),
           child: Container(
             // ListTile의 높이와 관계없이 가로·세로가 같은 원형을 유지한다.
             width: 28,
             height: 28,
             alignment: Alignment.center,
-            decoration: const BoxDecoration(
-              color: AppColors.primary,
+            decoration: BoxDecoration(
+              color: AppColors.of(context).primary,
               shape: BoxShape.circle,
             ),
             child: Text(
               count > 99 ? '99+' : '$count',
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
@@ -391,7 +446,11 @@ class ActivityBadge extends StatelessWidget {
         ),
         const SizedBox(width: 10),
       ],
-      const Icon(Icons.chevron_right, size: 18, color: Color(0xFFB1A59F)),
+      Icon(
+        Icons.chevron_right,
+        size: 18,
+        color: AppColors.resolve(context, Color(0xFFB1A59F)),
+      ),
     ],
   );
 }

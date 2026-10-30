@@ -1,3 +1,4 @@
+from python.features.auth.account_cleanup import check_account_cleanup
 """알림 담당자 한 명이 실행하는 통합 worker. --once는 작업별 한 번 검사 후 종료한다."""
 import argparse
 import logging
@@ -46,6 +47,7 @@ def _start_jobs(stop, once):
         ('채팅 푸시', check_chat_pushes, 5, False, False),
         ('재수락 만료·미확인', check_expired_requests, 60, False, True),
         ('미발행 알림 재시도', retry_pending_notifications, 60, False, True),
+        ('30일 경과 계정 정리', check_account_cleanup, 3600, False, False),
     ]
     threads = []
     for name, action, interval, adaptive, fixed_rate in jobs:

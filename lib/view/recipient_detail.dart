@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:flutter/material.dart';
@@ -18,8 +19,8 @@ class RecipientDetail extends ConsumerWidget {
 
     if (room == null || participation == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('대상자 정보')),
-        body: const Center(child: Text('선택한 공간이 없습니다.')),
+        appBar: AppBar(title: Text(AppStrings.tr(context, '대상자 정보'))),
+        body: Center(child: Text(AppStrings.tr(context, '선택한 공간이 없습니다.'))),
       );
     }
 
@@ -37,19 +38,19 @@ class RecipientDetail extends ConsumerWidget {
         leadingWidth: 62,
         leading: const AppBackLeading(),
         centerTitle: true,
-        title: const Text('대상자 정보'),
+        title: Text(AppStrings.tr(context, '대상자 정보')),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 20),
             child: Container(
               padding: const EdgeInsets.all(11),
               decoration: BoxDecoration(
-                color: AppColors.sageLight,
+                color: AppColors.of(context).sageLight,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.person_outline,
-                color: AppColors.sageDark,
+                color: AppColors.of(context).sageDark,
               ),
             ),
           ),
@@ -61,9 +62,9 @@ class RecipientDetail extends ConsumerWidget {
           // 제목과 수정 버튼
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  '돌봄 대상자',
+                  AppStrings.tr(context, '돌봄 대상자'),
                   style: TextStyle(fontSize: 25, fontWeight: FontWeight.w800),
                 ),
               ),
@@ -73,13 +74,21 @@ class RecipientDetail extends ConsumerWidget {
                 FilledButton(
                   onPressed: () => editAction(context, ref, room),
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.textPrimary,
+                    backgroundColor: AppColors.resolve(
+                      context,
+                      AppColors.primary,
+                      onAccent: true,
+                    ),
+                    foregroundColor: AppColors.resolve(
+                      context,
+                      AppColors.textPrimary,
+                      onAccent: true,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: const Text('수정'),
+                  child: Text(AppStrings.tr(context, '수정')),
                 ),
             ],
           ),
@@ -87,11 +96,11 @@ class RecipientDetail extends ConsumerWidget {
 
           // 대상자 정보 카드
           Card(
-            color: AppColors.surface,
+            color: AppColors.of(context).surface,
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(24),
-              side: const BorderSide(color: AppColors.border),
+              side: BorderSide(color: AppColors.of(context).border),
             ),
             margin: EdgeInsets.zero,
             child: Padding(
@@ -100,7 +109,9 @@ class RecipientDetail extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${room.careRecipientName} 님',
+                    AppStrings.format(context, "{0} 님", [
+                      room.careRecipientName,
+                    ]),
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -109,15 +120,27 @@ class RecipientDetail extends ConsumerWidget {
                   const SizedBox(height: 28),
 
                   // 확정한 성별 코드에 맞춰 한글로 표시한다.
-                  infoRow(context, '성별', switch (room.gender) {
-                    1 => '남성',
-                    2 => '여성',
-                    null => '미등록',
-                    _ => '확인 필요',
-                  }),
-                  infoRow(context, '생년월일', birthText),
-                  infoRow(context, '특이사항', room.specialNotes),
-                  infoRow(context, '돌봄 장소', room.careAddress),
+                  infoRow(
+                    context,
+                    AppStrings.tr(context, '성별'),
+                    switch (room.gender) {
+                      1 => AppStrings.tr(context, '남성'),
+                      2 => AppStrings.tr(context, '여성'),
+                      null => AppStrings.tr(context, '미등록'),
+                      _ => AppStrings.tr(context, '확인 필요'),
+                    },
+                  ),
+                  infoRow(context, AppStrings.tr(context, '생년월일'), birthText),
+                  infoRow(
+                    context,
+                    AppStrings.tr(context, '특이사항'),
+                    room.specialNotes,
+                  ),
+                  infoRow(
+                    context,
+                    AppStrings.tr(context, '돌봄 장소'),
+                    room.careAddress,
+                  ),
                 ],
               ),
             ),
@@ -140,13 +163,18 @@ class RecipientDetail extends ConsumerWidget {
             width: 100,
             child: Text(
               title,
-              style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
+              style: TextStyle(
+                fontSize: 16,
+                color: AppColors.of(context).textSecondary,
+              ),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              value == null || value.trim().isEmpty ? '미등록' : value,
+              value == null || value.trim().isEmpty
+                  ? AppStrings.tr(context, '미등록')
+                  : value,
               style: const TextStyle(fontSize: 16),
             ),
           ),
@@ -184,6 +212,6 @@ class RecipientDetail extends ConsumerWidget {
 
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ).showSnackBar(SnackBar(content: Text(AppStrings.error(context, message))));
   }
 } // class

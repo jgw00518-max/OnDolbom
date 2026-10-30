@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/view/widgets/menu_header_icon.dart';
 import 'package:ondolbom/vm/activity/activity_vm.dart';
 import 'package:ondolbom/view/schedules/schedule_detail.dart';
@@ -26,9 +27,9 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
       await action();
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppStrings.error(context, error.toString()))),
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -40,16 +41,22 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(id == null ? '알림을 전체 삭제할까요?' : '이 알림을 삭제할까요?'),
-        content: const Text('내 알림 목록에서만 삭제합니다. 다른 가족의 알림과 일정은 유지됩니다.'),
+        title: Text(
+          id == null
+              ? AppStrings.tr(context, '알림을 전체 삭제할까요?')
+              : AppStrings.tr(context, '이 알림을 삭제할까요?'),
+        ),
+        content: Text(
+          AppStrings.tr(context, '내 알림 목록에서만 삭제합니다. 다른 가족의 알림과 일정은 유지됩니다.'),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('취소'),
+            child: Text(AppStrings.tr(context, '취소')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('삭제'),
+            child: Text(AppStrings.tr(context, '삭제')),
           ),
         ],
       ),
@@ -73,7 +80,7 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
   Future<void> _showRoomDeletion(ScheduleNotification item) => showDialog<void>(
     context: context,
     builder: (dialogContext) => Dialog(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.of(context).background,
       surfaceTintColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -85,41 +92,46 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const ColoredBox(
-                color: AppColors.surface,
+              ColoredBox(
+                color: AppColors.of(context).surface,
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(22, 24, 22, 20),
                   child: Text(
-                    '돌봄 공간 삭제 안내',
+                    AppStrings.tr(context, '돌봄 공간 삭제 안내'),
                     style: TextStyle(
                       fontSize: 21,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
+                      color: AppColors.of(context).textPrimary,
                     ),
                   ),
                 ),
               ),
-              const Divider(height: 1, color: AppColors.border),
+              Divider(height: 1, color: AppColors.of(context).border),
               Padding(
                 padding: const EdgeInsets.all(22),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      '${item.recipientName} 돌봄 공간',
-                      style: const TextStyle(
+                      AppStrings.format(context, '{0} 돌봄 공간', [
+                        item.recipientName,
+                      ]),
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: AppColors.of(context).textPrimary,
                       ),
                     ),
                     const SizedBox(height: 14),
-                    const Text(
-                      '주보호자가 이 돌봄 공간을 삭제했습니다.\n이 공간은 더 이상 이용할 수 없습니다.',
+                    Text(
+                      AppStrings.tr(
+                        context,
+                        '주보호자가 이 돌봄 공간을 삭제했습니다.\n이 공간은 더 이상 이용할 수 없습니다.',
+                      ),
                       style: TextStyle(
                         fontSize: 14,
                         height: 1.6,
-                        color: AppColors.textSecondary,
+                        color: AppColors.of(context).textSecondary,
                       ),
                     ),
                     if (item.roomDeletedAt != null) ...[
@@ -135,7 +147,7 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                       style: FilledButton.styleFrom(
                         minimumSize: const Size(0, 48),
                       ),
-                      child: const Text('확인'),
+                      child: Text(AppStrings.tr(context, '확인')),
                     ),
                   ],
                 ),
@@ -161,17 +173,20 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
         SizedBox(
           width: 86,
           child: Text(
-            label,
-            style: const TextStyle(
+            AppStrings.tr(context, label),
+            style: TextStyle(
               fontSize: 15,
-              color: AppColors.textSecondary,
+              color: AppColors.of(context).textSecondary,
             ),
           ),
         ),
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(fontSize: 15, color: AppColors.textPrimary),
+            style: TextStyle(
+              fontSize: 15,
+              color: AppColors.of(context).textPrimary,
+            ),
           ),
         ),
       ],
@@ -218,7 +233,7 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
       await showDialog<void>(
         context: context,
         builder: (context) => Dialog(
-          backgroundColor: AppColors.background,
+          backgroundColor: AppColors.of(context).background,
           surfaceTintColor: Colors.transparent,
           insetPadding: const EdgeInsets.symmetric(
             horizontal: 20,
@@ -236,27 +251,27 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   ColoredBox(
-                    color: AppColors.surface,
+                    color: AppColors.of(context).surface,
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(22, 16, 10, 16),
                       child: Row(
                         children: [
-                          const Expanded(
+                          Expanded(
                             child: Text(
-                              '일정 삭제 안내',
+                              AppStrings.tr(context, '일정 삭제 안내'),
                               style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.textPrimary,
+                                color: AppColors.of(context).textPrimary,
                               ),
                             ),
                           ),
                           IconButton(
-                            tooltip: '닫기',
+                            tooltip: AppStrings.tr(context, '닫기'),
                             onPressed: () => Navigator.pop(context),
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.close,
-                              color: AppColors.textSecondary,
+                              color: AppColors.of(context).textSecondary,
                             ),
                           ),
                         ],
@@ -277,15 +292,19 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                               vertical: 7,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(
-                                0xFFB87568,
+                              color: AppColors.resolve(
+                                context,
+                                const Color(0xFFB87568),
                               ).withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(24),
                             ),
-                            child: const Text(
-                              '삭제된 일정',
+                            child: Text(
+                              AppStrings.tr(context, '삭제된 일정'),
                               style: TextStyle(
-                                color: Color(0xFF9B5C50),
+                                color: AppColors.resolve(
+                                  context,
+                                  Color(0xFF9B5C50),
+                                ),
                                 fontWeight: FontWeight.w600,
                                 fontSize: 12,
                               ),
@@ -296,35 +315,41 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                         Text(
                           schedule.scheduleName?.trim().isNotEmpty == true
                               ? schedule.scheduleName!
-                              : '돌봄 일정',
-                          style: const TextStyle(
+                              : AppStrings.tr(context, '돌봄 일정'),
+                          style: TextStyle(
                             fontSize: 23,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
+                            color: AppColors.of(context).textPrimary,
                           ),
                         ),
                         const SizedBox(height: 12),
-                        const Text(
-                          '이 일정은 삭제되었습니다.',
+                        Text(
+                          AppStrings.tr(context, '이 일정은 삭제되었습니다.'),
                           style: TextStyle(
-                            color: AppColors.textSecondary,
+                            color: AppColors.of(context).textSecondary,
                             fontSize: 15,
                           ),
                         ),
                         const SizedBox(height: 24),
-                        _deletedInfoRow('날짜', schedule.date),
                         _deletedInfoRow(
-                          '시작시간',
+                          AppStrings.tr(context, '날짜'),
+                          schedule.date,
+                        ),
+                        _deletedInfoRow(
+                          AppStrings.tr(context, '시작시간'),
                           _deletedTime(schedule.startTime),
                         ),
-                        _deletedInfoRow('종료시간', _deletedTime(schedule.endTime)),
+                        _deletedInfoRow(
+                          AppStrings.tr(context, '종료시간'),
+                          _deletedTime(schedule.endTime),
+                        ),
                         const SizedBox(height: 12),
                         FilledButton(
                           onPressed: () => Navigator.pop(context),
                           style: FilledButton.styleFrom(
                             minimumSize: const Size(0, 48),
                           ),
-                          child: const Text('닫기'),
+                          child: Text(AppStrings.tr(context, '닫기')),
                         ),
                       ],
                     ),
@@ -359,15 +384,21 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
     final time = date == null
         ? item.createdAt
         : '${date.month}월 ${date.day}일 ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-    final textColor = unread ? _ink : const Color(0xFF827C78);
+    final textColor = unread
+        ? AppColors.resolve(context, _ink)
+        : AppColors.resolve(context, const Color(0xFF827C78));
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: unread ? const Color(0xFFFFF8F3) : Colors.white,
+        color: unread
+            ? AppColors.resolve(context, const Color(0xFFFFF8F3))
+            : AppColors.resolve(context, Colors.white),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
           side: BorderSide(
-            color: unread ? const Color(0xFFF1C1A8) : const Color(0xFFF0E6DF),
+            color: unread
+                ? AppColors.resolve(context, const Color(0xFFF1C1A8))
+                : AppColors.resolve(context, const Color(0xFFF0E6DF)),
           ),
         ),
         clipBehavior: Clip.antiAlias,
@@ -383,8 +414,8 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                   height: 44,
                   decoration: BoxDecoration(
                     color: unread
-                        ? AppColors.sageLight
-                        : const Color(0xFFE8EEDf),
+                        ? AppColors.of(context).sageLight
+                        : AppColors.resolve(context, const Color(0xFFE8EEDf)),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(
@@ -408,8 +439,8 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                         ? Icons.edit_calendar_outlined
                         : Icons.calendar_month_outlined,
                     color: unread
-                        ? AppColors.sageDark
-                        : const Color(0xFF929D85),
+                        ? AppColors.of(context).sageDark
+                        : AppColors.resolve(context, const Color(0xFF929D85)),
                     size: 23,
                   ),
                 ),
@@ -424,12 +455,17 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                           Expanded(
                             child: Text(
                               item.isRoomDeletion
-                                  ? '${item.recipientName} 돌봄 공간'
-                                  : '${item.recipientName} · ${item.scheduleName ?? '새 돌봄 일정'}',
+                                  ? AppStrings.format(context, '{0} 돌봄 공간', [
+                                      item.recipientName,
+                                    ])
+                                  : '${item.recipientName} · ${item.scheduleName ?? AppStrings.tr(context, '새 돌봄 일정')}',
                               style: TextStyle(
                                 color: unread
-                                    ? const Color(0xFFA46F59)
-                                    : _muted,
+                                    ? AppColors.resolve(
+                                        context,
+                                        const Color(0xFFA46F59),
+                                      )
+                                    : AppColors.resolve(context, _muted),
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -440,8 +476,8 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                             child: Text(
                               time,
                               textAlign: TextAlign.right,
-                              style: const TextStyle(
-                                color: _muted,
+                              style: TextStyle(
+                                color: AppColors.resolve(context, _muted),
                                 fontSize: 10,
                               ),
                             ),
@@ -452,8 +488,8 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                               width: 7,
                               height: 7,
                               margin: const EdgeInsets.only(top: 3),
-                              decoration: const BoxDecoration(
-                                color: AppColors.primary,
+                              decoration: BoxDecoration(
+                                color: AppColors.of(context).primary,
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -462,7 +498,7 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        item.title,
+                        AppStrings.tr(context, item.title),
                         style: TextStyle(
                           color: textColor,
                           fontSize: 16,
@@ -473,10 +509,15 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                       const SizedBox(height: 7),
                       Text(
                         item.isRoomDeletion
-                            ? '이 공간은 더 이상 이용할 수 없습니다.'
+                            ? AppStrings.tr(context, '이 공간은 더 이상 이용할 수 없습니다.')
                             : '${item.date} ${item.startTime} ~ ${item.endTime}',
                         style: TextStyle(
-                          color: unread ? const Color(0xFF8C7A70) : _muted,
+                          color: unread
+                              ? AppColors.resolve(
+                                  context,
+                                  const Color(0xFF8C7A70),
+                                )
+                              : AppColors.resolve(context, _muted),
                           fontSize: 12,
                           height: 1.6,
                         ),
@@ -486,8 +527,8 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                           item.memo!,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: _muted,
+                          style: TextStyle(
+                            color: AppColors.resolve(context, _muted),
                             fontSize: 12,
                             height: 1.6,
                           ),
@@ -500,27 +541,41 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                             height: 5,
                             decoration: BoxDecoration(
                               color: unread
-                                  ? AppColors.primary
-                                  : const Color(0xFFCFC8C3),
+                                  ? AppColors.of(context).primary
+                                  : AppColors.resolve(
+                                      context,
+                                      const Color(0xFFCFC8C3),
+                                    ),
                               shape: BoxShape.circle,
                             ),
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            unread ? '읽지 않음' : '읽음',
+                            unread
+                                ? AppStrings.tr(context, '읽지 않음')
+                                : AppStrings.tr(context, '읽음'),
                             style: TextStyle(
                               color: unread
-                                  ? const Color(0xFFA46F59)
-                                  : const Color(0xFFAAA09B),
+                                  ? AppColors.resolve(
+                                      context,
+                                      const Color(0xFFA46F59),
+                                    )
+                                  : AppColors.resolve(
+                                      context,
+                                      const Color(0xFFAAA09B),
+                                    ),
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                           const Spacer(),
                           IconButton(
-                            tooltip: '알림 삭제',
+                            tooltip: AppStrings.tr(context, '알림 삭제'),
                             style: IconButton.styleFrom(
-                              foregroundColor: const Color(0xFFB3A49D),
+                              foregroundColor: AppColors.resolve(
+                                context,
+                                const Color(0xFFB3A49D),
+                              ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -556,11 +611,11 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
         list.asData?.value.items.where((item) => item.readAt == null).length ??
         0;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.of(context).background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.of(context).background,
         surfaceTintColor: Colors.transparent,
-        foregroundColor: _ink,
+        foregroundColor: AppColors.resolve(context, _ink),
         toolbarHeight: 88,
         centerTitle: true,
         leadingWidth: 62,
@@ -573,9 +628,9 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                 onPressed: () => Navigator.maybePop(context),
                 style: OutlinedButton.styleFrom(
                   padding: EdgeInsets.zero,
-                  backgroundColor: AppColors.surface,
-                  foregroundColor: _ink,
-                  side: const BorderSide(color: AppColors.border),
+                  backgroundColor: AppColors.of(context).surface,
+                  foregroundColor: AppColors.resolve(context, _ink),
+                  side: BorderSide(color: AppColors.of(context).border),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(13),
                   ),
@@ -585,12 +640,12 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
             ),
           ),
         ),
-        title: const Column(
+        title: Column(
           children: [
             Text(
               'NOTIFICATIONS',
               style: TextStyle(
-                color: Color(0xFFA77762),
+                color: AppColors.resolve(context, Color(0xFFA77762)),
                 fontSize: 8,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 1.5,
@@ -598,9 +653,9 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
             ),
             SizedBox(height: 3),
             Text(
-              '알림',
+              AppStrings.tr(context, '알림'),
               style: TextStyle(
-                color: _ink,
+                color: AppColors.resolve(context, _ink),
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
               ),
@@ -610,15 +665,20 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
         actions: [
           MenuHeaderIcon(
             icon: Icons.notifications_none,
-            backgroundColor: AppColors.peachLight,
-            foregroundColor: const Color(0xFF875C49),
+            backgroundColor: AppColors.of(context).peachLight,
+            foregroundColor: AppColors.resolve(
+              context,
+              const Color(0xFF875C49),
+            ),
             unreadCount: unread,
           ),
         ],
       ),
       body: list.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
+        loading: () => Center(
+          child: CircularProgressIndicator(
+            color: AppColors.of(context).primary,
+          ),
         ),
         error: (error, _) => Center(
           child: Padding(
@@ -626,21 +686,24 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(error.toString(), textAlign: TextAlign.center),
+                Text(
+                  AppStrings.error(context, error.toString()),
+                  textAlign: TextAlign.center,
+                ),
                 TextButton(
                   onPressed: () {
                     ref.invalidate(notificationsVmProvider);
                     // 사용자가 직접 새로고침하면 배지 캐시도 우회한다.
                     ref.read(activityProvider.notifier).refresh(force: true);
                   },
-                  child: const Text('다시 시도'),
+                  child: Text(AppStrings.tr(context, '다시 시도')),
                 ),
               ],
             ),
           ),
         ),
         data: (page) => page.items.isEmpty && page.nextBeforeId == null
-            ? const Center(child: Text('확인할 알림이 없습니다.'))
+            ? Center(child: Text(AppStrings.tr(context, '확인할 알림이 없습니다.')))
             : Align(
                 alignment: Alignment.topCenter,
                 child: ConstrainedBox(
@@ -648,21 +711,30 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
                     children: [
-                      const Text(
-                        '새로운 소식',
-                        style: TextStyle(color: _muted, fontSize: 12),
+                      Text(
+                        AppStrings.tr(context, '새로운 소식'),
+                        style: TextStyle(
+                          color: AppColors.resolve(context, _muted),
+                          fontSize: 12,
+                        ),
                       ),
                       const SizedBox(height: 6),
                       LayoutBuilder(
                         builder: (context, constraints) {
                           final summary = Text(
                             page.nextBeforeId != null
-                                ? '불러온 알림 중 $unread개의 미확인 알림'
+                                ? AppStrings.format(
+                                    context,
+                                    "불러온 알림 중 {0}개의 미확인 알림",
+                                    [unread],
+                                  )
                                 : unread > 0
-                                ? '$unread개의 읽지 않은 알림'
-                                : '모든 알림을 확인했어요',
-                            style: const TextStyle(
-                              color: _ink,
+                                ? AppStrings.format(context, "{0}개의 읽지 않은 알림", [
+                                    unread,
+                                  ])
+                                : AppStrings.tr(context, '모든 알림을 확인했어요'),
+                            style: TextStyle(
+                              color: AppColors.resolve(context, _ink),
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
                               height: 1.4,
@@ -675,7 +747,10 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                             children: [
                               if (unread > 0)
                                 Tooltip(
-                                  message: '읽지 않은 알림을 모두 읽음으로 변경합니다.',
+                                  message: AppStrings.tr(
+                                    context,
+                                    '읽지 않은 알림을 모두 읽음으로 변경합니다.',
+                                  ),
                                   child: TextButton.icon(
                                     // 다른 목록 작업과 겹치지 않도록 공통 잠금을 사용한다.
                                     onPressed: _busy
@@ -689,13 +764,21 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                                                 .markAllRead(),
                                           ),
                                     style: TextButton.styleFrom(
-                                      backgroundColor: AppColors.peachSoft,
-                                      disabledBackgroundColor:
-                                          AppColors.peachSoft,
-                                      foregroundColor: const Color(0xFFA46F59),
-                                      disabledForegroundColor: const Color(
-                                        0xFFA46F59,
+                                      backgroundColor: AppColors.of(
+                                        context,
+                                      ).peachSoft,
+                                      disabledBackgroundColor: AppColors.of(
+                                        context,
+                                      ).peachSoft,
+                                      foregroundColor: AppColors.resolve(
+                                        context,
+                                        const Color(0xFFA46F59),
                                       ),
+                                      disabledForegroundColor:
+                                          AppColors.resolve(
+                                            context,
+                                            const Color(0xFFA46F59),
+                                          ),
                                       minimumSize: const Size(0, 36),
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 9,
@@ -708,7 +791,9 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                                       shape: const StadiumBorder(),
                                     ),
                                     icon: const Icon(Icons.check, size: 14),
-                                    label: const Text('모두 읽음'),
+                                    label: Text(
+                                      AppStrings.tr(context, '모두 읽음'),
+                                    ),
                                   ),
                                 ),
                               TextButton.icon(
@@ -719,8 +804,14 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                                     ? null
                                     : () => _deleteNotification(),
                                 style: TextButton.styleFrom(
-                                  backgroundColor: _deleteFill,
-                                  foregroundColor: _deleteInk,
+                                  backgroundColor: AppColors.resolve(
+                                    context,
+                                    _deleteFill,
+                                  ),
+                                  foregroundColor: AppColors.resolve(
+                                    context,
+                                    _deleteInk,
+                                  ),
                                   minimumSize: const Size(0, 36),
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 9,
@@ -736,7 +827,7 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                                   Icons.delete_outline,
                                   size: 14,
                                 ),
-                                label: const Text('전체 삭제'),
+                                label: Text(AppStrings.tr(context, '전체 삭제')),
                               ),
                             ],
                           );
@@ -775,7 +866,7 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                                       .read(notificationsVmProvider.notifier)
                                       .loadMore(),
                                 ),
-                          child: const Text('더 보기'),
+                          child: Text(AppStrings.tr(context, '더 보기')),
                         ),
                     ],
                   ),
