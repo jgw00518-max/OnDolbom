@@ -30,21 +30,6 @@ class FamilyMemberList extends ConsumerWidget {
         leadingWidth: 62,
         leading: const AppBackLeading(),
         title: Text(AppStrings.tr(context, '함께하는 가족')),
-        actions: [
-          IconButton(
-            tooltip: AppStrings.tr(context, '새로고침'),
-            onPressed: state.isLoading
-                ? null
-                : () async {
-                    await ref
-                        .read(familyRoomProvider.notifier)
-                        .refreshRoomsPreservingState();
-                    if (!context.mounted) return;
-                    ref.invalidate(familyMembersProvider(familyRoomId));
-                  },
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
       ),
       body: members.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -354,11 +339,17 @@ class FamilyMemberCard extends StatelessWidget {
       icon: Icon(icon, size: 16),
       label: Text(AppStrings.tr(context, label)),
       style: OutlinedButton.styleFrom(
-        foregroundColor: color,
-        backgroundColor: AppColors.of(context).surface,
+        foregroundColor:
+            ThemeData.estimateBrightnessForColor(
+                  Color.lerp(color, Colors.white, 0.14)!,
+                ) ==
+                Brightness.dark
+            ? Colors.white
+            : AppColors.textPrimary,
+        backgroundColor: Color.lerp(color, Colors.white, 0.14),
         minimumSize: const Size(64, 44),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        side: BorderSide(color: AppColors.of(context).border),
+        side: BorderSide(color: Color.lerp(color, Colors.white, 0.14)!),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     ),

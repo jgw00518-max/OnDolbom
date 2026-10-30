@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/app_empty_state.dart';
 import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/view/widgets/menu_header_icon.dart';
 import 'dart:async';
@@ -417,18 +418,14 @@ class _ChatViewState extends ConsumerState<ChatView>
                           pending.isEmpty
                       ? const Center(child: CircularProgressIndicator())
                       : messages.isEmpty && pending.isEmpty
-                      ? Center(
-                          child: Text(
-                            state.status == ChatStatus.connected
-                                ? AppStrings.tr(
-                                    context,
-                                    '아직 대화가 없어요. 가족에게 첫 메시지를 보내보세요.',
-                                  )
-                                : AppStrings.tr(
-                                    context,
-                                    '연결 후 대화를 확인할 수 있습니다.',
-                                  ),
-                          ),
+                      ? AppEmptyState(
+                          icon: Icons.chat_bubble_outline,
+                          title: state.status == ChatStatus.connected
+                              ? '아직 대화가 없어요'
+                              : '연결 후 대화를 확인할 수 있습니다.',
+                          description: state.status == ChatStatus.connected
+                              ? '가족에게 첫 메시지를 보내보세요.'
+                              : '연결 상태를 확인한 뒤 다시 시도해 주세요.',
                         )
                       : ListView.builder(
                           key: const ValueKey('chat-messages'),

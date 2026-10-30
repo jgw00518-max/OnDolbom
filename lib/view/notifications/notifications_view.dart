@@ -1,3 +1,5 @@
+import 'package:ondolbom/view/widgets/app_empty_state.dart';
+import 'package:ondolbom/view/widgets/discard_changes_dialog.dart';
 import 'package:ondolbom/view/notifications/care_notification_dialog.dart';
 import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/view/widgets/menu_header_icon.dart';
@@ -41,26 +43,36 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
     final uid = ref.read(authUserProvider).asData?.value?.uid;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          id == null
-              ? AppStrings.tr(context, '알림을 전체 삭제할까요?')
-              : AppStrings.tr(context, '이 알림을 삭제할까요?'),
-        ),
-        content: Text(
-          AppStrings.tr(context, '내 알림 목록에서만 삭제합니다. 다른 가족의 알림과 일정은 유지됩니다.'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(AppStrings.tr(context, '취소')),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(AppStrings.tr(context, '삭제')),
-          ),
-        ],
-      ),
+      // 전체 삭제는 초대함과 같은 공통 확인창을 사용하고 기존 삭제 결과 계약은 유지한다.
+      builder: (context) => id == null
+          ? DiscardChangesDialog(
+              title: AppStrings.tr(context, '알림을 전체 삭제할까요?'),
+              message: AppStrings.tr(
+                context,
+                '내 알림 목록에서만 삭제합니다. 다른 가족의 알림과 일정은 유지됩니다.',
+              ),
+              continueLabel: AppStrings.tr(context, '취소'),
+              discardLabel: AppStrings.tr(context, '삭제'),
+            )
+          : AlertDialog(
+              title: Text(AppStrings.tr(context, '이 알림을 삭제할까요?')),
+              content: Text(
+                AppStrings.tr(
+                  context,
+                  '내 알림 목록에서만 삭제합니다. 다른 가족의 알림과 일정은 유지됩니다.',
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: Text(AppStrings.tr(context, '취소')),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: Text(AppStrings.tr(context, '삭제')),
+                ),
+              ],
+            ),
     );
     if (!mounted ||
         confirmed != true ||
@@ -661,7 +673,11 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
           ),
         ),
         data: (page) => page.items.isEmpty && page.nextBeforeId == null
-            ? Center(child: Text(AppStrings.tr(context, '확인할 알림이 없습니다.')))
+            ? const AppEmptyState(
+                icon: Icons.notifications_none_rounded,
+                title: '확인할 알림이 없습니다.',
+                description: '새로운 소식이 도착하면 이곳에서 알려드릴게요.',
+              )
             : Align(
                 alignment: Alignment.topCenter,
                 child: ConstrainedBox(

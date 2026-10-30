@@ -69,7 +69,11 @@ void main() {
       primary: true,
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('약 삭제'));
+    expect(find.byTooltip('약 삭제'), findsNothing);
+    await tester.tap(find.textContaining('기간 약'));
+    await tester.pumpAndSettle();
+    expect(find.text('복약 완료 체크'), findsNothing);
+    await tester.tap(find.widgetWithText(FilledButton, '삭제'));
     await tester.pumpAndSettle();
     expect(find.textContaining('오늘 체크한 항목도 삭제'), findsOneWidget);
     await tester.tap(find.text('삭제'));
