@@ -1,4 +1,4 @@
-"""기한 있는 긴급 만료는 발행하고 기한 없는 요청·조기 처리는 막는다."""
+"""일반 만료를 발행하고 24시간 이하 긴급 전환·조기 처리를 막는다."""
 import unittest
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
@@ -34,16 +34,19 @@ class ExpiryPublicationTests(unittest.TestCase):
         self.assertEqual(publish.call_count, int(expected))
         conn.close.assert_called_once()
 
-    def test_urgent_with_deadline_publishes_both_notices_at_deadline(self):
+    def test_urgent_requests_never_publish_expiry_notices(self):
         for kind in ('schedule_reconfirm_expired', 'schedule_reconfirm_unanswered'):
             with self.subTest(kind=kind):
-                self.check_case(18, 0, True, kind)
+                self.check_case(18, 0, False, kind)
 
     def test_urgent_without_deadline_never_publishes(self):
         self.check_case(12, 60, False, 'schedule_reconfirm_expired')
 
     def test_before_deadline_never_publishes(self):
-        self.check_case(18, -1, False, 'schedule_reconfirm_expired')
+        self.check_case(30, -1, False, 'schedule_reconfirm_expired')
 
     def test_general_request_still_publishes(self):
-        self.check_case(48, 1, True, 'schedule_reconfirm_expired')
+        self.check_case(72, 1, True, 'schedule_reconfirm_expired')
+
+    def test_exact_24_hour_transition_precedes_expiry(self):
+        self.check_case(48, 0, False, 'schedule_reconfirm_expired')

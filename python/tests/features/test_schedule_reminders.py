@@ -15,6 +15,9 @@ def schedule(**changes):
 
 class ScheduleReminderTests(unittest.TestCase):
     def setUp(self):
+        # 추가된 긴급 알림 후처리도 외부 DB·Firestore에 접근하지 않도록 격리한다.
+        self.enterContext(patch.object(routes, 'try_urgent_schedule', return_value=False))
+        self.enterContext(patch.object(routes, 'process_urgent_reconfirm_notice', return_value={'notified': False}))
         replacement = patch.object(api, 'completed_reminders', api.completed_reminders.__class__())
         replacement.start()
         self.addCleanup(replacement.stop)

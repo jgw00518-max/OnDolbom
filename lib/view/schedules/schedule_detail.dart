@@ -309,7 +309,6 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                               : contentVersion == null && previous != null
                               ? memoText(previous.memo)
                               : null,
-                          newLine: true,
                         ),
                         infoRow(
                           AppStrings.tr(context, '등록자'),
@@ -641,13 +640,12 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
     String label,
     String value, {
     String? previousValue,
-    bool newLine = false,
     TextStyle? valueStyle,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 17),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(
             width: 86,
@@ -655,6 +653,7 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
               AppStrings.tr(context, label),
               style: TextStyle(
                 fontSize: 15,
+                height: 1.4,
                 color: AppColors.resolve(context, Color(0xFF78716A)),
               ),
             ),
@@ -663,7 +662,6 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
             child: changeText(
               value,
               previousValue: previousValue,
-              newLine: newLine,
               style: TextStyle(
                 fontSize: 15,
                 height: 1.4,
@@ -676,44 +674,62 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
     );
   }
 
-  // 변경된 항목만 기존 값 → 빨간색 새 값으로 표시한다.
-  Widget changeText(
-    String value, {
-    String? previousValue,
-    bool newLine = false,
-    TextStyle? style,
-  }) {
+  // 이전 값은 그대로 두고 변경된 값과 작은 점만 내용 크기의 둥근 배경으로 강조한다.
+  Widget changeText(String value, {String? previousValue, TextStyle? style}) {
     if (previousValue == null || previousValue == value) {
       return Text(value, style: style);
     }
 
-    return Text.rich(
-      TextSpan(
-        children: [
-          TextSpan(
-            text: previousValue,
-            style: TextStyle(
-              color: AppColors.resolve(context, Color(0xFF78716A)),
+    final palette = AppColors.of(context);
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Text(
+          previousValue,
+          style: (style ?? const TextStyle()).copyWith(
+            height: 1.4,
+            color: palette.textSecondary,
+            fontWeight: FontWeight.normal,
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+          decoration: BoxDecoration(
+            color: palette.peachSoft,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text.rich(
+            TextSpan(
+              children: [
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.top,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 4, right: 4),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: AppColors.resolve(
+                          context,
+                          const Color(0xFFB87568),
+                        ),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const SizedBox(width: 4, height: 4),
+                    ),
+                  ),
+                ),
+                TextSpan(text: value),
+              ],
+            ),
+            style: (style ?? const TextStyle()).copyWith(
+              height: 1.4,
+              color: palette.textPrimary,
               fontWeight: FontWeight.normal,
             ),
           ),
-          TextSpan(
-            text: newLine ? '\n→ ' : ' → ',
-            style: TextStyle(
-              color: AppColors.resolve(context, Color(0xFFC62828)),
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          TextSpan(
-            text: value,
-            style: TextStyle(
-              color: AppColors.resolve(context, Color(0xFFC62828)),
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-      style: style,
+        ),
+      ],
     );
   }
 
@@ -740,7 +756,7 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
     );
     final remaining = startsAt.difference(DateTime.now());
     final needsContact =
-        remaining > Duration.zero && remaining < const Duration(hours: 24);
+        remaining > Duration.zero && remaining <= const Duration(hours: 24);
     setState(() => isWithdrawing = true);
     final confirmed = await showDialog<bool>(
       context: context,
@@ -770,7 +786,7 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Text(
-                    AppStrings.tr(context, '일정 시작까지 24시간이 채 남지 않았습니다.\n') +
+                    AppStrings.tr(context, '일정 시작까지 24시간 이하로 남았습니다.\n') +
                         AppStrings.tr(context, '주보호자에게 알려 새로운 담당 가족을 찾도록\n') +
                         AppStrings.tr(context, '알려주세요'),
                     style: TextStyle(
@@ -867,6 +883,49 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
         errorMessage = '로그인 상태와 선택한 일정을 다시 확인해 주세요.';
       });
       return;
+    }
+
+    if (!acceptChange) {
+      final parts = item.startTime.split(':');
+      final startsAt = DateTime(
+        item.date.year,
+        item.date.month,
+        item.date.day,
+        int.parse(parts[0]),
+        int.parse(parts[1]),
+      );
+      final remaining = startsAt.difference(DateTime.now());
+      if (remaining > Duration.zero && remaining <= const Duration(hours: 24)) {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(AppStrings.tr(context, '긴급 일정 재수락 거절')),
+            content: Text(
+              AppStrings.tr(
+                context,
+                '일정 시작까지 24시간 이하로 남았습니다.\n주보호자에게 연락하여 새로운 담당 가족을 찾도록 알려주세요.\n변경된 일정을 거절할까요?',
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(AppStrings.tr(context, '닫기')),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(AppStrings.tr(context, '거절')),
+              ),
+            ],
+          ),
+        );
+        if (!mounted || confirmed != true || isBusy) return;
+        // 확인창을 띄우는 동안 계정·공간이 바뀌었으면 응답하지 않는다.
+        if (ref.read(firebaseAuthProvider).currentUser?.uid != loginUid ||
+            ref.read(familyRoomProvider).selectedRoomId !=
+                widget.query.familyRoomId) {
+          return;
+        }
+      }
     }
 
     setState(() {

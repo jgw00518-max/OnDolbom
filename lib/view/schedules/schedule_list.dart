@@ -461,11 +461,9 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
                           ),
                           Text(
                             item.acceptedBy == null
-                                ? AppStrings.tr(context, '모집 중 · 1명')
-                                : AppStrings.format(context, "{0} · 1명", [
-                                    item.acceptedName ??
-                                        AppStrings.tr(context, '가족'),
-                                  ]),
+                                ? AppStrings.tr(context, '모집 중')
+                                : item.acceptedName ??
+                                      AppStrings.tr(context, '가족'),
                             style: TextStyle(
                               color: AppColors.resolve(
                                 context,

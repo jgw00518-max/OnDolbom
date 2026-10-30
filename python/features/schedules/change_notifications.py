@@ -448,6 +448,12 @@ def publish_recruitment_notification(
 ):
     identifier = f"schedule_recruitment_{schedule_seq}_{history_seq}"
     event = get_event(identifier)
+    if event is not None and event.get("status") == "pending":
+        from python.features.schedules.urgent_schedule import redirect_urgent_recruitment
+        redirected = redirect_urgent_recruitment(event)
+        if redirected is not None:
+            return redirected
+
 
     if event is None or event.get("status") not in ("pending", "published"):
         return False
@@ -685,10 +691,10 @@ def publish_reconfirm_expiry_notification(identifier: str):
             requested_at=saved["requested_at"],
             schedule_date=saved["schedule_date"],
             start_time=saved["start_time"],
+            now=saved["updated_at"],
         )
 
-        # 긴급 여부가 아니라 실제 기한 유무로 자동 만료 발행을 판단한다.
-        # 12시간 초과~24시간 이하 요청도 기한이 지나면 발행한다.
+        # 실제 배정 해제 시각을 기준으로 긴급 전환 이전의 일반 만료인지 확인한다.
         if (
             deadline["response_due_at"] is None
             or saved["updated_at"] < deadline["response_due_at"]

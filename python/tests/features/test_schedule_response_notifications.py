@@ -64,7 +64,7 @@ class ResponseNotificationsTests(unittest.TestCase):
         cursor = connection.cursor.return_value.__enter__.return_value
         cursor.fetchone.side_effect = [dict(family_room_id='room'), dict(family_room_id='room'),
             dict(accepted_by='family', schedule_state='미완료'), dict(participate_seq=1),
-            dict(update_accepted_by='family', update_accepted_at=None)]
+            dict(update_accepted_by='family', update_accepted_at=None), dict(server_now='now')]
         pending = dict(request_history_seqs=[12], request_history_seq=12, requested_at='now',
                        current=dict(schedule_date='date', start_time='09:00'))
         def publish(prepared):
@@ -72,7 +72,7 @@ class ResponseNotificationsTests(unittest.TestCase):
             return True
         with patch.object(schedules, 'connect', return_value=connection), \
              patch.object(schedules, 'get_pending_reconfirm_request', return_value=pending), \
-             patch.object(schedules, 'get_reconfirm_deadline', return_value={'is_urgent': True}), \
+             patch.object(schedules, 'get_reconfirm_deadline', return_value={'is_urgent': True, 'response_due_at': None}), \
              patch.object(schedules, 'insert_schedule_history', return_value=13), \
              patch.object(schedules, 'prepare_response_notification', return_value=('event', 'created')) as prepare, \
              patch.object(schedules, 'publish_response_notification', side_effect=publish), \

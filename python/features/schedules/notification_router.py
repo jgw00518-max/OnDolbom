@@ -121,6 +121,17 @@ def _visible(connection, user_id, event):
     if (event.get('reason') == 'participation_withdrawal'
             and event.get('former_assignee_id') == user_id):
         return None
+    if event.get('notification_type') == 'schedule_urgent':
+        from python.features.schedules.urgent_schedule import is_urgent
+        from python.features.schedules.reminders import load_state
+        loaded = load_state(connection, event['schedule_seq'])
+        if loaded is None or not is_urgent(loaded[0]):
+            return None
+    if event.get('notification_type') == 'schedule_reconfirm_urgent':
+        from python.features.schedules.urgent_reconfirm import get_urgent_unverified_request
+        pending = get_urgent_unverified_request(connection, event['schedule_seq'], event['family_room_id'])
+        if (pending is None or pending['request']['request_history_seq'] != event.get('request_history_seq')):
+            return None
     if event.get('notification_type') == 'family_room_deleted':
         return visible_room_deletion(connection, user_id, event)
     if event.get('notification_type') == 'schedule_reminder' and not reminder_is_current(connection, event):
@@ -148,6 +159,8 @@ def _visible(connection, user_id, event):
     if row is None or str(row['created_at']) != event['schedule_created_at']:
         return None
     kind = event.get('notification_type', 'schedule_created')
+    if kind == 'schedule_reconfirm_unverified':
+        return None
     # 한 재모집 이벤트라도 현재 역할에 맞는 안내를 반환한다.
     # 참여 철회·자동 만료 후 재모집은 재수락 거절과 구분한다.
     if (kind == 'schedule_recruitment' and event.get('request_history_seq') is None
@@ -164,6 +177,8 @@ def _visible(connection, user_id, event):
     return {**row, 'notification_id': str(identifier),
             'notification_type': kind,
             'actor_name': event.get('actor_name'),
+            'is_urgent': event.get('is_urgent', kind in {'schedule_urgent', 'schedule_reconfirm_urgent'}),
+            'message': event.get('message'),
             'history_seq': event.get('history_seq'),
             'created_at': event['created_at'],
             'read_at': receipt.get('read_at')}
@@ -173,7 +188,7 @@ def visible_v2(connection, user_id, event):
     """V2 알림함과 배지가 동일한 유형·권한 기준을 사용한다."""
     kind = event.get('notification_type', 'schedule_created')
     if kind not in {'family_room_deleted', 'schedule_created', 'schedule_changed', 'schedule_reconfirm', 'schedule_recruitment', 'schedule_accepted', 'schedule_reconfirmed', 'schedule_deleted', 'schedule_reminder', 'schedule_withdrawn',
-                    'schedule_reconfirm_expired', 'schedule_reconfirm_unanswered', 'schedule_reconfirm_unverified'}:
+                    'schedule_reconfirm_expired', 'schedule_reconfirm_unanswered', 'schedule_reconfirm_urgent', 'schedule_urgent'}:
         return None
     # 자동 만료 재모집도 원래 recipient_ids와 현재 참여 권한으로 조회한다.
     return _visible(connection, user_id, event)

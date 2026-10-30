@@ -70,12 +70,23 @@ def exclude_actor(payload):
     return payload
 
 
+def registration_identifier(payload):
+    version = sha256(f"{payload['family_room_id']}|{payload['schedule_created_at']}".encode()).hexdigest()
+    return f"schedule_created_{payload['schedule_seq']}_{version}"
+
+
 def _prepare(transaction, ref, payload):
     payload = exclude_actor(payload)
     snapshot = ref.get(transaction=transaction)
     if snapshot.exists:
         old = snapshot.to_dict()
         if any(old[key] != payload[key] for key in ('family_room_id', 'schedule_created_at')):
+            # DB 초기화·롤백 후 번호가 재사용돼도 다른 일정의 과거 알림을 덮어쓰지 않는다.
+            if str(ref.id) == str(payload['schedule_seq']):
+                identifier = registration_identifier(payload)
+                return _prepare(transaction, ref.parent.document(identifier),
+                                {**payload, 'notification_id': identifier,
+                                 'notification_type': 'schedule_created'})
             raise ValueError('Schedule identity mismatch')
         return  # 재시도해도 최초 수신자와 읽음 상태를 유지한다.
     transaction.create(ref, {**payload, 'status': 'pending', 'created_at': firestore.SERVER_TIMESTAMP})

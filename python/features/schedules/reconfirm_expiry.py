@@ -71,18 +71,17 @@ def get_expired_reconfirm_request(
         if request is None:
             return None
 
+        cursor.execute("SELECT CURRENT_TIMESTAMP AS server_now")
+        server_now = cursor.fetchone()["server_now"]
         deadline = get_reconfirm_deadline(
             requested_at=request["requested_at"],
             schedule_date=request["current"]["schedule_date"],
             start_time=request["current"]["start_time"],
+            now=server_now,
         )
-
-        # 기한이 없는 12시간 이하 긴급 요청만 자동 만료에서 제외한다.
-        if deadline["response_due_at"] is None:
+        # 24시간 경계에서는 만료보다 긴급 전환을 우선한다.
+        if deadline["is_urgent"]:
             return None
-
-        cursor.execute("SELECT CURRENT_TIMESTAMP AS server_now")
-        server_now = cursor.fetchone()["server_now"]
 
         if server_now < deadline["response_due_at"]:
             return None
