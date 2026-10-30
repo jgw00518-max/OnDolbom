@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/app_empty_state.dart';
 import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/view/widgets/discard_changes_dialog.dart';
 import 'package:ondolbom/view/widgets/menu_header_icon.dart';
@@ -316,16 +317,18 @@ class _ReceivedInvitesState extends ConsumerState<ReceivedInvites> {
                         ),
                         const SizedBox(height: 22),
                         if (items.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 48),
-                            child: Text(
-                              showSent
-                                  ? AppStrings.tr(context, '내가 보낸 초대가 없습니다.')
-                                  : AppStrings.tr(context, '받은 가족 초대가 없습니다.'),
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: AppColors.resolve(context, _muted),
-                              ),
+                          SizedBox(
+                            height: 300,
+                            child: AppEmptyState(
+                              icon: showSent
+                                  ? Icons.send_outlined
+                                  : Icons.mail_outline,
+                              title: showSent
+                                  ? '내가 보낸 초대가 없습니다.'
+                                  : '받은 가족 초대가 없습니다.',
+                              description: showSent
+                                  ? '가족을 초대하고 함께 돌봄을 시작해 보세요.'
+                                  : '초대가 도착하면 이곳에서 확인할 수 있어요.',
                             ),
                           ),
                         for (final invite in items)

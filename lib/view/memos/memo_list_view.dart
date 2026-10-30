@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/discard_changes_dialog.dart';
 import 'package:ondolbom/view/widgets/care_menu_read.dart';
 import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/view/widgets/menu_header_icon.dart';
@@ -334,19 +335,11 @@ class _MemoDetailViewState extends ConsumerState<MemoDetailView> {
     setState(() => _deleting = true);
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(AppStrings.tr(context, '메모를 삭제할까요?')),
-        content: Text(AppStrings.tr(context, '삭제한 메모는 목록에서 사라져요.')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(AppStrings.tr(context, '취소')),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(AppStrings.tr(context, '삭제하기')),
-          ),
-        ],
+      builder: (context) => DiscardChangesDialog(
+        title: AppStrings.tr(context, '메모를 삭제할까요?'),
+        message: AppStrings.tr(context, '삭제한 메모는 목록에서 사라져요.'),
+        continueLabel: AppStrings.tr(context, '취소'),
+        discardLabel: AppStrings.tr(context, '삭제하기'),
       ),
     );
     if (!mounted) return;

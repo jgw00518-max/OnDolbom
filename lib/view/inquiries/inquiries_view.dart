@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/app_empty_state.dart';
 import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/view/inquiries/inquiry_style.dart';
@@ -132,11 +133,12 @@ class _InquiriesViewState extends ConsumerState<InquiriesView> {
                 ),
                 const SizedBox(height: 24),
                 if (value.items.isEmpty)
-                  Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Text(
-                      AppStrings.tr(context, '등록한 문의가 없습니다.'),
-                      textAlign: TextAlign.center,
+                  const SizedBox(
+                    height: 300,
+                    child: AppEmptyState(
+                      icon: Icons.help_outline_rounded,
+                      title: '등록한 문의가 없습니다.',
+                      description: '궁금한 점이 있다면 첫 문의를 남겨 보세요.',
                     ),
                   ),
                 for (final item in value.items)

@@ -71,7 +71,7 @@ void main() {
   });
 
   for (final checker in ['other-user', null]) {
-    testWidgets('주보호자는 상세에서 타인·과거 기록을 해제한다 ($checker)', (tester) async {
+    testWidgets('주보호자는 목록에서 타인·과거 기록을 해제한다 ($checker)', (tester) async {
       await fixture.mount(
         tester,
         MockClient((request) async {
@@ -86,14 +86,12 @@ void main() {
         }),
         primary: true,
       );
-      await tester.tap(find.textContaining('완료된 약'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('체크 해제'));
+      await tester.tap(find.byTooltip('복약 완료 체크 해제'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('해제'));
       await tester.pumpAndSettle();
       expect(find.text('체크 해제'), findsNothing);
-      expect(find.text('복약 완료 체크'), findsOneWidget);
+      expect(find.byTooltip('복약 완료 체크'), findsOneWidget);
       expect(find.text('0/1 완료'), findsOneWidget);
       expect(find.textContaining('체크: 김확인'), findsNothing);
       expect(tester.takeException(), isNull);
@@ -133,15 +131,18 @@ void main() {
         return fixture.response([row()]);
       }),
     );
-    await tester.tap(find.textContaining('완료된 약'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('체크 해제'));
+    await tester.tap(find.byTooltip('복약 완료 체크 해제'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('해제'));
     await tester.pump();
     expect(
       tester
-          .widget<TextButton>(find.widgetWithText(TextButton, '해제 중…'))
+          .widget<IconButton>(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is IconButton && widget.tooltip == '복약 완료 체크 해제',
+            ),
+          )
           .onPressed,
       isNull,
     );
@@ -155,8 +156,8 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('1/1 완료'), findsOneWidget);
-    expect(find.text('체크 해제'), findsOneWidget);
-    await tester.tap(find.text('체크 해제'));
+    expect(find.byTooltip('복약 완료 체크 해제'), findsOneWidget);
+    await tester.tap(find.byTooltip('복약 완료 체크 해제'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('해제'));
     await tester.pumpAndSettle();

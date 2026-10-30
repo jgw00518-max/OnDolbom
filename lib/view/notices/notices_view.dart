@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/app_empty_state.dart';
 import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/view/widgets/menu_header_icon.dart';
 import 'package:ondolbom/theme/app_colors.dart';
@@ -173,11 +174,12 @@ class _NoticesViewState extends ConsumerState<NoticesView> {
                 ),
                 const SizedBox(height: 24),
                 if (page.items.isEmpty)
-                  Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Text(
-                      AppStrings.tr(context, '등록된 공지사항이 없습니다.'),
-                      textAlign: TextAlign.center,
+                  const SizedBox(
+                    height: 300,
+                    child: AppEmptyState(
+                      icon: Icons.campaign_outlined,
+                      title: '등록된 공지사항이 없습니다.',
+                      description: '새로운 공지가 등록되면 이곳에서 알려드릴게요.',
                     ),
                   ),
                 for (final notice in page.items)

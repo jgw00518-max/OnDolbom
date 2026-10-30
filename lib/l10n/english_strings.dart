@@ -973,4 +973,14 @@ const englishStrings = <String, String>{
       "A family member left this care space and can no longer access it.",
   "가족의 공간 참여가 종료되었어요. 참여가 종료된 가족은 이 공간에 접근할 수 없어요.":
       "A family member\u2019s membership ended. They can no longer access this care space.",
+  "새로운 공지가 등록되면 이곳에서 알려드릴게요.": "New announcements will appear here.",
+  "궁금한 점이 있다면 첫 문의를 남겨 보세요.": "Have a question? Send your first inquiry.",
+  "새로운 소식이 도착하면 이곳에서 알려드릴게요.": "New updates will appear here.",
+  "가족을 초대하고 함께 돌봄을 시작해 보세요.": "Invite your family and start caring together.",
+  "초대가 도착하면 이곳에서 확인할 수 있어요.": "Invitations will appear here when they arrive.",
+  "이 날짜에 등록된 약이 없어요.": "No medication is scheduled for this date.",
+  "약 추가로 투약일지를 작성해 보세요.": "Add medication to start a medication log.",
+  "아직 대화가 없어요": "No messages yet",
+  "가족에게 첫 메시지를 보내보세요.": "Send the first message to your family.",
+  "연결 상태를 확인한 뒤 다시 시도해 주세요.": "Check your connection and try again.",
 };

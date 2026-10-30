@@ -31,7 +31,7 @@ http.Response confirmation({int seq = 42, bool repeated = false}) =>
     );
 
 void main() {
-  testWidgets('일반 참여자가 목록에서 체크하면 완료 개수와 체크 이름·시간이 즉시 갱신된다', (tester) async {
+  testWidgets('목록은 체크 이름만 표시하고 상세에서 체크 시간을 확인한다', (tester) async {
     var posts = 0;
     await fixture.mount(
       tester,
@@ -53,7 +53,7 @@ void main() {
     expect(posts, 1);
     expect(find.text('1/1 완료'), findsOneWidget);
     expect(find.textContaining('체크: 김확인'), findsOneWidget);
-    expect(find.textContaining('체크 시간: 오후 2시 25분'), findsOneWidget);
+    expect(find.textContaining('체크 시간: 오후 2시 25분'), findsNothing);
     expect(
       tester
           .widget<IconButton>(
@@ -84,7 +84,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('상세에서 체크하며 서버가 반환한 최초 체크 사용자·시간을 표시한다', (tester) async {
+  testWidgets('목록에서 체크한 뒤 상세에서 최초 체크 정보를 확인하며 추가 체크 버튼은 없다', (tester) async {
     await fixture.mount(
       tester,
       MockClient((request) async {
@@ -92,10 +92,11 @@ void main() {
         return fixture.response([fixture.medicationJson(42, '체크할 약')]);
       }),
     );
+    await tester.tap(find.byTooltip('복약 완료 체크'));
+    await tester.pumpAndSettle();
     await tester.tap(find.textContaining('체크할 약'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('복약 완료 체크'));
-    await tester.pumpAndSettle();
+    expect(find.text('복약 완료 체크'), findsNothing);
     expect(
       find.descendant(
         of: find.byType(AlertDialog),
@@ -121,15 +122,20 @@ void main() {
         return fixture.response([fixture.medicationJson(42, '체크할 약')]);
       }),
     );
-    await tester.tap(find.textContaining('체크할 약'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('복약 완료 체크'));
+    await tester.tap(
+      find.byWidgetPredicate(
+        (widget) => widget is IconButton && widget.tooltip == '복약 완료 체크',
+      ),
+    );
     await tester.pump();
-    await tester.tap(find.text('체크 중…'));
     expect(posts, 1);
     expect(
       tester
-          .widget<TextButton>(find.widgetWithText(TextButton, '체크 중…'))
+          .widget<IconButton>(
+            find.byWidgetPredicate(
+              (widget) => widget is IconButton && widget.tooltip == '복약 완료 체크',
+            ),
+          )
           .onPressed,
       isNull,
     );
@@ -137,7 +143,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('0/1 완료'), findsOneWidget);
     expect(find.text('check failed'), findsOneWidget);
-    await tester.tap(find.text('복약 완료 체크'));
+    await tester.tap(
+      find.byWidgetPredicate(
+        (widget) => widget is IconButton && widget.tooltip == '복약 완료 체크',
+      ),
+    );
     await tester.pumpAndSettle();
     expect(posts, 2);
     expect(find.text('1/1 완료'), findsOneWidget);

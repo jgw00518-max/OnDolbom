@@ -44,17 +44,6 @@ class TodayScheduleCard extends ConsumerWidget {
                     ),
                   ),
                 ),
-                IconButton(
-                  tooltip: AppStrings.tr(context, '오늘 일정 새로고침'),
-                  onPressed: schedules.isLoading
-                      ? null
-                      : () => ref.invalidate(scheduleListProvider(query)),
-                  icon: Icon(
-                    Icons.refresh,
-                    size: 21,
-                    color: AppColors.of(context).sageDark,
-                  ),
-                ),
                 TextButton(
                   onPressed: () async {
                     await Navigator.push(

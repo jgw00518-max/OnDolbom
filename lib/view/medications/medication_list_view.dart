@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/app_empty_state.dart';
 import 'package:ondolbom/view/widgets/care_menu_read.dart';
 import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/view/widgets/discard_changes_dialog.dart';
@@ -62,25 +63,15 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
     try {
       final approved = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: Text(AppStrings.tr(context, '남은 복용 기간을 삭제할까요?')),
-          content: Text(
-            AppStrings.format(
-              context,
-              "{0}의 같은 등록 묶음에서 오늘과 이후 날짜의 항목을 삭제해요.\n오늘 체크한 항목도 삭제되며, 어제까지의 기록은 유지돼요.",
-              [item.info ?? AppStrings.tr(context, '이 약')],
-            ),
+        builder: (context) => DiscardChangesDialog(
+          title: AppStrings.tr(context, '남은 복용 기간을 삭제할까요?'),
+          message: AppStrings.format(
+            context,
+            "{0}의 같은 등록 묶음에서 오늘과 이후 날짜의 항목을 삭제해요.\n오늘 체크한 항목도 삭제되며, 어제까지의 기록은 유지돼요.",
+            [item.info ?? AppStrings.tr(context, '이 약')],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(AppStrings.tr(context, '취소')),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(AppStrings.tr(context, '삭제')),
-            ),
-          ],
+          continueLabel: AppStrings.tr(context, '취소'),
+          discardLabel: AppStrings.tr(context, '삭제'),
         ),
       );
       if (approved != true || !mounted) return;
@@ -340,8 +331,10 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
                                 if (data.items.isEmpty)
                                   const SizedBox(
                                     height: 280,
-                                    child: _MedicationMessage(
-                                      '이 날짜에 등록된 약이 없어요.\n약 추가로 투약일지를 작성해 보세요.',
+                                    child: AppEmptyState(
+                                      icon: Icons.medication_outlined,
+                                      title: '이 날짜에 등록된 약이 없어요.',
+                                      description: '약 추가로 투약일지를 작성해 보세요.',
                                     ),
                                   ),
                                 for (final group in orderedGroups)
@@ -482,100 +475,61 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
                                               title: Text(
                                                 '${item.info ?? AppStrings.tr(context, '약 정보 없음')} ${item.doseLabel}',
                                               ),
-                                              subtitle: item.isConfirmed
-                                                  ? Column(
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .start,
-                                                      children: [
-                                                        Text(
-                                                          AppStrings.tr(
-                                                            context,
-                                                            '복약 완료',
-                                                          ),
-                                                        ),
-                                                        const SizedBox(
-                                                          height: 6,
-                                                        ),
-                                                        Container(
-                                                          padding:
-                                                              const EdgeInsets.symmetric(
-                                                                horizontal: 10,
-                                                                vertical: 5,
-                                                              ),
-                                                          decoration: BoxDecoration(
-                                                            color:
-                                                                AppColors.resolve(
-                                                                  context,
-                                                                  AppColors
-                                                                      .sageLight,
-                                                                ),
-                                                            borderRadius:
-                                                                BorderRadius.circular(
-                                                                  20,
-                                                                ),
-                                                          ),
-                                                          child: Text(
-                                                            AppStrings.format(
-                                                              context,
-                                                              "체크: {0}",
-                                                              [
-                                                                item.confirmedByLabel,
-                                                              ],
-                                                            ),
-                                                            style: TextStyle(
-                                                              color:
-                                                                  AppColors.resolve(
-                                                                    context,
-                                                                    AppColors
-                                                                        .sageDark,
-                                                                  ),
-                                                              fontSize: 12,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w600,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                        const SizedBox(
-                                                          height: 4,
-                                                        ),
-                                                        Text(
-                                                          medicationConfirmationLabel(
-                                                            item,
-                                                          ).split('\n').last,
-                                                        ),
-                                                      ],
-                                                    )
-                                                  : Text(
-                                                      AppStrings.tr(
-                                                        context,
-                                                        '복약 전',
-                                                      ),
-                                                    ),
-                                              trailing: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  if (canCreate)
-                                                    IconButton(
-                                                      tooltip: AppStrings.tr(
-                                                        context,
-                                                        '약 삭제',
-                                                      ),
-                                                      icon: const Icon(
-                                                        Icons.delete_outline,
-                                                      ),
-                                                      onPressed: () =>
-                                                          _deletePeriod(
-                                                            query,
-                                                            item,
-                                                          ),
-                                                    ),
-                                                  const Icon(
-                                                    Icons.chevron_right,
-                                                  ),
-                                                ],
+                                              // 체크 시각은 상세에만 두고 확인한 가족은 목록 오른쪽에 표시한다.
+                                              subtitle: Text(
+                                                AppStrings.tr(
+                                                  context,
+                                                  item.isConfirmed
+                                                      ? '복약 완료'
+                                                      : '복약 전',
+                                                ),
                                               ),
+                                              trailing: item.isConfirmed
+                                                  ? ConstrainedBox(
+                                                      constraints:
+                                                          const BoxConstraints(
+                                                            maxWidth: 110,
+                                                          ),
+                                                      child: Container(
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 10,
+                                                              vertical: 5,
+                                                            ),
+                                                        decoration: BoxDecoration(
+                                                          color: AppColors.of(
+                                                            context,
+                                                          ).sageLight,
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                20,
+                                                              ),
+                                                        ),
+                                                        child: Text(
+                                                          AppStrings.format(
+                                                            context,
+                                                            '체크: {0}',
+                                                            [
+                                                              item.confirmedByLabel,
+                                                            ],
+                                                          ),
+                                                          maxLines: 2,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                          textAlign:
+                                                              TextAlign.center,
+                                                          style: TextStyle(
+                                                            color: AppColors.of(
+                                                              context,
+                                                            ).sageDark,
+                                                            fontSize: 12,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    )
+                                                  : null,
                                               onTap: () => _showDetail(item),
                                             ),
                                         ],
@@ -646,7 +600,7 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
   Future<void> _showDetail(Medication item) async {
     final room = ref.read(familyContextProvider);
     final query = (context: room, date: medicationDateKey(_date));
-    final edit = await showDialog<bool>(
+    final action = await showDialog<String>(
       context: context,
       builder: (context) => Consumer(
         builder: (context, ref, _) {
@@ -660,18 +614,6 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
                   .firstOrNull ??
               item;
           final confirming = feed?.confirming.contains(item.seq) ?? false;
-          final canConfirm =
-              current == room &&
-              room.userId.isNotEmpty &&
-              feed != null &&
-              !record.isConfirmed &&
-              !confirming;
-          final canUnconfirm =
-              current == room &&
-              room.userId.isNotEmpty &&
-              feed != null &&
-              record.isConfirmed &&
-              (canEdit || record.confirmedByUserId == room.userId);
           return AlertDialog(
             backgroundColor: AppColors.of(context).background,
             surfaceTintColor: Colors.transparent,
@@ -768,33 +710,41 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
                       ],
                     ),
             ),
+            // 체크는 목록에서 처리하고 상세 관리 버튼은 수정 → 삭제 → 닫기 순서로 고정한다.
             actions: [
-              if (canUnconfirm)
-                TextButton(
+              if (canEdit)
+                FilledButton(
                   onPressed: confirming
                       ? null
-                      : () => _unconfirm(query, record),
-                  child: Text(
-                    confirming
-                        ? AppStrings.tr(context, '해제 중…')
-                        : AppStrings.tr(context, '체크 해제'),
+                      : () => Navigator.pop(context, 'edit'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 36),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                   ),
-                ),
-              if (!record.isConfirmed)
-                TextButton(
-                  onPressed: canConfirm ? () => _confirm(query, record) : null,
-                  child: Text(
-                    confirming
-                        ? AppStrings.tr(context, '체크 중…')
-                        : AppStrings.tr(context, '복약 완료 체크'),
-                  ),
+                  child: Text(AppStrings.tr(context, '수정')),
                 ),
               if (canEdit)
-                TextButton(
+                FilledButton(
                   onPressed: confirming
                       ? null
-                      : () => Navigator.pop(context, true),
-                  child: Text(AppStrings.tr(context, '수정')),
+                      : () => Navigator.pop(context, 'delete'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.resolve(
+                      context,
+                      const Color(0xFFB87568),
+                      onAccent: true,
+                    ),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(0, 36),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                  ),
+                  child: Text(AppStrings.tr(context, '삭제')),
                 ),
               TextButton(
                 onPressed: () => Navigator.pop(context),
@@ -805,7 +755,11 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
         },
       ),
     );
-    if (!mounted || edit != true || ref.read(familyContextProvider) != room) {
+    if (!mounted || action == null || ref.read(familyContextProvider) != room) {
+      return;
+    }
+    if (action == 'delete') {
+      await _deletePeriod(query, item);
       return;
     }
     final savedDate = await showDialog<DateTime>(
