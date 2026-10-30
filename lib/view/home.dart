@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/auth/account_reactivation_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/vm/auth/auth_vm.dart';
@@ -15,6 +16,11 @@ class Home extends ConsumerWidget {
     // Firebase 로그인과 MySQL 사용자 등록은 별개이므로 서버 프로필을 추가 조회한다.
     final profile = ref.watch(userProfileProvider);
     final registration = ref.watch(profileRegistrationProvider);
+    final inactive = profile.error;
+    if (inactive is AccountInactiveException) {
+      return AccountReactivationView(account: inactive);
+    }
+
     if (profile.isLoading) {
       return const LoginLoadingView();
     }

@@ -1,10 +1,10 @@
+import 'package:ondolbom/view/auth/account_withdrawal_button.dart';
 import 'package:ondolbom/model/settings/text_size_preferences.dart';
 import 'package:ondolbom/vm/settings/text_size_vm.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/vm/auth/auth_vm.dart';
-import 'package:ondolbom/vm/auth/personal_settings_vm.dart';
 import 'package:ondolbom/vm/auth/user_profile_vm.dart';
 import 'package:ondolbom/view/auth/profile_edit_view.dart';
 import 'package:ondolbom/view/widgets/push_bridge.dart';
@@ -16,7 +16,6 @@ class PersonalSettingsView extends ConsumerWidget {
     final profileState = ref.watch(userProfileProvider);
     final profile = profileState.asData?.value;
     final user = ref.watch(authUserProvider).asData?.value;
-    final settings = ref.watch(personalSettingsProvider);
     final textSettings = ref.watch(textSizeProvider);
     final textSize = textSettings.asData?.value;
     final name = profile?.name?.trim().isNotEmpty == true
@@ -400,50 +399,11 @@ class PersonalSettingsView extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 28),
-              _section('LOGIN'),
+              _section('NOTIFICATIONS'),
               const PushSettingsTile(),
-              _card(
-                settings.when(
-                  loading: () => const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                  error: (error, _) => Column(
-                    children: [
-                      Text(error.toString()),
-                      TextButton(
-                        onPressed: () =>
-                            ref.invalidate(personalSettingsProvider),
-                        child: const Text('설정 다시 불러오기'),
-                      ),
-                    ],
-                  ),
-                  data: (value) => Column(
-                    children: [
-                      SwitchListTile(
-                        title: const Text('아이디 저장'),
-                        subtitle: const Text('현재 로그인한 이메일을 로그인 화면에 표시합니다.'),
-                        value: value.rememberEmail,
-                        onChanged: settings.isLoading
-                            ? null
-                            : (v) => ref
-                                  .read(personalSettingsProvider.notifier)
-                                  .save(rememberEmail: v),
-                      ),
-                      SwitchListTile(
-                        title: const Text('자동 로그인'),
-                        subtitle: const Text('앱을 다시 실행할 때 로그인 상태를 유지합니다.'),
-                        value: value.autoLogin,
-                        onChanged: settings.isLoading
-                            ? null
-                            : (v) => ref
-                                  .read(personalSettingsProvider.notifier)
-                                  .save(autoLogin: v),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              const SizedBox(height: 28),
+              const SizedBox(height: 32),
+              const AccountWithdrawalButton(),
             ],
           ),
         ),

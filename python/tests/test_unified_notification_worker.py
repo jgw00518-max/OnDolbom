@@ -6,7 +6,10 @@ from python.features.schedules import reminder_worker as worker
 
 
 class UnifiedWorkerTests(unittest.TestCase):
-    def test_once_starts_all_five_jobs_and_finishes(self):
+    def setUp(self):
+        self.cleanup = self.enterContext(patch.object(worker, 'check_account_cleanup'))
+
+    def test_once_starts_all_six_jobs_and_finishes(self):
         with patch('sys.argv', ['worker', '--once']), \
              patch.object(worker, 'check_reminders') as reminders, \
              patch.object(worker, 'check_push_notifications') as push, \
@@ -14,7 +17,7 @@ class UnifiedWorkerTests(unittest.TestCase):
              patch.object(worker, 'check_expired_requests') as expiry, \
              patch.object(worker, 'retry_pending_notifications') as retry:
             worker.main()
-        for action in [reminders, push, chat, expiry, retry]:
+        for action in [reminders, push, chat, expiry, retry, self.cleanup]:
             action.assert_called_once()
 
     def test_slow_expiry_does_not_block_chat_or_other_jobs(self):

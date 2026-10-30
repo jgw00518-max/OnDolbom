@@ -170,6 +170,10 @@ class AndroidPushPlatform implements PushPlatform {
 
 class PushPreferences {
   SharedPreferencesAsync get _prefs => SharedPreferencesAsync();
+  // 이 기기의 수신 선택은 계정 전환과 앱 재실행 후에도 유지한다.
+  Future<bool> readEnabled() async =>
+      await _prefs.getBool('push.enabled') ?? true;
+  Future<void> saveEnabled(bool value) => _prefs.setBool('push.enabled', value);
   String random(int bytes) => List.generate(
     bytes,
     (_) => Random.secure().nextInt(256).toRadixString(16).padLeft(2, '0'),
@@ -211,6 +215,7 @@ class PushService {
   final PushPreferences preferences;
   final http.Client client;
   final status = ValueNotifier<String>('푸시 연결 준비 중');
+  bool enabled = true;
   final taps = StreamController<PushEvent>.broadcast();
   final received = StreamController<PushEvent>.broadcast();
   bool Function(PushEvent)? suppressForeground;
@@ -232,7 +237,8 @@ class PushService {
       _listening = true;
       platform.messages.listen((event) async {
         final uid = auth.currentUser?.uid;
-        if (uid == null ||
+        if (!enabled ||
+            uid == null ||
             (event.data['user_uid'] != null && event.data['user_uid'] != uid)) {
           return;
         }
@@ -340,6 +346,11 @@ class PushService {
   Future<void> reconnect() {
     final revision = _revision;
     return _serial(() async {
+      enabled = await preferences.readEnabled();
+      if (!enabled) {
+        status.value = '기기 푸시 알림 꺼짐';
+        return;
+      }
       await start();
       final uid = auth.currentUser?.uid;
       if (uid == null || !_ready || revision != _revision) return;
@@ -365,6 +376,33 @@ class PushService {
   }
 
   // 로그아웃 전에 현재 계정 인증으로 서버 연결 해제를 시도한다.
+  Future<void> setEnabled(bool value) async {
+    if (value) {
+      await preferences.saveEnabled(true);
+      enabled = true;
+      await reconnect();
+      return;
+    }
+    _revision++;
+    await _serial(() async {
+      status.value = '푸시 설정 변경 중';
+      final uid = auth.currentUser?.uid;
+      if (uid == null) throw StateError('로그인이 필요합니다.');
+      // 서버 해제가 성공한 후 꺼짐을 저장한다. 실패를 성공한 설정으로 표시하지 않는다.
+      await _post('/push/devices/unregister', {
+        ...await preferences.installation(),
+        'generation': await preferences.nextGeneration(),
+      }, uid);
+      await preferences.saveEnabled(false);
+      enabled = false;
+      _binding = null;
+      try {
+        await platform.clear();
+      } catch (_) {}
+      status.value = '기기 푸시 알림 꺼짐';
+    });
+  }
+
   Future<void> detach() {
     _revision++;
     return _serial(() async {
