@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/view/inquiries/inquiry_style.dart';
 import 'package:ondolbom/view/widgets/activity_read_marker.dart';
@@ -12,11 +13,13 @@ class InquiryDetailView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final inquiry = ref.watch(inquiryDetailProvider(id));
     return Scaffold(
-      backgroundColor: InquiryStyle.paper,
-      appBar: InquiryStyle.header(context, '문의 상세'),
+      backgroundColor: AppColors.resolve(context, InquiryStyle.paper),
+      appBar: InquiryStyle.header(context, AppStrings.tr(context, '문의 상세')),
       body: inquiry.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: InquiryStyle.peach),
+        loading: () => Center(
+          child: CircularProgressIndicator(
+            color: AppColors.resolve(context, InquiryStyle.peach),
+          ),
         ),
         error: (e, _) => Center(
           child: Column(
@@ -25,7 +28,7 @@ class InquiryDetailView extends ConsumerWidget {
               Text(e.toString()),
               TextButton(
                 onPressed: () => ref.invalidate(inquiryDetailProvider(id)),
-                child: const Text('다시 시도'),
+                child: Text(AppStrings.tr(context, '다시 시도')),
               ),
             ],
           ),
@@ -42,13 +45,13 @@ class InquiryDetailView extends ConsumerWidget {
                 children: [
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: InquiryStyle.status(item.answered),
+                    child: InquiryStyle.status(context, item.answered),
                   ),
                   const SizedBox(height: 18),
                   Text(
                     item.title,
-                    style: const TextStyle(
-                      color: InquiryStyle.ink,
+                    style: TextStyle(
+                      color: AppColors.resolve(context, InquiryStyle.ink),
                       fontSize: 25,
                       fontWeight: FontWeight.w800,
                       height: 1.4,
@@ -58,17 +61,20 @@ class InquiryDetailView extends ConsumerWidget {
                   const SizedBox(height: 14),
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.schedule,
-                        color: InquiryStyle.muted,
+                        color: AppColors.resolve(context, InquiryStyle.muted),
                         size: 14,
                       ),
                       const SizedBox(width: 7),
                       Expanded(
                         child: Text(
                           item.createdAt.toString().substring(0, 16),
-                          style: const TextStyle(
-                            color: InquiryStyle.muted,
+                          style: TextStyle(
+                            color: AppColors.resolve(
+                              context,
+                              InquiryStyle.muted,
+                            ),
                             fontSize: 11,
                           ),
                         ),
@@ -76,21 +82,24 @@ class InquiryDetailView extends ConsumerWidget {
                     ],
                   ),
                   if (item.familyRoomId != null)
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.only(top: 10),
                       child: Text(
-                        '돌봄 공간 관련 문의',
+                        AppStrings.tr(context, '돌봄 공간 관련 문의'),
                         style: TextStyle(
-                          color: InquiryStyle.muted,
+                          color: AppColors.resolve(context, InquiryStyle.muted),
                           fontSize: 12,
                         ),
                       ),
                     ),
-                  const Divider(color: Color(0xFFF0E6DF), height: 42),
-                  const Text(
-                    '문의 내용',
+                  Divider(
+                    color: AppColors.resolve(context, Color(0xFFF0E6DF)),
+                    height: 42,
+                  ),
+                  Text(
+                    AppStrings.tr(context, '문의 내용'),
                     style: TextStyle(
-                      color: Color(0xFFA46F59),
+                      color: AppColors.resolve(context, Color(0xFFA46F59)),
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
@@ -98,17 +107,20 @@ class InquiryDetailView extends ConsumerWidget {
                   const SizedBox(height: 16),
                   SelectableText(
                     item.content ?? '',
-                    style: const TextStyle(
-                      color: Color(0xFF746A64),
+                    style: TextStyle(
+                      color: AppColors.resolve(context, Color(0xFF746A64)),
                       fontSize: 15,
                       height: 1.9,
                     ),
                   ),
-                  const Divider(color: Color(0xFFF0E6DF), height: 42),
+                  Divider(
+                    color: AppColors.resolve(context, Color(0xFFF0E6DF)),
+                    height: 42,
+                  ),
                   // 답변의 개수와 원문은 실제 서버 응답을 유지한다.
-                  if (item.answers.isEmpty) _answerCard(null, null),
+                  if (item.answers.isEmpty) _answerCard(context, null, null),
                   for (final answer in item.answers)
-                    _answerCard(answer.content, answer.createdAt),
+                    _answerCard(context, answer.content, answer.createdAt),
                 ],
               ),
             ),
@@ -118,70 +130,76 @@ class InquiryDetailView extends ConsumerWidget {
     );
   }
 
-  Widget _answerCard(String? content, DateTime? date) => Container(
-    padding: const EdgeInsets.all(20),
-    margin: const EdgeInsets.only(bottom: 16),
-    decoration: BoxDecoration(
-      color: const Color(0xFFFFF6EF),
-      border: Border.all(color: const Color(0xFFF1C1A8)),
-      borderRadius: BorderRadius.circular(20),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+  Widget _answerCard(BuildContext context, String? content, DateTime? date) =>
+      Container(
+        padding: const EdgeInsets.all(20),
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: AppColors.resolve(context, const Color(0xFFFFF6EF)),
+          border: Border.all(
+            color: AppColors.resolve(context, const Color(0xFFF1C1A8)),
+          ),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: AppColors.peachLight,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.chat_outlined,
-                size: 20,
-                color: Color(0xFF875C49),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    '관리자 답변',
-                    style: TextStyle(
-                      color: InquiryStyle.ink,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
+            Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: AppColors.of(context).peachLight,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  if (date != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      date.toString().substring(0, 16),
-                      style: const TextStyle(
-                        color: InquiryStyle.muted,
-                        fontSize: 10,
+                  child: Icon(
+                    Icons.chat_outlined,
+                    size: 20,
+                    color: AppColors.resolve(context, Color(0xFF875C49)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppStrings.tr(context, '관리자 답변'),
+                        style: TextStyle(
+                          color: AppColors.resolve(context, InquiryStyle.ink),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                  ],
-                ],
+                      if (date != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          date.toString().substring(0, 16),
+                          style: TextStyle(
+                            color: AppColors.resolve(
+                              context,
+                              InquiryStyle.muted,
+                            ),
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SelectableText(
+              content ?? AppStrings.tr(context, '아직 등록된 답변이 없습니다.'),
+              style: TextStyle(
+                color: AppColors.resolve(context, Color(0xFF746A64)),
+                fontSize: 14,
+                height: 1.9,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 16),
-        SelectableText(
-          content ?? '아직 등록된 답변이 없습니다.',
-          style: const TextStyle(
-            color: Color(0xFF746A64),
-            fontSize: 14,
-            height: 1.9,
-          ),
-        ),
-      ],
-    ),
-  );
+      );
 }

@@ -23,13 +23,19 @@ class MenuHeaderIcon extends StatelessWidget {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: backgroundColor,
+          color: AppColors.resolve(context, backgroundColor),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            Center(child: Icon(icon, color: foregroundColor, size: 24)),
+            Center(
+              child: Icon(
+                icon,
+                color: AppColors.resolve(context, foregroundColor),
+                size: 24,
+              ),
+            ),
             if (unreadCount > 0)
               Positioned(
                 right: -3,
@@ -41,11 +47,14 @@ class MenuHeaderIcon extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.textPrimary,
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
+                    border: Border.all(
+                      color: AppColors.resolve(context, Colors.white),
+                      width: 2,
+                    ),
                   ),
                   child: Text(
                     unreadCount > 99 ? '99+' : '$unreadCount',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: Colors.white,
                       fontSize: 9,
                       fontWeight: FontWeight.w800,

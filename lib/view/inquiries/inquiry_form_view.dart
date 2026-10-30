@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/view/inquiries/inquiry_style.dart';
 import 'package:flutter/material.dart';
@@ -57,10 +58,10 @@ class _InquiryFormViewState extends ConsumerState<InquiryFormView> {
     return PopScope(
       canPop: !operation.isLoading,
       child: Scaffold(
-        backgroundColor: InquiryStyle.paper,
+        backgroundColor: AppColors.resolve(context, InquiryStyle.paper),
         appBar: InquiryStyle.header(
           context,
-          '문의 작성',
+          AppStrings.tr(context, '문의 작성'),
           busy: operation.isLoading,
         ),
         body: SafeArea(
@@ -78,7 +79,7 @@ class _InquiryFormViewState extends ConsumerState<InquiryFormView> {
                       Container(
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
-                          color: AppColors.peachLight,
+                          color: AppColors.of(context).peachLight,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
@@ -88,24 +89,33 @@ class _InquiryFormViewState extends ConsumerState<InquiryFormView> {
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: InquiryStyle.peach,
+                                color: AppColors.resolve(
+                                  context,
+                                  InquiryStyle.peach,
+                                ),
                                 borderRadius: BorderRadius.circular(13),
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.edit_outlined,
-                                color: Color(0xFF875C49),
+                                color: AppColors.resolve(
+                                  context,
+                                  Color(0xFF875C49),
+                                ),
                                 size: 22,
                               ),
                             ),
                             const SizedBox(width: 13),
-                            const Expanded(
+                            Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    '어떤 도움이 필요하신가요?',
+                                    AppStrings.tr(context, '어떤 도움이 필요하신가요?'),
                                     style: TextStyle(
-                                      color: InquiryStyle.ink,
+                                      color: AppColors.resolve(
+                                        context,
+                                        InquiryStyle.ink,
+                                      ),
                                       fontSize: 17,
                                       fontWeight: FontWeight.w800,
                                       height: 1.4,
@@ -113,9 +123,15 @@ class _InquiryFormViewState extends ConsumerState<InquiryFormView> {
                                   ),
                                   SizedBox(height: 6),
                                   Text(
-                                    '비밀번호나 인증번호 등 민감한 정보는 입력하지 마세요.',
+                                    AppStrings.tr(
+                                      context,
+                                      '비밀번호나 인증번호 등 민감한 정보는 입력하지 마세요.',
+                                    ),
                                     style: TextStyle(
-                                      color: Color(0xFFA46F59),
+                                      color: AppColors.resolve(
+                                        context,
+                                        Color(0xFFA46F59),
+                                      ),
                                       fontSize: 11,
                                       height: 1.6,
                                     ),
@@ -127,10 +143,10 @@ class _InquiryFormViewState extends ConsumerState<InquiryFormView> {
                         ),
                       ),
                       const SizedBox(height: 25),
-                      const Text(
-                        '문의 제목',
+                      Text(
+                        AppStrings.tr(context, '문의 제목'),
                         style: TextStyle(
-                          color: InquiryStyle.ink,
+                          color: AppColors.resolve(context, InquiryStyle.ink),
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
                         ),
@@ -140,14 +156,17 @@ class _InquiryFormViewState extends ConsumerState<InquiryFormView> {
                         controller: _title,
                         enabled: !operation.isLoading,
                         maxLength: 100,
-                        decoration: InquiryStyle.input('문의 제목을 입력해 주세요'),
+                        decoration: InquiryStyle.input(
+                          context,
+                          AppStrings.tr(context, '문의 제목을 입력해 주세요'),
+                        ),
                         validator: (v) => _validate(v, 100),
                       ),
                       const SizedBox(height: 20),
-                      const Text(
-                        '문의 내용',
+                      Text(
+                        AppStrings.tr(context, '문의 내용'),
                         style: TextStyle(
-                          color: InquiryStyle.ink,
+                          color: AppColors.resolve(context, InquiryStyle.ink),
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
                         ),
@@ -159,13 +178,18 @@ class _InquiryFormViewState extends ConsumerState<InquiryFormView> {
                         maxLength: 10000,
                         minLines: 6,
                         maxLines: 12,
-                        decoration: InquiryStyle.input('궁금한 내용을 자세히 적어주세요'),
+                        decoration: InquiryStyle.input(
+                          context,
+                          AppStrings.tr(context, '궁금한 내용을 자세히 적어주세요'),
+                        ),
                         validator: (v) => _validate(v, 10000),
                       ),
                       if (widget.familyRoomId != null)
                         CheckboxListTile(
                           contentPadding: EdgeInsets.zero,
-                          title: const Text('현재 돌봄 공간과 관련된 문의'),
+                          title: Text(
+                            AppStrings.tr(context, '현재 돌봄 공간과 관련된 문의'),
+                          ),
                           value: _linkRoom,
                           onChanged: operation.isLoading
                               ? null
@@ -174,13 +198,26 @@ class _InquiryFormViewState extends ConsumerState<InquiryFormView> {
                       if (operation.hasError)
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 12),
-                          child: Text(operation.error.toString()),
+                          child: Text(
+                            AppStrings.error(
+                              context,
+                              operation.error.toString(),
+                            ),
+                          ),
                         ),
                       const SizedBox(height: 24),
                       FilledButton(
                         style: FilledButton.styleFrom(
-                          backgroundColor: InquiryStyle.peach,
-                          foregroundColor: InquiryStyle.ink,
+                          backgroundColor: AppColors.resolve(
+                            context,
+                            InquiryStyle.peach,
+                            onAccent: true,
+                          ),
+                          foregroundColor: AppColors.resolve(
+                            context,
+                            InquiryStyle.ink,
+                            onAccent: true,
+                          ),
                           minimumSize: const Size.fromHeight(54),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
@@ -191,7 +228,11 @@ class _InquiryFormViewState extends ConsumerState<InquiryFormView> {
                           ),
                         ),
                         onPressed: operation.isLoading ? null : _submit,
-                        child: Text(operation.isLoading ? '등록 중…' : '문의 등록'),
+                        child: Text(
+                          operation.isLoading
+                              ? AppStrings.tr(context, '등록 중…')
+                              : AppStrings.tr(context, '문의 등록'),
+                        ),
                       ),
                     ],
                   ),

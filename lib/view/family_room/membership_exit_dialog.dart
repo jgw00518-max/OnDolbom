@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/model/family/family_member.dart';
@@ -51,7 +52,7 @@ class _MembershipExitDialogState extends ConsumerState<MembershipExitDialog> {
     return PopScope(
       canPop: !_busy,
       child: Dialog(
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.of(context).background,
         surfaceTintColor: Colors.transparent,
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -64,15 +65,17 @@ class _MembershipExitDialogState extends ConsumerState<MembershipExitDialog> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 ColoredBox(
-                  color: AppColors.surface,
+                  color: AppColors.of(context).surface,
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
                     child: Text(
-                      removing ? '가족을 강퇴할까요?' : '공간에서 나갈까요?',
-                      style: const TextStyle(
+                      removing
+                          ? AppStrings.tr(context, '가족을 강퇴할까요?')
+                          : AppStrings.tr(context, '공간에서 나갈까요?'),
+                      style: TextStyle(
                         fontSize: 21,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
+                        color: AppColors.of(context).textPrimary,
                       ),
                     ),
                   ),
@@ -85,35 +88,51 @@ class _MembershipExitDialogState extends ConsumerState<MembershipExitDialog> {
                     children: [
                       Text(
                         removing
-                            ? '${widget.target!.name ?? '선택한 가족'}님의 공간 접근이 종료됩니다.'
-                            : '이 공간의 기록을 더 이상 조회할 수 없습니다.',
-                        style: const TextStyle(
+                            ? AppStrings.format(
+                                context,
+                                "{0}님의 공간 접근이 종료됩니다.",
+                                [
+                                  widget.target!.name ??
+                                      AppStrings.tr(context, '선택한 가족'),
+                                ],
+                              )
+                            : AppStrings.tr(
+                                context,
+                                '이 공간의 기록을 더 이상 조회할 수 없습니다.',
+                              ),
+                        style: TextStyle(
                           fontSize: 15,
                           height: 1.6,
-                          color: AppColors.textPrimary,
+                          color: AppColors.of(context).textPrimary,
                         ),
                       ),
                       const SizedBox(height: 16),
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: AppColors.peachSoft,
+                          color: AppColors.of(context).peachSoft,
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Text(
-                          '맡고 있던 미완료 일정은 담당자 없는 상태로 변경됩니다.\n'
-                          '작성한 메모·채팅과 완료 기록은 보존됩니다.',
+                        child: Text(
+                          AppStrings.tr(
+                                context,
+                                '맡고 있던 미완료 일정은 담당자 없는 상태로 변경됩니다.\n',
+                              ) +
+                              AppStrings.tr(
+                                context,
+                                '작성한 메모·채팅과 완료 기록은 보존됩니다.',
+                              ),
                           style: TextStyle(
                             fontSize: 13,
                             height: 1.6,
-                            color: AppColors.textPrimary,
+                            color: AppColors.of(context).textPrimary,
                           ),
                         ),
                       ),
                       if (_error != null) ...[
                         const SizedBox(height: 12),
                         Text(
-                          _error!,
+                          AppStrings.error(context, _error!),
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.error,
                           ),
@@ -130,7 +149,7 @@ class _MembershipExitDialogState extends ConsumerState<MembershipExitDialog> {
                               style: OutlinedButton.styleFrom(
                                 minimumSize: const Size(0, 48),
                               ),
-                              child: const Text('취소'),
+                              child: Text(AppStrings.tr(context, '취소')),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -138,16 +157,24 @@ class _MembershipExitDialogState extends ConsumerState<MembershipExitDialog> {
                             child: FilledButton(
                               onPressed: _busy ? null : _submit,
                               style: FilledButton.styleFrom(
-                                backgroundColor: const Color(0xFFB87568),
-                                foregroundColor: Colors.white,
+                                backgroundColor: AppColors.resolve(
+                                  context,
+                                  const Color(0xFFB87568),
+                                  onAccent: true,
+                                ),
+                                foregroundColor: AppColors.resolve(
+                                  context,
+                                  Colors.white,
+                                  onAccent: true,
+                                ),
                                 minimumSize: const Size(0, 48),
                               ),
                               child: Text(
                                 _busy
-                                    ? '처리 중…'
+                                    ? AppStrings.tr(context, '처리 중…')
                                     : removing
-                                    ? '강퇴'
-                                    : '나가기',
+                                    ? AppStrings.tr(context, '강퇴')
+                                    : AppStrings.tr(context, '나가기'),
                               ),
                             ),
                           ),

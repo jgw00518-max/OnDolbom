@@ -1,3 +1,5 @@
+import 'package:ondolbom/vm/settings/locale_vm.dart';
+import 'package:ondolbom/vm/settings/theme_vm.dart';
 import 'package:ondolbom/model/settings/text_size_preferences.dart';
 import 'text_size_test.dart' show MemoryTextSizePreferences;
 import 'package:flutter/material.dart';
@@ -25,6 +27,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          initialThemeModeProvider.overrideWithValue(ThemeMode.light),
+          initialLocaleProvider.overrideWithValue(const Locale('ko', 'KR')),
           textSizePreferencesProvider.overrideWithValue(
             MemoryTextSizePreferences(),
           ),
@@ -55,12 +59,15 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('가족 사용자'), findsOneWidget);
-    expect(tester.widget<Switch>(find.byType(Switch).first).onChanged, isNull);
+    expect(
+      tester.widget<Switch>(find.byType(Switch).first).onChanged,
+      isNotNull,
+    );
     expect(
       tester
           .widget<DropdownButton<String>>(find.byType(DropdownButton<String>))
           .onChanged,
-      isNull,
+      isNotNull,
     );
     await tester.ensureVisible(find.text('크게'));
     await tester.pumpAndSettle();
@@ -80,6 +87,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          initialThemeModeProvider.overrideWithValue(ThemeMode.light),
+          initialLocaleProvider.overrideWithValue(const Locale('ko', 'KR')),
           firebaseAuthProvider.overrideWithValue(auth),
           authUserProvider.overrideWith(
             (ref) => Stream.value(
@@ -147,6 +156,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          initialThemeModeProvider.overrideWithValue(ThemeMode.light),
+          initialLocaleProvider.overrideWithValue(const Locale('ko', 'KR')),
           textSizePreferencesProvider.overrideWithValue(
             MemoryTextSizePreferences(),
           ),
@@ -174,6 +185,8 @@ void main() {
     final preferences = MemoryPreferences();
     final container = ProviderContainer(
       overrides: [
+        initialThemeModeProvider.overrideWithValue(ThemeMode.light),
+        initialLocaleProvider.overrideWithValue(const Locale('ko', 'KR')),
         loginPreferencesProvider.overrideWithValue(preferences),
         authUserProvider.overrideWith((ref) => Stream.value(null)),
       ],

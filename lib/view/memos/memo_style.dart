@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/theme/app_theme.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:flutter/material.dart';
@@ -32,7 +33,7 @@ class MemoLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: AppColors.background,
+    backgroundColor: AppColors.of(context).background,
     floatingActionButton: floatingActionButton,
     bottomNavigationBar: footer == null
         ? null
@@ -97,14 +98,14 @@ class MemoMetadata extends StatelessWidget {
           Container(
             width: 44,
             height: 44,
-            decoration: const BoxDecoration(
-              color: AppColors.peachSoft,
+            decoration: BoxDecoration(
+              color: AppColors.of(context).peachSoft,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.person_outline_rounded,
               size: 24,
-              color: AppColors.textPrimary,
+              color: AppColors.of(context).textPrimary,
             ),
           ),
           const SizedBox(width: 10),
@@ -114,18 +115,18 @@ class MemoMetadata extends StatelessWidget {
               children: [
                 Text(
                   author,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
+                    color: AppColors.of(context).textPrimary,
                   ),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   memoDate(date),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
-                    color: AppColors.textSecondary,
+                    color: AppColors.of(context).textSecondary,
                   ),
                 ),
               ],
@@ -138,15 +139,18 @@ class MemoMetadata extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.favorite_border,
                 size: 16,
-                color: AppColors.sageDark,
+                color: AppColors.of(context).sageDark,
               ),
               const SizedBox(width: 5),
               Text(
-                '좋아요 $likes',
-                style: const TextStyle(fontSize: 12, color: AppColors.sageDark),
+                AppStrings.format(context, "좋아요 {0}", [likes]),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.of(context).sageDark,
+                ),
               ),
             ],
           ),

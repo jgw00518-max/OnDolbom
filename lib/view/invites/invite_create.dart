@@ -1,3 +1,5 @@
+import 'package:ondolbom/l10n/app_strings.dart';
+import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,7 +39,7 @@ class _InviteCreateState extends ConsumerState<InviteCreate> {
       canPop: !isSaving,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('가족 초대'),
+          title: Text(AppStrings.tr(context, '가족 초대')),
           automaticallyImplyLeading: false,
           leadingWidth: 62,
           leading: AppBackLeading(enabled: !isSaving),
@@ -47,7 +49,7 @@ class _InviteCreateState extends ConsumerState<InviteCreate> {
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              const Text('함께 돌볼 가족의 로그인 이메일을 입력해 주세요.'),
+              Text(AppStrings.tr(context, '함께 돌볼 가족의 로그인 이메일을 입력해 주세요.')),
               const SizedBox(height: 24),
 
               TextFormField(
@@ -57,8 +59,8 @@ class _InviteCreateState extends ConsumerState<InviteCreate> {
                 textCapitalization: TextCapitalization.none,
                 autocorrect: false,
                 maxLength: 200,
-                decoration: const InputDecoration(
-                  labelText: '초대할 가족 이메일',
+                decoration: InputDecoration(
+                  labelText: AppStrings.tr(context, '초대할 가족 이메일'),
                   hintText: 'family@example.com',
                   border: OutlineInputBorder(),
                 ),
@@ -66,10 +68,13 @@ class _InviteCreateState extends ConsumerState<InviteCreate> {
               ),
               const SizedBox(height: 16),
 
-              const Text(
-                '초대받은 가족은 같은 이메일로 로그인한 뒤 '
-                '‘받은 가족 초대’에서 수락할 수 있습니다.',
-                style: TextStyle(color: Color(0xFF78716A), height: 1.6),
+              Text(
+                AppStrings.tr(context, '초대받은 가족은 같은 이메일로 로그인한 뒤 ') +
+                    AppStrings.tr(context, '‘받은 가족 초대’에서 수락할 수 있습니다.'),
+                style: TextStyle(
+                  color: AppColors.resolve(context, Color(0xFF78716A)),
+                  height: 1.6,
+                ),
               ),
               const SizedBox(height: 24),
 
@@ -77,7 +82,7 @@ class _InviteCreateState extends ConsumerState<InviteCreate> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: Text(
-                    errorMessage!,
+                    AppStrings.error(context, errorMessage!),
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.error,
                     ),
@@ -87,14 +92,26 @@ class _InviteCreateState extends ConsumerState<InviteCreate> {
               FilledButton(
                 onPressed: isSaving ? null : saveAction,
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFFF7AC82),
-                  foregroundColor: const Color(0xFF553724),
+                  backgroundColor: AppColors.resolve(
+                    context,
+                    const Color(0xFFF7AC82),
+                    onAccent: true,
+                  ),
+                  foregroundColor: AppColors.resolve(
+                    context,
+                    const Color(0xFF553724),
+                    onAccent: true,
+                  ),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: Text(isSaving ? '초대 등록 중…' : '초대 등록'),
+                child: Text(
+                  isSaving
+                      ? AppStrings.tr(context, '초대 등록 중…')
+                      : AppStrings.tr(context, '초대 등록'),
+                ),
               ),
             ],
           ),

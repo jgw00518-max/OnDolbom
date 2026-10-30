@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/view/widgets/menu_header_icon.dart';
 import 'dart:async';
 import 'package:ondolbom/vm/chats/chat_notifications_vm.dart';
@@ -169,9 +170,12 @@ class _ChatViewState extends ConsumerState<ChatView>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            error is ChatFailure
-                ? error.message
-                : '사진을 선택하지 못했어요. 사진 접근 권한을 확인해 주세요.',
+            AppStrings.error(
+              context,
+              error is ChatFailure
+                  ? error.message
+                  : AppStrings.tr(context, '사진을 선택하지 못했어요. 사진 접근 권한을 확인해 주세요.'),
+            ),
           ),
         ),
       );
@@ -195,12 +199,12 @@ class _ChatViewState extends ConsumerState<ChatView>
             children: [
               ListTile(
                 leading: const Icon(Icons.edit_outlined),
-                title: const Text('수정'),
+                title: Text(AppStrings.tr(context, '수정')),
                 onTap: () => Navigator.pop(context, 'edit'),
               ),
               ListTile(
                 leading: const Icon(Icons.delete_outline),
-                title: const Text('삭제'),
+                title: Text(AppStrings.tr(context, '삭제')),
                 onTap: () => Navigator.pop(context, 'delete'),
               ),
             ],
@@ -234,16 +238,18 @@ class _ChatViewState extends ConsumerState<ChatView>
         final approved = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('메시지 삭제'),
-            content: const Text('이 메시지를 삭제하시겠습니까?\n첨부 사진도 함께 숨겨집니다.'),
+            title: Text(AppStrings.tr(context, '메시지 삭제')),
+            content: Text(
+              AppStrings.tr(context, '이 메시지를 삭제하시겠습니까?\n첨부 사진도 함께 숨겨집니다.'),
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text('취소'),
+                child: Text(AppStrings.tr(context, '취소')),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: const Text('삭제'),
+                child: Text(AppStrings.tr(context, '삭제')),
               ),
             ],
           ),
@@ -262,9 +268,12 @@ class _ChatViewState extends ConsumerState<ChatView>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              error is ChatFailure
-                  ? error.message
-                  : '메시지를 변경하지 못했어요. 다시 시도해 주세요.',
+              AppStrings.error(
+                context,
+                error is ChatFailure
+                    ? error.message
+                    : AppStrings.tr(context, '메시지를 변경하지 못했어요. 다시 시도해 주세요.'),
+              ),
             ),
           ),
         );
@@ -290,10 +299,12 @@ class _ChatViewState extends ConsumerState<ChatView>
         appBar: AppBar(
           leadingWidth: 62,
           leading: const AppBackLeading(),
-          title: const Text('가족 채팅'),
+          title: Text(AppStrings.tr(context, '가족 채팅')),
           actions: const [MenuHeaderIcon(icon: Icons.chat_bubble_outline)],
         ),
-        body: const Center(child: Text('로그인 후 돌봄 공간을 선택해 주세요.')),
+        body: Center(
+          child: Text(AppStrings.tr(context, '로그인 후 돌봄 공간을 선택해 주세요.')),
+        ),
       );
     }
     final provider = chatVmProvider(selected);
@@ -318,7 +329,7 @@ class _ChatViewState extends ConsumerState<ChatView>
       appBar: AppBar(
         leadingWidth: 62,
         leading: const AppBackLeading(),
-        title: const Text('가족 채팅'),
+        title: Text(AppStrings.tr(context, '가족 채팅')),
         actions: const [MenuHeaderIcon(icon: Icons.chat_bubble_outline)],
       ),
       body: SafeArea(
@@ -343,21 +354,21 @@ class _ChatViewState extends ConsumerState<ChatView>
                           Icons.circle,
                           size: 8,
                           color: state.status == ChatStatus.connected
-                              ? AppColors.sageDark
-                              : AppColors.textSecondary,
+                              ? AppColors.of(context).sageDark
+                              : AppColors.of(context).textSecondary,
                         ),
                         const SizedBox(width: 5),
                         Flexible(
                           fit: FlexFit.loose,
                           child: Text(
-                            label,
+                            AppStrings.tr(context, label),
                             textAlign: TextAlign.right,
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: state.status == ChatStatus.connected
-                                  ? AppColors.sageDark
-                                  : AppColors.textSecondary,
+                                  ? AppColors.of(context).sageDark
+                                  : AppColors.of(context).textSecondary,
                             ),
                           ),
                         ),
@@ -372,7 +383,11 @@ class _ChatViewState extends ConsumerState<ChatView>
                       children: [
                         Expanded(
                           child: Text(
-                            state.error ?? '가족 채팅에 연결하고 있습니다.',
+                            AppStrings.error(
+                              context,
+                              state.error ??
+                                  AppStrings.tr(context, '가족 채팅에 연결하고 있습니다.'),
+                            ),
                             style: TextStyle(color: colors.error),
                           ),
                         ),
@@ -380,7 +395,7 @@ class _ChatViewState extends ConsumerState<ChatView>
                           onPressed: state.status == ChatStatus.connecting
                               ? null
                               : vm.reconnect,
-                          child: const Text('다시 연결'),
+                          child: Text(AppStrings.tr(context, '다시 연결')),
                         ),
                       ],
                     ),
@@ -392,7 +407,7 @@ class _ChatViewState extends ConsumerState<ChatView>
                       _scheduleRead(state, selected);
                     },
                     icon: const Icon(Icons.refresh, size: 18),
-                    label: const Text('읽음 처리 실패 · 다시 시도'),
+                    label: Text(AppStrings.tr(context, '읽음 처리 실패 · 다시 시도')),
                   ),
                 const Divider(height: 1),
                 Expanded(
@@ -405,8 +420,14 @@ class _ChatViewState extends ConsumerState<ChatView>
                       ? Center(
                           child: Text(
                             state.status == ChatStatus.connected
-                                ? '아직 대화가 없어요. 가족에게 첫 메시지를 보내보세요.'
-                                : '연결 후 대화를 확인할 수 있습니다.',
+                                ? AppStrings.tr(
+                                    context,
+                                    '아직 대화가 없어요. 가족에게 첫 메시지를 보내보세요.',
+                                  )
+                                : AppStrings.tr(
+                                    context,
+                                    '연결 후 대화를 확인할 수 있습니다.',
+                                  ),
                           ),
                         )
                       : ListView.builder(
@@ -440,8 +461,12 @@ class _ChatViewState extends ConsumerState<ChatView>
                                             height: 200,
                                             fit: BoxFit.contain,
                                             cacheWidth: 600,
-                                            errorBuilder: (_, _, _) =>
-                                                const Text('사진을 표시할 수 없어요.'),
+                                            errorBuilder: (_, _, _) => Text(
+                                              AppStrings.tr(
+                                                context,
+                                                '사진을 표시할 수 없어요.',
+                                              ),
+                                            ),
                                           ),
                                           if (!message.failed)
                                             const Positioned(
@@ -467,7 +492,9 @@ class _ChatViewState extends ConsumerState<ChatView>
                                     ? null
                                     : vm.loadOlder,
                                 child: Text(
-                                  state.loadingOlder ? '불러오는 중…' : '이전 대화 더 보기',
+                                  state.loadingOlder
+                                      ? AppStrings.tr(context, '불러오는 중…')
+                                      : AppStrings.tr(context, '이전 대화 더 보기'),
                                 ),
                               );
                             }
@@ -532,12 +559,14 @@ class _ChatViewState extends ConsumerState<ChatView>
                           fit: BoxFit.contain,
                           cacheWidth: 200,
                           errorBuilder: (_, _, _) =>
-                              const Text('사진을 표시할 수 없어요.'),
+                              Text(AppStrings.tr(context, '사진을 표시할 수 없어요.')),
                         ),
                         const SizedBox(width: 8),
-                        const Expanded(child: Text('첨부 사진 1장')),
+                        Expanded(
+                          child: Text(AppStrings.tr(context, '첨부 사진 1장')),
+                        ),
                         IconButton(
-                          tooltip: '첨부 사진 제거',
+                          tooltip: AppStrings.tr(context, '첨부 사진 제거'),
                           onPressed: _picking
                               ? null
                               : () => setState(() => _image = null),
@@ -552,15 +581,17 @@ class _ChatViewState extends ConsumerState<ChatView>
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       IconButton(
-                        tooltip: _image == null ? '사진 첨부' : '첨부 사진 변경',
+                        tooltip: _image == null
+                            ? AppStrings.tr(context, '사진 첨부')
+                            : AppStrings.tr(context, '첨부 사진 변경'),
                         onPressed: state.canSend && !_picking
                             ? () => _pickImage(selected)
                             : null,
                         icon: const Icon(Icons.photo_outlined),
                         style: IconButton.styleFrom(
                           minimumSize: const Size(44, 48),
-                          backgroundColor: AppColors.peachSoft,
-                          foregroundColor: AppColors.sageDark,
+                          backgroundColor: AppColors.of(context).peachSoft,
+                          foregroundColor: AppColors.of(context).sageDark,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
@@ -574,39 +605,39 @@ class _ChatViewState extends ConsumerState<ChatView>
                           minLines: 1,
                           maxLines: 4,
                           maxLength: 4000,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
-                            color: AppColors.textPrimary,
+                            color: AppColors.of(context).textPrimary,
                           ),
                           textInputAction: TextInputAction.newline,
                           decoration: InputDecoration(
-                            hintText: '가족에게 메시지를 보내세요',
+                            hintText: AppStrings.tr(context, '가족에게 메시지를 보내세요'),
                             filled: true,
-                            fillColor: AppColors.surface,
+                            fillColor: AppColors.of(context).surface,
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 14,
                               vertical: 14,
                             ),
-                            hintStyle: const TextStyle(
+                            hintStyle: TextStyle(
                               fontSize: 14,
-                              color: AppColors.textSecondary,
+                              color: AppColors.of(context).textSecondary,
                             ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(16),
-                              borderSide: const BorderSide(
-                                color: AppColors.border,
+                              borderSide: BorderSide(
+                                color: AppColors.of(context).border,
                               ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(16),
-                              borderSide: const BorderSide(
-                                color: AppColors.border,
+                              borderSide: BorderSide(
+                                color: AppColors.of(context).border,
                               ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(16),
-                              borderSide: const BorderSide(
-                                color: AppColors.sageDark,
+                              borderSide: BorderSide(
+                                color: AppColors.of(context).sageDark,
                               ),
                             ),
                             counterText: '',
@@ -619,12 +650,16 @@ class _ChatViewState extends ConsumerState<ChatView>
                         builder: (context, value, _) => IconButton.filled(
                           style: IconButton.styleFrom(
                             minimumSize: const Size(48, 48),
-                            backgroundColor: AppColors.sageDark,
-                            foregroundColor: AppColors.surface,
-                            disabledBackgroundColor: AppColors.sageLight,
-                            disabledForegroundColor: AppColors.sageDark,
+                            backgroundColor: AppColors.of(context).sageDark,
+                            foregroundColor: AppColors.of(context).surface,
+                            disabledBackgroundColor: AppColors.of(
+                              context,
+                            ).sageLight,
+                            disabledForegroundColor: AppColors.of(
+                              context,
+                            ).sageDark,
                           ),
-                          tooltip: '메시지 전송',
+                          tooltip: AppStrings.tr(context, '메시지 전송'),
                           onPressed:
                               state.canSend &&
                                   !_picking &&
@@ -678,10 +713,10 @@ class _Bubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const messageStyle = TextStyle(
+    final messageStyle = TextStyle(
       fontSize: 16,
       height: 1.5,
-      color: AppColors.textPrimary,
+      color: AppColors.of(context).textPrimary,
     );
     return LayoutBuilder(
       builder: (context, constraints) => Align(
@@ -700,8 +735,8 @@ class _Bubble extends StatelessWidget {
                   ExcludeSemantics(
                     child: CircleAvatar(
                       radius: 17,
-                      backgroundColor: AppColors.sageLight,
-                      foregroundColor: AppColors.sageDark,
+                      backgroundColor: AppColors.of(context).sageLight,
+                      foregroundColor: AppColors.of(context).sageDark,
                       child: Text(
                         author.characters.first,
                         style: const TextStyle(
@@ -725,10 +760,10 @@ class _Bubble extends StatelessWidget {
                           padding: const EdgeInsets.only(bottom: 6),
                           child: Text(
                             author,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
+                              color: AppColors.of(context).textPrimary,
                             ),
                           ),
                         ),
@@ -736,13 +771,13 @@ class _Bubble extends StatelessWidget {
                         SizedBox(
                           height: 36,
                           child: IconButton(
-                            tooltip: '메시지 메뉴',
+                            tooltip: AppStrings.tr(context, '메시지 메뉴'),
                             onPressed: onLongPress,
                             padding: EdgeInsets.zero,
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.more_horiz,
                               size: 21,
-                              color: AppColors.textSecondary,
+                              color: AppColors.of(context).textSecondary,
                             ),
                           ),
                         ),
@@ -754,10 +789,12 @@ class _Bubble extends StatelessWidget {
                           padding: EdgeInsets.all(image == null ? 14 : 8),
                           decoration: BoxDecoration(
                             color: mine
-                                ? AppColors.peachSoft
-                                : AppColors.surface,
+                                ? AppColors.of(context).peachSoft
+                                : AppColors.of(context).surface,
                             borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: AppColors.border),
+                            border: Border.all(
+                              color: AppColors.of(context).border,
+                            ),
                           ),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
@@ -780,8 +817,9 @@ class _Bubble extends StatelessWidget {
                                           content,
                                           style: isDeleted
                                               ? messageStyle.copyWith(
-                                                  color:
-                                                      AppColors.textSecondary,
+                                                  color: AppColors.of(
+                                                    context,
+                                                  ).textSecondary,
                                                 )
                                               : messageStyle,
                                         )
@@ -798,14 +836,14 @@ class _Bubble extends StatelessWidget {
                           fontSize: 12,
                           height: 1.4,
                           color: retry == null
-                              ? AppColors.textSecondary
+                              ? AppColors.of(context).textSecondary
                               : Theme.of(context).colorScheme.error,
                         ),
                       ),
                       if (retry != null)
                         TextButton(
                           onPressed: retryEnabled ? retry : null,
-                          child: const Text('재전송'),
+                          child: Text(AppStrings.tr(context, '재전송')),
                         ),
                     ],
                   ),
@@ -825,22 +863,21 @@ class _DateSeparator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const weekdays = ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'];
     return Padding(
       padding: const EdgeInsets.only(top: 12, bottom: 24),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: AppColors.peachSoft,
+          color: AppColors.of(context).peachSoft,
           borderRadius: BorderRadius.circular(24),
         ),
         child: Text(
-          '${date.year}년 ${date.month}월 ${date.day}일 ${weekdays[date.weekday - 1]}',
+          AppStrings.fullDate(context, date),
           textAlign: TextAlign.center,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: AppColors.sageDark,
+            color: AppColors.of(context).sageDark,
           ),
         ),
       ),

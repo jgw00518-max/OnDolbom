@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/view/widgets/menu_header_icon.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter/material.dart';
@@ -15,9 +16,9 @@ abstract final class InquiryStyle {
     String title, {
     bool busy = false,
   }) => AppBar(
-    backgroundColor: paper,
+    backgroundColor: AppColors.resolve(context, paper),
     surfaceTintColor: Colors.transparent,
-    foregroundColor: ink,
+    foregroundColor: AppColors.resolve(context, ink),
     toolbarHeight: 88,
     centerTitle: true,
     leadingWidth: 62,
@@ -30,9 +31,9 @@ abstract final class InquiryStyle {
             onPressed: busy ? null : () => Navigator.maybePop(context),
             style: OutlinedButton.styleFrom(
               padding: EdgeInsets.zero,
-              backgroundColor: AppColors.surface,
-              foregroundColor: ink,
-              side: const BorderSide(color: line),
+              backgroundColor: AppColors.of(context).surface,
+              foregroundColor: AppColors.resolve(context, ink),
+              side: BorderSide(color: AppColors.resolve(context, line)),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(13),
               ),
@@ -44,10 +45,10 @@ abstract final class InquiryStyle {
     ),
     title: Column(
       children: [
-        const Text(
+        Text(
           'SUPPORT',
           style: TextStyle(
-            color: Color(0xFFA77762),
+            color: AppColors.resolve(context, Color(0xFFA77762)),
             fontSize: 8,
             letterSpacing: 1.5,
             fontWeight: FontWeight.w800,
@@ -56,8 +57,8 @@ abstract final class InquiryStyle {
         const SizedBox(height: 3),
         Text(
           title,
-          style: const TextStyle(
-            color: ink,
+          style: TextStyle(
+            color: AppColors.resolve(context, ink),
             fontSize: 24,
             fontWeight: FontWeight.w800,
           ),
@@ -67,41 +68,57 @@ abstract final class InquiryStyle {
     actions: const [MenuHeaderIcon(icon: Icons.help_outline)],
   );
 
-  static Widget status(bool answered) => Container(
+  static Widget status(BuildContext context, bool answered) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
     decoration: BoxDecoration(
-      color: answered ? const Color(0xFFE5EEDC) : AppColors.peachSoft,
+      color: answered
+          ? AppColors.resolve(context, const Color(0xFFE5EEDC))
+          : AppColors.of(context).peachSoft,
       borderRadius: BorderRadius.circular(24),
     ),
     child: Text(
-      answered ? '답변 완료' : '답변 대기',
+      answered
+          ? AppStrings.tr(context, '답변 완료')
+          : AppStrings.tr(context, '답변 대기'),
       style: TextStyle(
-        color: answered ? AppColors.sageDark : const Color(0xFFA46F59),
+        color: answered
+            ? AppColors.of(context).sageDark
+            : AppColors.resolve(context, const Color(0xFFA46F59)),
         fontSize: 11,
         fontWeight: FontWeight.w700,
       ),
     ),
   );
 
-  static InputDecoration input(String hint) => InputDecoration(
-    hintText: hint,
-    hintStyle: const TextStyle(color: Color(0xFFB4AAA5), fontSize: 13),
-    filled: true,
-    fillColor: AppColors.surface,
-    contentPadding: const EdgeInsets.all(17),
-    counterStyle: const TextStyle(color: muted, fontSize: 10),
-    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: line),
-    ),
-    disabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: line),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: peach, width: 2),
-    ),
-  );
+  static InputDecoration input(BuildContext context, String hint) =>
+      InputDecoration(
+        hintText: hint,
+        hintStyle: TextStyle(
+          color: AppColors.resolve(context, Color(0xFFB4AAA5)),
+          fontSize: 13,
+        ),
+        filled: true,
+        fillColor: AppColors.of(context).surface,
+        contentPadding: const EdgeInsets.all(17),
+        counterStyle: TextStyle(
+          color: AppColors.resolve(context, muted),
+          fontSize: 10,
+        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: AppColors.resolve(context, line)),
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: AppColors.resolve(context, line)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: AppColors.resolve(context, peach),
+            width: 2,
+          ),
+        ),
+      );
 }

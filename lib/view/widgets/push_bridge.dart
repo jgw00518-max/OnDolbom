@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/vm/chats/chat_notifications_vm.dart';
 import 'package:ondolbom/vm/chats/chat_vm.dart';
@@ -147,8 +148,13 @@ class _PushBridgeState extends ConsumerState<PushBridge>
       final context = widget.navigatorKey.currentContext;
       if (context != null && context.mounted) {
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          const SnackBar(
-            content: Text('채팅 공간에 접근할 수 없습니다. 공간 목록과 참여 상태를 확인해 주세요.'),
+          SnackBar(
+            content: Text(
+              AppStrings.tr(
+                context,
+                '채팅 공간에 접근할 수 없습니다. 공간 목록과 참여 상태를 확인해 주세요.',
+              ),
+            ),
           ),
         );
       }
@@ -206,9 +212,9 @@ class PushSettingsTile extends ConsumerWidget {
         return Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: AppColors.of(context).surface,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: AppColors.of(context).border),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -219,32 +225,32 @@ class PushSettingsTile extends ConsumerWidget {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: AppColors.peachSoft,
+                      color: AppColors.of(context).peachSoft,
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.notifications_outlined,
-                      color: AppColors.sageDark,
+                      color: AppColors.of(context).sageDark,
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '기기 푸시 알림',
+                          AppStrings.tr(context, '기기 푸시 알림'),
                           style: TextStyle(
-                            color: AppColors.textPrimary,
+                            color: AppColors.of(context).textPrimary,
                             fontWeight: FontWeight.w700,
                             fontSize: 15,
                           ),
                         ),
                         SizedBox(height: 4),
                         Text(
-                          '앱을 보고 있지 않아도 소식을 받아요',
+                          AppStrings.tr(context, '앱을 보고 있지 않아도 소식을 받아요'),
                           style: TextStyle(
-                            color: AppColors.textSecondary,
+                            color: AppColors.of(context).textSecondary,
                             fontSize: 12,
                           ),
                         ),
@@ -253,7 +259,6 @@ class PushSettingsTile extends ConsumerWidget {
                   ),
                   Switch(
                     value: service.enabled,
-                    activeTrackColor: AppColors.primary,
                     onChanged: connecting
                         ? null
                         : (value) async {
@@ -262,9 +267,12 @@ class PushSettingsTile extends ConsumerWidget {
                             } catch (_) {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
+                                  SnackBar(
                                     content: Text(
-                                      '알림 설정을 저장하지 못했습니다. 다시 시도해 주세요.',
+                                      AppStrings.tr(
+                                        context,
+                                        '알림 설정을 저장하지 못했습니다. 다시 시도해 주세요.',
+                                      ),
                                     ),
                                   ),
                                 );
@@ -278,7 +286,9 @@ class PushSettingsTile extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: connected ? AppColors.sageLight : AppColors.peachSoft,
+                  color: connected
+                      ? AppColors.of(context).sageLight
+                      : AppColors.of(context).peachSoft,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -288,20 +298,20 @@ class PushSettingsTile extends ConsumerWidget {
                           ? Icons.check_circle_outline
                           : Icons.info_outline,
                       size: 18,
-                      color: AppColors.sageDark,
+                      color: AppColors.of(context).sageDark,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         !service.enabled
-                            ? '이 기기의 푸시 알림을 껐어요'
+                            ? AppStrings.tr(context, '이 기기의 푸시 알림을 껐어요')
                             : connected
-                            ? '알림을 받을 준비가 되었어요'
+                            ? AppStrings.tr(context, '알림을 받을 준비가 되었어요')
                             : connecting
-                            ? '알림 수신을 준비하고 있어요'
-                            : '알림 권한과 연결 상태를 확인해 주세요',
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
+                            ? AppStrings.tr(context, '알림 수신을 준비하고 있어요')
+                            : AppStrings.tr(context, '알림 권한과 연결 상태를 확인해 주세요'),
+                        style: TextStyle(
+                          color: AppColors.of(context).textPrimary,
                           fontSize: 12,
                         ),
                       ),
@@ -315,17 +325,17 @@ class PushSettingsTile extends ConsumerWidget {
                   child: TextButton.icon(
                     onPressed: connecting ? null : () => service.reconnect(),
                     icon: const Icon(Icons.refresh, size: 16),
-                    label: const Text('연결 확인'),
+                    label: Text(AppStrings.tr(context, '연결 확인')),
                     style: TextButton.styleFrom(
-                      foregroundColor: AppColors.sageDark,
+                      foregroundColor: AppColors.of(context).sageDark,
                     ),
                   ),
                 ),
               const SizedBox(height: 8),
-              const Text(
-                '알림 수신 권한은 휴대폰의 앱 알림 설정에서 변경할 수 있어요.',
+              Text(
+                AppStrings.tr(context, '알림 수신 권한은 휴대폰의 앱 알림 설정에서 변경할 수 있어요.'),
                 style: TextStyle(
-                  color: AppColors.textSecondary,
+                  color: AppColors.of(context).textSecondary,
                   fontSize: 11,
                   height: 1.5,
                 ),

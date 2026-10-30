@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 
@@ -12,7 +13,7 @@ class AppBackButton extends StatelessWidget {
   Widget build(BuildContext context) => SizedBox.square(
     dimension: 42,
     child: Tooltip(
-      message: '이전 화면',
+      message: AppStrings.tr(context, '이전 화면'),
       child: OutlinedButton(
         onPressed: !enabled
             ? null
@@ -22,14 +23,17 @@ class AppBackButton extends StatelessWidget {
                   },
         style: OutlinedButton.styleFrom(
           padding: EdgeInsets.zero,
-          backgroundColor: AppColors.surface,
-          foregroundColor: AppColors.textPrimary,
-          side: const BorderSide(color: AppColors.border),
+          backgroundColor: AppColors.of(context).surface,
+          foregroundColor: AppColors.of(context).textPrimary,
+          side: BorderSide(color: AppColors.of(context).border),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(13),
           ),
         ),
-        child: const Icon(Icons.chevron_left, semanticLabel: '뒤로'),
+        child: Icon(
+          Icons.chevron_left,
+          semanticLabel: AppStrings.tr(context, '뒤로'),
+        ),
       ),
     ),
   );

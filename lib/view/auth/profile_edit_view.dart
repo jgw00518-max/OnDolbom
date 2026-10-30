@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter/material.dart';
@@ -24,15 +25,15 @@ class ProfileEditView extends ConsumerWidget {
     return PopScope(
       canPop: !operation.isLoading,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.of(context).background,
         appBar: AppBar(
           leadingWidth: 62,
           leading: AppBackLeading(enabled: !operation.isLoading),
-          backgroundColor: AppColors.background,
+          backgroundColor: AppColors.of(context).background,
           surfaceTintColor: Colors.transparent,
-          title: const Text(
-            '프로필 수정',
-            style: TextStyle(color: AppColors.textPrimary),
+          title: Text(
+            AppStrings.tr(context, '프로필 수정'),
+            style: TextStyle(color: AppColors.of(context).textPrimary),
           ),
         ),
         body: profile.when(
@@ -41,16 +42,23 @@ class ProfileEditView extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(error.toString(), textAlign: TextAlign.center),
+                Text(
+                  AppStrings.error(context, error.toString()),
+                  textAlign: TextAlign.center,
+                ),
                 TextButton(
                   onPressed: () => ref.invalidate(userProfileProvider),
-                  child: const Text('프로필 다시 조회'),
+                  child: Text(AppStrings.tr(context, '프로필 다시 조회')),
                 ),
               ],
             ),
           ),
           data: (value) => value == null || session == null
-              ? const Center(child: Text('로그인과 사용자 등록 상태를 확인해 주세요.'))
+              ? Center(
+                  child: Text(
+                    AppStrings.tr(context, '로그인과 사용자 등록 상태를 확인해 주세요.'),
+                  ),
+                )
               : _ProfileEditForm(
                   key: ValueKey('${session.uid}/${value.userId}'),
                   profile: value,
@@ -98,9 +106,9 @@ class _ProfileEditFormState extends ConsumerState<_ProfileEditForm> {
         .read(profileEditProvider.notifier)
         .save(_name.text, _phone.text);
     if (!mounted || !success) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('프로필을 수정했습니다.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppStrings.tr(context, '프로필을 수정했습니다.'))),
+    );
     Navigator.of(context).pop();
   }
 
@@ -118,29 +126,29 @@ class _ProfileEditFormState extends ConsumerState<_ProfileEditForm> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  '개인 프로필',
+                Text(
+                  AppStrings.tr(context, '개인 프로필'),
                   style: TextStyle(
-                    color: AppColors.textPrimary,
+                    color: AppColors.of(context).textPrimary,
                     fontSize: 24,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  '이름과 전화번호를 수정할 수 있어요.',
-                  style: TextStyle(color: AppColors.textSecondary),
+                Text(
+                  AppStrings.tr(context, '이름과 전화번호를 수정할 수 있어요.'),
+                  style: TextStyle(color: AppColors.of(context).textSecondary),
                 ),
                 const SizedBox(height: 24),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('이메일'),
+                  title: Text(AppStrings.tr(context, '이메일')),
                   subtitle: SelectableText(widget.email),
                 ),
-                const Text(
-                  '이메일은 로그인 계정 정보이므로 이 화면에서 변경할 수 없어요.',
+                Text(
+                  AppStrings.tr(context, '이메일은 로그인 계정 정보이므로 이 화면에서 변경할 수 없어요.'),
                   style: TextStyle(
-                    color: AppColors.textSecondary,
+                    color: AppColors.of(context).textSecondary,
                     fontSize: 12,
                   ),
                 ),
@@ -148,35 +156,42 @@ class _ProfileEditFormState extends ConsumerState<_ProfileEditForm> {
                 TextFormField(
                   controller: _name,
                   enabled: !operation.isLoading,
-                  decoration: _input('이름 (필수)'),
+                  decoration: _input(AppStrings.tr(context, '이름 (필수)')),
                   autofillHints: const [AutofillHints.name],
                   validator: (value) => value == null || value.trim().isEmpty
-                      ? '이름을 입력해 주세요.'
+                      ? AppStrings.tr(context, '이름을 입력해 주세요.')
                       : value.trim().runes.length > 20
-                      ? '이름은 20자 이내로 입력해 주세요.'
+                      ? AppStrings.tr(context, '이름은 20자 이내로 입력해 주세요.')
                       : null,
                 ),
                 const SizedBox(height: 20),
                 TextFormField(
                   controller: _phone,
                   enabled: !operation.isLoading,
-                  decoration: _input(
-                    '전화번호 (필수)',
-                  ).copyWith(hintText: '01012345678 또는 010-1234-5678'),
+                  decoration: _input(AppStrings.tr(context, '전화번호 (필수)'))
+                      .copyWith(
+                        hintText: AppStrings.tr(
+                          context,
+                          '01012345678 또는 010-1234-5678',
+                        ),
+                      ),
                   keyboardType: TextInputType.phone,
                   autofillHints: const [AutofillHints.telephoneNumber],
                   validator: (value) =>
                       !RegExp(
                         r'^010(?:[0-9]{8}|-[0-9]{4}-[0-9]{4})$',
                       ).hasMatch(value?.trim() ?? '')
-                      ? '01012345678 또는 010-1234-5678로 입력해 주세요.'
+                      ? AppStrings.tr(
+                          context,
+                          '01012345678 또는 010-1234-5678로 입력해 주세요.',
+                        )
                       : null,
                 ),
                 if (operation.hasError)
                   Padding(
                     padding: const EdgeInsets.only(top: 16),
                     child: Text(
-                      operation.error.toString(),
+                      AppStrings.error(context, operation.error.toString()),
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.error,
                       ),
@@ -185,20 +200,32 @@ class _ProfileEditFormState extends ConsumerState<_ProfileEditForm> {
                 if (operation.hasError)
                   TextButton(
                     onPressed: () => ref.invalidate(userProfileProvider),
-                    child: const Text('프로필 다시 조회'),
+                    child: Text(AppStrings.tr(context, '프로필 다시 조회')),
                   ),
                 const SizedBox(height: 28),
                 FilledButton(
                   onPressed: operation.isLoading ? null : _save,
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.textPrimary,
+                    backgroundColor: AppColors.resolve(
+                      context,
+                      AppColors.primary,
+                      onAccent: true,
+                    ),
+                    foregroundColor: AppColors.resolve(
+                      context,
+                      AppColors.textPrimary,
+                      onAccent: true,
+                    ),
                     minimumSize: const Size.fromHeight(54),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  child: Text(operation.isLoading ? '저장 중…' : '변경사항 저장'),
+                  child: Text(
+                    operation.isLoading
+                        ? AppStrings.tr(context, '저장 중…')
+                        : AppStrings.tr(context, '변경사항 저장'),
+                  ),
                 ),
               ],
             ),
@@ -211,11 +238,11 @@ class _ProfileEditFormState extends ConsumerState<_ProfileEditForm> {
   InputDecoration _input(String label) => InputDecoration(
     labelText: label,
     filled: true,
-    fillColor: AppColors.surface,
+    fillColor: AppColors.of(context).surface,
     border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: AppColors.border),
+      borderSide: BorderSide(color: AppColors.of(context).border),
     ),
     contentPadding: const EdgeInsets.all(18),
   );

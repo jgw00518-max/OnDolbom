@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/view/widgets/discard_changes_dialog.dart';
 import 'dart:typed_data';
 
@@ -58,8 +59,12 @@ class _MemoFormViewState extends ConsumerState<MemoFormView> {
     return await showDialog<bool>(
           context: context,
           builder: (context) => DiscardChangesDialog(
-            title: _editing ? '수정을 취소할까요?' : '작성을 취소할까요?',
-            message: _editing ? '변경한 내용은 저장되지 않아요.' : '작성 중인 메모는 저장되지 않아요.',
+            title: _editing
+                ? AppStrings.tr(context, '수정을 취소할까요?')
+                : AppStrings.tr(context, '작성을 취소할까요?'),
+            message: _editing
+                ? AppStrings.tr(context, '변경한 내용은 저장되지 않아요.')
+                : AppStrings.tr(context, '작성 중인 메모는 저장되지 않아요.'),
             continueLabel: _editing ? '계속 수정' : '계속 작성',
             discardLabel: _editing ? '수정 취소' : '작성 취소',
           ),
@@ -104,7 +109,16 @@ class _MemoFormViewState extends ConsumerState<MemoFormView> {
           hasImage: _hasImage,
         ));
         messenger.showSnackBar(
-          SnackBar(content: Text(_editing ? '메모를 수정했어요.' : '메모를 등록했어요.')),
+          SnackBar(
+            content: Text(
+              AppStrings.error(
+                context,
+                _editing
+                    ? AppStrings.tr(context, '메모를 수정했어요.')
+                    : AppStrings.tr(context, '메모를 등록했어요.'),
+              ),
+            ),
+          ),
         );
       });
     } catch (error) {
@@ -113,7 +127,12 @@ class _MemoFormViewState extends ConsumerState<MemoFormView> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            error is MemoFailure ? error.message : '저장하지 못했어요. 다시 시도해 주세요.',
+            AppStrings.error(
+              context,
+              error is MemoFailure
+                  ? error.message
+                  : AppStrings.tr(context, '저장하지 못했어요. 다시 시도해 주세요.'),
+            ),
           ),
         ),
       );
@@ -138,9 +157,15 @@ class _MemoFormViewState extends ConsumerState<MemoFormView> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              error is MemoFailure
-                  ? error.message
-                  : '사진을 선택하지 못했어요. 사진 접근 권한을 확인해 주세요.',
+              AppStrings.error(
+                context,
+                error is MemoFailure
+                    ? error.message
+                    : AppStrings.tr(
+                        context,
+                        '사진을 선택하지 못했어요. 사진 접근 권한을 확인해 주세요.',
+                      ),
+              ),
             ),
           ),
         );
@@ -163,14 +188,16 @@ class _MemoFormViewState extends ConsumerState<MemoFormView> {
       },
       child: MemoLayout(
         roomName: widget.selected.roomName,
-        title: _editing ? '메모 수정' : '메모 쓰기',
+        title: _editing
+            ? AppStrings.tr(context, '메모 수정')
+            : AppStrings.tr(context, '메모 쓰기'),
         onBack: _busy ? null : _leave,
         footer: Row(
           children: [
             Expanded(
               child: OutlinedButton(
                 onPressed: _busy ? null : _leave,
-                child: const Text('취소'),
+                child: Text(AppStrings.tr(context, '취소')),
               ),
             ),
             const SizedBox(width: 12),
@@ -180,8 +207,12 @@ class _MemoFormViewState extends ConsumerState<MemoFormView> {
                 onPressed: _busy || !_allowed ? null : _save,
                 child: Text(
                   _saving
-                      ? (_editing ? '저장 중…' : '등록 중…')
-                      : (_editing ? '수정 저장' : '메모 등록'),
+                      ? (_editing
+                            ? AppStrings.tr(context, '저장 중…')
+                            : AppStrings.tr(context, '등록 중…'))
+                      : (_editing
+                            ? AppStrings.tr(context, '수정 저장')
+                            : AppStrings.tr(context, '메모 등록')),
                 ),
               ),
             ),
@@ -198,17 +229,17 @@ class _MemoFormViewState extends ConsumerState<MemoFormView> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: AppColors.peachSoft,
+                    color: AppColors.of(context).peachSoft,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Text(
-                    '작은 돌봄 기록도 가족에게 큰 도움이 돼요.',
+                  child: Text(
+                    AppStrings.tr(context, '작은 돌봄 기록도 가족에게 큰 도움이 돼요.'),
                     style: TextStyle(fontSize: 13, height: 1.6),
                   ),
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  '메모 내용',
+                Text(
+                  AppStrings.tr(context, '메모 내용'),
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 12),
@@ -222,25 +253,33 @@ class _MemoFormViewState extends ConsumerState<MemoFormView> {
                   onChanged: (_) => setState(() {}),
                   style: const TextStyle(fontSize: 15, height: 1.8),
                   decoration: InputDecoration(
-                    hintText: '오늘은 어떤 하루였나요?\n가족에게 전하고 싶은 이야기를 남겨 주세요.',
+                    hintText: AppStrings.tr(
+                      context,
+                      '오늘은 어떤 하루였나요?\n가족에게 전하고 싶은 이야기를 남겨 주세요.',
+                    ),
                     filled: true,
                     contentPadding: const EdgeInsets.all(20),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(20),
-                      borderSide: const BorderSide(color: AppColors.border),
+                      borderSide: BorderSide(
+                        color: AppColors.of(context).border,
+                      ),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(20),
-                      borderSide: const BorderSide(color: AppColors.border),
+                      borderSide: BorderSide(
+                        color: AppColors.of(context).border,
+                      ),
                     ),
                   ),
-                  validator: (value) =>
-                      (value ?? '').trim().isEmpty ? '메모 내용을 입력해 주세요.' : null,
+                  validator: (value) => (value ?? '').trim().isEmpty
+                      ? AppStrings.tr(context, '메모 내용을 입력해 주세요.')
+                      : null,
                 ),
 
                 const SizedBox(height: 16),
-                const Text(
-                  '사진 첨부 (선택 · 한 장)',
+                Text(
+                  AppStrings.tr(context, '사진 첨부 (선택 · 한 장)'),
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 8),
@@ -251,8 +290,12 @@ class _MemoFormViewState extends ConsumerState<MemoFormView> {
                       height: 160,
                       width: double.infinity,
                       fit: BoxFit.contain,
-                      errorBuilder: (_, _, _) =>
-                          const Text('사진을 표시할 수 없어요. 다른 사진을 선택해 주세요.'),
+                      errorBuilder: (_, _, _) => Text(
+                        AppStrings.tr(
+                          context,
+                          '사진을 표시할 수 없어요. 다른 사진을 선택해 주세요.',
+                        ),
+                      ),
                     )
                   else
                     MemoImageView(
@@ -271,7 +314,11 @@ class _MemoFormViewState extends ConsumerState<MemoFormView> {
                       onPressed: _busy || !_allowed ? null : _pickImage,
                       icon: const Icon(Icons.add_photo_alternate_outlined),
                       label: Text(
-                        _picking ? '사진 선택 중…' : (_hasImage ? '사진 교체' : '사진 첨부'),
+                        _picking
+                            ? AppStrings.tr(context, '사진 선택 중…')
+                            : (_hasImage
+                                  ? AppStrings.tr(context, '사진 교체')
+                                  : AppStrings.tr(context, '사진 첨부')),
                       ),
                     ),
                     if (_hasImage)
@@ -284,18 +331,23 @@ class _MemoFormViewState extends ConsumerState<MemoFormView> {
                                     widget.memo?.hasImage ?? false;
                               }),
                         icon: const Icon(Icons.close),
-                        label: const Text('사진 제거'),
+                        label: Text(AppStrings.tr(context, '사진 제거')),
                       ),
                   ],
                 ),
-                const Text(
-                  'JPG, PNG, WEBP · 최대 5MB',
+                Text(
+                  AppStrings.tr(context, 'JPG, PNG, WEBP · 최대 5MB'),
                   style: TextStyle(fontSize: 12),
                 ),
                 if (!sameSpace)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.only(top: 12),
-                    child: Text('선택한 공간이 변경됐어요. 목록으로 돌아가 다시 작성해 주세요.'),
+                    child: Text(
+                      AppStrings.tr(
+                        context,
+                        '선택한 공간이 변경됐어요. 목록으로 돌아가 다시 작성해 주세요.',
+                      ),
+                    ),
                   ),
               ],
             ),

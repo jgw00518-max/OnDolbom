@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/model/family/family_room.dart';
@@ -60,27 +61,25 @@ class _FamilyRoomDeleteDialogState
       canPop: !_deleting,
       child: AlertDialog(
         scrollable: true,
-        title: const Text(
-          '돌봄 공간을 삭제할까요?',
+        title: Text(
+          AppStrings.tr(context, '돌봄 공간을 삭제할까요?'),
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('모든 가족이 이 공간을 이용할 수 없게 됩니다.'),
+            Text(AppStrings.tr(context, '모든 가족이 이 공간을 이용할 수 없게 됩니다.')),
             const SizedBox(height: 20),
-            Text(
-              '삭제하려면 돌봄 대상자 이름을 입력해 주세요.',
-            ),
+            Text(AppStrings.tr(context, '삭제하려면 돌봄 대상자 이름을 입력해 주세요.')),
             const SizedBox(height: 12),
             TextField(
               key: const Key('family-room-delete-name'),
               controller: _name,
               enabled: allowed && !_deleting,
               autocorrect: false,
-              decoration: const InputDecoration(
-                labelText: '돌봄 대상자 이름',
+              decoration: InputDecoration(
+                labelText: AppStrings.tr(context, '돌봄 대상자 이름'),
                 border: OutlineInputBorder(),
               ),
               onChanged: (_) => setState(() => _error = null),
@@ -90,7 +89,15 @@ class _FamilyRoomDeleteDialogState
               Semantics(
                 liveRegion: true,
                 child: Text(
-                  !allowed ? '공간 또는 권한이 변경됐어요. 화면을 다시 열어 주세요.' : _error!,
+                  AppStrings.error(
+                    context,
+                    !allowed
+                        ? AppStrings.tr(
+                            context,
+                            '공간 또는 권한이 변경됐어요. 화면을 다시 열어 주세요.',
+                          )
+                        : _error!,
+                  ),
                   style: TextStyle(color: errorColor),
                 ),
               ),
@@ -111,13 +118,17 @@ class _FamilyRoomDeleteDialogState
                     _name.text.trim() == widget.room.careRecipientName
                 ? _delete
                 : null,
-            child: Text(_deleting ? '삭제 중…' : '공간 삭제'),
+            child: Text(
+              _deleting
+                  ? AppStrings.tr(context, '삭제 중…')
+                  : AppStrings.tr(context, '공간 삭제'),
+            ),
           ),
           TextButton(
             onPressed: _deleting
                 ? null
                 : () => Navigator.of(context).pop(false),
-            child: const Text('취소'),
+            child: Text(AppStrings.tr(context, '취소')),
           ),
         ],
       ),

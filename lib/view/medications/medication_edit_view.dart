@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/view/widgets/app_date_picker.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/view/medications/medication_style.dart';
@@ -72,16 +73,16 @@ class _MedicationEditDialogState extends ConsumerState<MedicationEditDialog> {
       final discard = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('수정을 취소할까요?'),
-          content: const Text('변경한 약 정보는 저장되지 않아요.'),
+          title: Text(AppStrings.tr(context, '수정을 취소할까요?')),
+          content: Text(AppStrings.tr(context, '변경한 약 정보는 저장되지 않아요.')),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('계속 수정'),
+              child: Text(AppStrings.tr(context, '계속 수정')),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('수정 취소'),
+              child: Text(AppStrings.tr(context, '수정 취소')),
             ),
           ],
         ),
@@ -112,9 +113,12 @@ class _MedicationEditDialogState extends ConsumerState<MedicationEditDialog> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            error is MedicationFailure
-                ? error.message
-                : '수정하지 못했어요. 다시 시도해 주세요.',
+            AppStrings.error(
+              context,
+              error is MedicationFailure
+                  ? error.message
+                  : AppStrings.tr(context, '수정하지 못했어요. 다시 시도해 주세요.'),
+            ),
           ),
         ),
       );
@@ -143,16 +147,17 @@ class _MedicationEditDialogState extends ConsumerState<MedicationEditDialog> {
         ref.watch(medicationEditAllowedProvider(widget.query.context));
     final colors = Theme.of(context).colorScheme;
     final enabled = !_saving && allowed;
-    InputDecoration decoration(String label) => MedicationStyle.field(label);
+    InputDecoration decoration(String label) =>
+        MedicationStyle.field(context, label);
     return PopScope(
       canPop: _finished || (!_saving && !_dirty),
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _cancel();
       },
       child: Dialog(
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.of(context).background,
         surfaceTintColor: Colors.transparent,
-        shape: MedicationStyle.shape,
+        shape: MedicationStyle.shape(context),
         clipBehavior: Clip.antiAlias,
         insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         child: ConstrainedBox(
@@ -164,7 +169,7 @@ class _MedicationEditDialogState extends ConsumerState<MedicationEditDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               MedicationHeading(
-                title: '투약 정보 수정',
+                title: AppStrings.tr(context, '투약 정보 수정'),
                 onClose: _saving ? null : _cancel,
               ),
               const Divider(height: 1),
@@ -194,18 +199,25 @@ class _MedicationEditDialogState extends ConsumerState<MedicationEditDialog> {
                           maxLength: 100,
                           decoration: decoration('약 이름 · 정보'),
                           validator: (value) => (value ?? '').trim().isEmpty
-                              ? '약 정보를 입력해 주세요.'
+                              ? AppStrings.tr(context, '약 정보를 입력해 주세요.')
                               : null,
                         ),
                         const SizedBox(height: 16),
-                        const Text(
-                          '복약 시간',
+                        Text(
+                          AppStrings.tr(context, '복약 시간'),
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 12),
                         if (_unstructuredTime) ...[
                           Text(
-                            '기존 복약 시간: ${widget.item.time ?? '미지정'}\n식사·복약 시점·분을 선택해 주세요.',
+                            AppStrings.format(
+                              context,
+                              "기존 복약 시간: {0}\n식사·복약 시점·분을 선택해 주세요.",
+                              [
+                                widget.item.time ??
+                                    AppStrings.tr(context, '미지정'),
+                              ],
+                            ),
                             style: TextStyle(color: colors.onSurfaceVariant),
                           ),
                           const SizedBox(height: 12),
@@ -247,8 +259,9 @@ class _MedicationEditDialogState extends ConsumerState<MedicationEditDialog> {
                                         _meal = value;
                                         _dirty = true;
                                       }),
-                                validator: (value) =>
-                                    value == null ? '식사를 선택해 주세요.' : null,
+                                validator: (value) => value == null
+                                    ? AppStrings.tr(context, '식사를 선택해 주세요.')
+                                    : null,
                               ),
                             ),
                             const SizedBox(width: 6),
@@ -286,8 +299,9 @@ class _MedicationEditDialogState extends ConsumerState<MedicationEditDialog> {
                                         _timing = value;
                                         _dirty = true;
                                       }),
-                                validator: (value) =>
-                                    value == null ? '시점을 선택해 주세요.' : null,
+                                validator: (value) => value == null
+                                    ? AppStrings.tr(context, '시점을 선택해 주세요.')
+                                    : null,
                               ),
                             ),
                             const SizedBox(width: 6),
@@ -313,7 +327,7 @@ class _MedicationEditDialogState extends ConsumerState<MedicationEditDialog> {
                                 validator: (value) =>
                                     int.tryParse(value ?? '') == null ||
                                         value!.length > 4
-                                    ? '0~9999분 입력'
+                                    ? AppStrings.tr(context, '0~9999분 입력')
                                     : null,
                               ),
                             ),
@@ -331,7 +345,10 @@ class _MedicationEditDialogState extends ConsumerState<MedicationEditDialog> {
                           validator: (value) =>
                               isValidMedicationDosage(value ?? '')
                               ? null
-                              : '0보다 큰 용량을 소수점 3자리 이내로 입력해 주세요.',
+                              : AppStrings.tr(
+                                  context,
+                                  '0보다 큰 용량을 소수점 3자리 이내로 입력해 주세요.',
+                                ),
                         ),
                         const SizedBox(height: 20),
                         TextFormField(
@@ -341,17 +358,20 @@ class _MedicationEditDialogState extends ConsumerState<MedicationEditDialog> {
                           maxLength: 20,
                           decoration: decoration('단위'),
                           validator: (value) => (value ?? '').trim().isEmpty
-                              ? '단위를 입력해 주세요.'
+                              ? AppStrings.tr(context, '단위를 입력해 주세요.')
                               : null,
                         ),
                         if (!sameSpace)
                           Text(
-                            '선택한 공간이 변경됐어요. 닫은 후 다시 조회해 주세요.',
+                            AppStrings.tr(
+                              context,
+                              '선택한 공간이 변경됐어요. 닫은 후 다시 조회해 주세요.',
+                            ),
                             style: TextStyle(color: colors.error),
                           )
                         else if (!allowed)
                           Text(
-                            '현재 공간의 주보호자만 수정할 수 있어요.',
+                            AppStrings.tr(context, '현재 공간의 주보호자만 수정할 수 있어요.'),
                             style: TextStyle(color: colors.error),
                           ),
                       ],
@@ -361,7 +381,7 @@ class _MedicationEditDialogState extends ConsumerState<MedicationEditDialog> {
               ),
               const Divider(height: 1),
               Container(
-                color: AppColors.surface,
+                color: AppColors.of(context).surface,
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
@@ -370,7 +390,7 @@ class _MedicationEditDialogState extends ConsumerState<MedicationEditDialog> {
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(80, 48),
                       ),
-                      child: const Text('취소'),
+                      child: Text(AppStrings.tr(context, '취소')),
                     ),
                     const Spacer(),
                     FilledButton(
@@ -378,7 +398,11 @@ class _MedicationEditDialogState extends ConsumerState<MedicationEditDialog> {
                       style: FilledButton.styleFrom(
                         minimumSize: const Size(110, 48),
                       ),
-                      child: Text(_saving ? '저장 중…' : '수정 저장'),
+                      child: Text(
+                        _saving
+                            ? AppStrings.tr(context, '저장 중…')
+                            : AppStrings.tr(context, '수정 저장'),
+                      ),
                     ),
                   ],
                 ),

@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,22 +18,31 @@ class _PasswordResetViewState extends ConsumerState<PasswordResetView> {
   static const _asideHeading = '새 비밀번호로\n안전하게 시작해요.';
   static const _asideDescription = '이메일 인증 후 비밀번호를 재설정하고 온돌봄을 계속 이용해 보세요.';
   String _title(PasswordResetStep step) => switch (step) {
-    PasswordResetStep.email => '비밀번호 찾기',
-    PasswordResetStep.code => '인증번호 확인',
-    PasswordResetStep.password => '새 비밀번호 설정',
-    PasswordResetStep.done => '재설정 완료',
+    PasswordResetStep.email => AppStrings.tr(context, '비밀번호 찾기'),
+    PasswordResetStep.code => AppStrings.tr(context, '인증번호 확인'),
+    PasswordResetStep.password => AppStrings.tr(context, '새 비밀번호 설정'),
+    PasswordResetStep.done => AppStrings.tr(context, '재설정 완료'),
   };
   String _description(PasswordResetStep step) => switch (step) {
-    PasswordResetStep.email => '가입한 이메일 주소를 입력해 주세요.',
-    PasswordResetStep.code => '이메일에서 확인한 인증번호를 입력해 주세요.',
-    PasswordResetStep.password => '안전하게 사용할 새 비밀번호를 입력해 주세요.',
-    PasswordResetStep.done => '새 비밀번호로 온돌봄을 계속 이용해 보세요.',
+    PasswordResetStep.email => AppStrings.tr(context, '가입한 이메일 주소를 입력해 주세요.'),
+    PasswordResetStep.code => AppStrings.tr(
+      context,
+      '이메일에서 확인한 인증번호를 입력해 주세요.',
+    ),
+    PasswordResetStep.password => AppStrings.tr(
+      context,
+      '안전하게 사용할 새 비밀번호를 입력해 주세요.',
+    ),
+    PasswordResetStep.done => AppStrings.tr(
+      context,
+      '새 비밀번호로 온돌봄을 계속 이용해 보세요.',
+    ),
   };
   String _buttonLabel(PasswordResetStep step) => switch (step) {
-    PasswordResetStep.email => '인증번호 전송',
-    PasswordResetStep.code => '인증번호 확인',
-    PasswordResetStep.password => '비밀번호 재설정',
-    PasswordResetStep.done => '로그인으로 돌아가기',
+    PasswordResetStep.email => AppStrings.tr(context, '인증번호 전송'),
+    PasswordResetStep.code => AppStrings.tr(context, '인증번호 확인'),
+    PasswordResetStep.password => AppStrings.tr(context, '비밀번호 재설정'),
+    PasswordResetStep.done => AppStrings.tr(context, '로그인으로 돌아가기'),
   };
   final _form = GlobalKey<FormState>();
   late final TextEditingController _email;
