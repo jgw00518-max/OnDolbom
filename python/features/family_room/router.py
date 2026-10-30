@@ -6,6 +6,12 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from python.database import connect
 from python.features.family_room.membership import end_membership, transfer_representative
+from python.features.family_room.delete_notifications import (
+    notification_id as deletion_notification_id,
+    prepare_notification as prepare_deletion_notification,
+    publish_notification as publish_deletion_notification,
+)
+import logging
 
 import os
 
@@ -18,16 +24,17 @@ from starlette.concurrency import run_in_threadpool
 
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 def _soft_delete_family_room(family_room_id: str, user_id: str) -> dict:
-    """공간과 권한을 잠근 뒤 공간 삭제 시각만 기록한다. 연결 데이터는 보존한다."""
+    """공간과 권한을 잠그고 삭제 안내를 준비한다. 공간의 연결 데이터는 보존한다."""
     connection = None
     try:
         connection = connect()
         with connection.cursor() as cursor:
             # 초대 수락·대상자 수정과 동일하게 공간부터 잠근다.
-            cursor.execute('''SELECT family_room_deleted_at FROM family_room
+            cursor.execute('''SELECT family_room_deleted_at, created_at, care_recipient_name FROM family_room
                 WHERE family_room_id = %s FOR UPDATE''', (family_room_id,))
             room = cursor.fetchone()
             if room is None:
@@ -51,7 +58,14 @@ def _soft_delete_family_room(family_room_id: str, user_id: str) -> dict:
                 cursor.execute('''SELECT family_room_deleted_at FROM family_room
                     WHERE family_room_id = %s''', (family_room_id,))
                 deleted_at = cursor.fetchone()["family_room_deleted_at"]
+                prepare_deletion_notification(connection, family_room_id, room, deleted_at, user_id)
         connection.commit()
+        # 발행 실패는 확정된 삭제를 되돌리지 않으며 기존 worker가 pending을 재시도한다.
+        try:
+            publish_deletion_notification(
+                deletion_notification_id(family_room_id, room['created_at'], deleted_at))
+        except Exception:
+            logger.error('공간 삭제 확정 후 알림 발행 실패; pending 재시도 필요')
         return {"result": "OK", "family_room_id": family_room_id,
                 "family_room_deleted_at": deleted_at, "already_deleted": already_deleted}
     except HTTPException:

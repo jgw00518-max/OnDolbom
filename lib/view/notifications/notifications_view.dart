@@ -70,6 +70,83 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
   static const _deleteFill = Color(0xFFF0ECE9);
   static const _deleteInk = Color(0xFF9A8F89);
 
+  Future<void> _showRoomDeletion(ScheduleNotification item) => showDialog<void>(
+    context: context,
+    builder: (dialogContext) => Dialog(
+      backgroundColor: AppColors.background,
+      surfaceTintColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      clipBehavior: Clip.antiAlias,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 440),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const ColoredBox(
+                color: AppColors.surface,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(22, 24, 22, 20),
+                  child: Text(
+                    '돌봄 공간 삭제 안내',
+                    style: TextStyle(
+                      fontSize: 21,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+              ),
+              const Divider(height: 1, color: AppColors.border),
+              Padding(
+                padding: const EdgeInsets.all(22),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      '${item.recipientName} 돌봄 공간',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    const Text(
+                      '주보호자가 이 돌봄 공간을 삭제했습니다.\n이 공간은 더 이상 이용할 수 없습니다.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        height: 1.6,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    if (item.roomDeletedAt != null) ...[
+                      const SizedBox(height: 16),
+                      _deletedInfoRow(
+                        '삭제 시각',
+                        item.roomDeletedAt!.replaceAll('T', ' '),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(0, 48),
+                      ),
+                      child: const Text('확인'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+
   // 서버에서 받은 삭제 당시 일시를 읽기 쉽게 표시한다.
   String _deletedTime(String value) {
     final match = RegExp(r'^(\d{1,2}):(\d{2})').firstMatch(value);
@@ -106,10 +183,20 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
     final uid = ref.read(authUserProvider).asData?.value?.uid;
     final schedule = await ref
         .read(notificationsVmProvider.notifier)
-        .open(item.id, deleted: item.type == 'schedule_deleted' ? item : null);
+        .open(
+          item.id,
+          deleted: item.type == 'schedule_deleted' || item.isRoomDeletion
+              ? item
+              : null,
+        );
     if (!mounted) return;
     // 최신 참여 목록으로 공간 권한을 확인한 뒤 기존 일정 상세를 재사용한다.
     if (ref.read(authUserProvider).asData?.value?.uid != uid) return;
+    if (schedule.isRoomDeletion) {
+      // 삭제 안내는 서버가 당시 수신자를 별도 검증한다. 공간 진입·일정 조회는 하지 않는다.
+      await _showRoomDeletion(schedule);
+      return;
+    }
     final roomsVm = ref.read(familyRoomProvider.notifier);
     await roomsVm.fetchRooms();
     if (!mounted || ref.read(authUserProvider).asData?.value?.uid != uid) {
@@ -301,7 +388,9 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(
-                    item.type == 'schedule_reconfirm_expired'
+                    item.isRoomDeletion
+                        ? Icons.domain_disabled_outlined
+                        : item.type == 'schedule_reconfirm_expired'
                         ? Icons.timer_off_outlined
                         : item.type == 'schedule_reconfirm_unanswered'
                         ? Icons.person_off_outlined
@@ -334,7 +423,9 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                         children: [
                           Expanded(
                             child: Text(
-                              '${item.recipientName} · ${item.scheduleName ?? '새 돌봄 일정'}',
+                              item.isRoomDeletion
+                                  ? '${item.recipientName} 돌봄 공간'
+                                  : '${item.recipientName} · ${item.scheduleName ?? '새 돌봄 일정'}',
                               style: TextStyle(
                                 color: unread
                                     ? const Color(0xFFA46F59)
@@ -381,7 +472,9 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                       ),
                       const SizedBox(height: 7),
                       Text(
-                        '${item.date} ${item.startTime} ~ ${item.endTime}',
+                        item.isRoomDeletion
+                            ? '이 공간은 더 이상 이용할 수 없습니다.'
+                            : '${item.date} ${item.startTime} ~ ${item.endTime}',
                         style: TextStyle(
                           color: unread ? const Color(0xFF8C7A70) : _muted,
                           fontSize: 12,

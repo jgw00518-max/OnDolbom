@@ -28,6 +28,8 @@ Authorization: Bearer <Firebase ID 토큰>
 - 일정·투약일지·메모·채팅·이미지 BLOB·좋아요·참여·초대·문의·답변을 변경하거나 삭제하지 않는다.
 - 참여의 `is_active`, `left_at` 및 개별 기록의 삭제 시각도 유지한다.
 - 성공 시 한 번 commit하고, DB 실패 시 rollback하며 연결을 닫는다.
+- 삭제 트랜잭션 안에서 현재 활성 참여·미탈퇴 가족을 수신자로 확정하고 `family_room_deleted` 알림을 Firestore에 `pending`으로 준비한다. 실제 삭제 작업자는 제외한다. 알림 준비 실패 시 공간 삭제도 rollback한다.
+- DB commit 후 알림을 발행하며, 발행 실패 시 공간 삭제는 유지하고 기존 통합 worker가 미발행 알림을 재시도한다. 삭제 시각·공간 생성 시각이 DB와 일치하는 이벤트만 발행한다.
 - 중복 삭제는 현재 주보호자 권한을 다시 확인한 후 HTTP 200과 `already_deleted: true`를 반환한다.
   최초 삭제 시각을 유지하고 UPDATE는 다시 수행하지 않는다.
 - 같은 공간의 삭제 요청은 공간 행 잠금으로 직렬화된다.
@@ -70,6 +72,19 @@ DB commit이 성공한 후 현재 서버 프로세스의 해당 공간 채팅 �
 
 구현은 `lib/view/family_room/family_room_delete_dialog.dart`, `family_room_home.dart`,
 `lib/vm/family_room/family_room_notifier.dart`에 있다.
+
+## 공간 삭제 알림
+
+- 삭제 당시 활성 참여 중인 미탈퇴 가족에게 앱 알림함·배지·FCM을 연결한다. 삭제 작업자, 이미 나간 가족·강퇴된 가족·탈퇴 계정은 제외한다.
+- 기존 `schedule_notifications` 컬렉션에 `notification_type=family_room_deleted`, `family_room_id`, `room_created_at`, `room_deleted_at`, `care_recipient_name`, `actor_id`, `recipient_ids`를 저장한다. 공간 ID·생성 시각·삭제 시각 해시로 문서를 식별해 중복 삭제 요청과 worker 재시도가 읽음 상태를 초기화하거나 푸시를 다시 예약하지 않는다.
+- 기존 `GET /schedules/schedule-notifications?scope=v2`, `/activity/badges`, 개별/전체 읽음·삭제 API에 포함된다. 일정 번호나 일정 날짜·시간은 만들지 않는다.
+- `GET /schedules/schedule-notifications/{notification_id}/room`은 Firebase 인증 및 최초 수신자·현재 미탈퇴 계정·삭제 당시 참여·공간 생성/삭제 시각을 재검사한 뒤 삭제 안내만 반환한다. 비수신자는 404이며 `/schedule`로 일정 진입을 시도하면 410이다. 일반 공간·일정·채팅 접근 차단은 유지한다.
+- 앱은 전용 제목·아이콘과 삭제 시각 안내창을 표시한다. 앱 실행 중 푸시 수신 시 알림함·배지·공간 목록도 갱신한다. 잠금 화면 푸시에는 대상자 이름·건강정보를 포함하지 않는다.
+- FCM과 미발행 재시도는 [기존 통합 worker](notification-worker.md)를 알림 담당자 한 명이 별도로 실행해야 동작한다. API는 worker를 자동 실행하지 않는다. 성공 응답은 공간 삭제 확정을 뜻하며 실제 기기 도착·읽음의 보장은 아니다.
+- 과거 이미 삭제되어 `pending` 알림이 없는 공간은 소급 발송하지 않는다. 기존 pending 조회·푸시 큐를 재사용하며 주기나 전체 조회를 추가하지 않는다. MySQL 스키마·Firestore 색인 추가는 없다. API·담당 worker 재시작과 Flutter 앱 Hot Restart 후 적용한다.
+
+검증은 `python -m unittest python.tests.test_family_room_delete_notifications python.tests.test_family_room_delete`와
+`flutter test test/room_deletion_notification_test.dart`로 수행한다. DB·Firestore·FCM을 모의 처리하며 실제 공간을 삭제하거나 실제 푸시를 발송하지 않는다.
 
 ## 오류와 검증
 

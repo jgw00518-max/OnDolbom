@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/model/family/family_room.dart';
+import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
 
 class FamilyRoomDeleteDialog extends ConsumerStatefulWidget {
@@ -58,68 +59,213 @@ class _FamilyRoomDeleteDialogState
     final errorColor = Theme.of(context).colorScheme.error;
     return PopScope(
       canPop: !_deleting,
-      child: AlertDialog(
-        scrollable: true,
-        title: const Text(
-          '돌봄 공간을 삭제할까요?',
-          style: TextStyle(fontWeight: FontWeight.bold),
+      child: Dialog(
+        backgroundColor: AppColors.background,
+        surfaceTintColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(color: AppColors.border),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('모든 가족이 이 공간을 이용할 수 없게 됩니다.'),
-            const SizedBox(height: 20),
-            Text(
-              '삭제하려면 돌봄 대상자 이름을 입력해 주세요.',
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              key: const Key('family-room-delete-name'),
-              controller: _name,
-              enabled: allowed && !_deleting,
-              autocorrect: false,
-              decoration: const InputDecoration(
-                labelText: '돌봄 대상자 이름',
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (_) => setState(() => _error = null),
-            ),
-            if (!allowed || _error != null) ...[
-              const SizedBox(height: 12),
-              Semantics(
-                liveRegion: true,
-                child: Text(
-                  !allowed ? '공간 또는 권한이 변경됐어요. 화면을 다시 열어 주세요.' : _error!,
-                  style: TextStyle(color: errorColor),
+        clipBehavior: Clip.antiAlias,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440),
+          // 키보드가 열리거나 글씨가 커져도 입력과 확인 버튼까지 접근할 수 있게 한다.
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ColoredBox(
+                  color: AppColors.surface,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.peachSoft,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Icon(Icons.delete_outline, color: errorColor),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            '돌봄 공간을 삭제할까요?',
+                            style: TextStyle(
+                              fontSize: 21,
+                              height: 1.4,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ],
-          ],
-        ),
-        actions: [
-          FilledButton(
-            key: const Key('family-room-delete-confirm'),
-            style: FilledButton.styleFrom(
-              backgroundColor: errorColor,
-              foregroundColor: Theme.of(context).colorScheme.onError,
+                const Divider(height: 1, color: AppColors.border),
+                Padding(
+                  padding: const EdgeInsets.all(22),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppColors.peachSoft,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Text(
+                          '모든 가족이 이 공간을 이용할 수 없게 됩니다.',
+                          style: TextStyle(
+                            fontSize: 14,
+                            height: 1.6,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        '삭제하려면 돌봄 대상자 이름을 입력해 주세요.',
+                        style: TextStyle(
+                          fontSize: 14,
+                          height: 1.6,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        key: const Key('family-room-delete-name'),
+                        controller: _name,
+                        enabled: allowed && !_deleting,
+                        autocorrect: false,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: AppColors.textPrimary,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: '돌봄 대상자 이름',
+                          labelStyle: const TextStyle(
+                            color: AppColors.textSecondary,
+                          ),
+                          floatingLabelStyle: const TextStyle(
+                            color: AppColors.sageDark,
+                          ),
+                          filled: true,
+                          fillColor: AppColors.surface,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 16,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(
+                              color: AppColors.border,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(
+                              color: AppColors.border,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(
+                              color: AppColors.sageDark,
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                        onChanged: (_) => setState(() => _error = null),
+                      ),
+                      if (!allowed || _error != null) ...[
+                        const SizedBox(height: 12),
+                        Semantics(
+                          liveRegion: true,
+                          child: Text(
+                            !allowed
+                                ? '공간 또는 권한이 변경됐어요. 화면을 다시 열어 주세요.'
+                                : _error!,
+                            style: TextStyle(
+                              color: errorColor,
+                              fontSize: 13,
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: _deleting
+                                  ? null
+                                  : () => Navigator.of(context).pop(false),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.textPrimary,
+                                side: const BorderSide(color: AppColors.border),
+                                minimumSize: const Size(0, 48),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              child: const Text(
+                                '취소',
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: FilledButton(
+                              key: const Key('family-room-delete-confirm'),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: AppColors.textPrimary,
+                                disabledBackgroundColor: AppColors.peachSoft,
+                                disabledForegroundColor:
+                                    AppColors.textSecondary,
+                                minimumSize: const Size(0, 48),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              onPressed:
+                                  allowed &&
+                                      !_deleting &&
+                                      !state.isLoading &&
+                                      _name.text.trim() ==
+                                          widget.room.careRecipientName
+                                  ? _delete
+                                  : null,
+                              child: Text(
+                                _deleting ? '삭제 중…' : '공간 삭제',
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            onPressed:
-                allowed &&
-                    !_deleting &&
-                    !state.isLoading &&
-                    _name.text.trim() == widget.room.careRecipientName
-                ? _delete
-                : null,
-            child: Text(_deleting ? '삭제 중…' : '공간 삭제'),
           ),
-          TextButton(
-            onPressed: _deleting
-                ? null
-                : () => Navigator.of(context).pop(false),
-            child: const Text('취소'),
-          ),
-        ],
+        ),
       ),
     );
   }

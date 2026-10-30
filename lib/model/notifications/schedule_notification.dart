@@ -1,4 +1,4 @@
-/// 서버가 현재 공간 접근 권한까지 확인한 일정 알림.
+/// 일정 알림과 서버가 삭제 당시 수신 권한을 확인한 공간 삭제 안내.
 class ScheduleNotification {
   const ScheduleNotification({
     required this.id,
@@ -13,12 +13,15 @@ class ScheduleNotification {
     required this.readAt,
     this.memo,
     this.type = 'schedule_created',
+    this.roomDeletedAt,
   });
   final String id;
   final String type;
   final String spaceId;
   final String recipientName;
-  final int scheduleId;
+  final int? scheduleId;
+  final String? roomDeletedAt;
+  bool get isRoomDeletion => type == 'family_room_deleted';
   final String? scheduleName;
   final String date;
   final String startTime;
@@ -40,9 +43,11 @@ class ScheduleNotification {
     createdAt: createdAt,
     readAt: value,
     memo: memo,
+    roomDeletedAt: roomDeletedAt,
   );
 
   String get title => switch (type) {
+    'family_room_deleted' => '참여하던 돌봄 공간이 삭제되었어요',
     'schedule_reminder' => '시작까지 72시간 이내, 돌봄 담당자가 필요해요',
     'schedule_accepted' => '가족이 돌봄 일정을 수락했어요',
     'schedule_reconfirmed' => '담당자가 변경된 일정을 재수락했어요',
@@ -58,19 +63,22 @@ class ScheduleNotification {
     _ => '새로운 돌봄 일정이 등록되었어요',
   };
 
-  factory ScheduleNotification.fromJson(Map<String, dynamic> json) =>
-      ScheduleNotification(
-        id: json['notification_id'].toString(),
-        type: json['notification_type'] as String? ?? 'schedule_created',
-        spaceId: json['family_room_id'] as String,
-        recipientName: json['care_recipient_name'] as String,
-        scheduleId: json['schedule_seq'] as int,
-        scheduleName: json['schedule_name'] as String?,
-        date: json['schedule_date'] as String,
-        startTime: json['start_time'] as String,
-        endTime: json['end_time'] as String,
-        createdAt: json['created_at'] as String,
-        readAt: json['read_at'] as String?,
-        memo: json['schedule_memo'] as String?,
-      );
+  factory ScheduleNotification.fromJson(Map<String, dynamic> json) {
+    final roomDeletion = json['notification_type'] == 'family_room_deleted';
+    return ScheduleNotification(
+      id: json['notification_id'].toString(),
+      type: json['notification_type'] as String? ?? 'schedule_created',
+      spaceId: json['family_room_id'] as String,
+      recipientName: json['care_recipient_name'] as String,
+      scheduleId: roomDeletion ? null : json['schedule_seq'] as int,
+      roomDeletedAt: json['room_deleted_at'] as String?,
+      scheduleName: json['schedule_name'] as String?,
+      date: roomDeletion ? '' : json['schedule_date'] as String,
+      startTime: roomDeletion ? '' : json['start_time'] as String,
+      endTime: roomDeletion ? '' : json['end_time'] as String,
+      createdAt: json['created_at'] as String,
+      readAt: json['read_at'] as String?,
+      memo: json['schedule_memo'] as String?,
+    );
+  }
 }
