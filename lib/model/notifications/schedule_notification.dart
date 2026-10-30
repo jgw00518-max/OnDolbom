@@ -42,7 +42,20 @@ class ScheduleNotification {
     memo: memo,
   );
 
+  bool get isSpaceEvent => const {
+    'representative_transferred',
+    'member_left',
+    'member_removed',
+    'memo_created',
+    'medication_created',
+  }.contains(type);
+
   String get title => switch (type) {
+    'representative_transferred' => '주보호자가 변경되었어요',
+    'member_left' => '가족이 돌봄 공간에서 나갔어요',
+    'member_removed' => '가족의 돌봄 공간 참여가 종료되었어요',
+    'memo_created' => '새 메모가 등록되었어요',
+    'medication_created' => '새 투약일지가 등록되었어요',
     'schedule_reminder' => '시작까지 72시간 이내, 돌봄 담당자가 필요해요',
     'schedule_accepted' => '가족이 돌봄 일정을 수락했어요',
     'schedule_reconfirmed' => '담당자가 변경된 일정을 재수락했어요',

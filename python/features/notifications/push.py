@@ -115,6 +115,11 @@ def send_message(fid, uid, identifier, test=False, notification_type='schedule_c
     # 잠금 화면에는 대상자 건강정보나 메모를 노출하지 않는다.
     return messaging.send(messaging.Message(fid=fid,
         notification=messaging.Notification(title='온돌봄', body='푸시 연결 테스트입니다.' if test else {
+            'representative_transferred': '돌봄 공간의 주보호자가 변경되었습니다.',
+            'member_left': '가족이 돌봄 공간에서 나갔습니다.',
+            'member_removed': '가족의 돌봄 공간 참여가 종료되었습니다.',
+            'memo_created': '새 메모가 등록되었습니다. 앱에서 확인해 주세요.',
+            'medication_created': '새 투약일지가 등록되었습니다. 앱에서 확인해 주세요.',
             'chat_message': '가족의 새 채팅이 도착했습니다. 앱에서 확인해 주세요.',
             'schedule_created': '새 돌봄 일정이 등록되었습니다. 앱에서 확인해 주세요.',
             'schedule_changed': '돌봄 일정이 변경되었습니다. 앱에서 확인해 주세요.',

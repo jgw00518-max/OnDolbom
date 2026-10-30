@@ -1,3 +1,4 @@
+from python.features.notifications import space_events
 import logging
 from uuid import uuid4
 
@@ -298,7 +299,10 @@ def _insert_memo(memo: MemoCreate, current_user_id: str, image_data: bytes | Non
                 """,
                 params,
             )
+        # 텍스트·사진 메모의 공통 작성 경로에서만 알림을 준비한다. 수정에는 발행하지 않는다.
+        notice = space_events.prepare(conn, memo.family_room_id, current_user_id, 'memo_created', memo_id)
         conn.commit()
+        space_events.publish_safely(notice)
         return {"result": "OK", "memo_id": memo_id}
 
     except HTTPException:
