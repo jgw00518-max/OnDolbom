@@ -85,7 +85,8 @@ void main() {
     expect(patches, 1);
     expect(find.text('수정한 내용'), findsOneWidget);
     expect(find.textContaining('수정됨'), findsOneWidget);
-    expect(find.text('나'), findsOneWidget);
+    // 내 메시지는 우측 배치로 구분하므로 이름을 반복하지 않는다.
+    expect(find.text('나'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

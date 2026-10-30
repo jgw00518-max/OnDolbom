@@ -1,4 +1,10 @@
+import 'package:ondolbom/view/widgets/discard_changes_dialog.dart';
+import 'package:ondolbom/view/widgets/care_menu_read.dart';
+import 'package:ondolbom/l10n/app_strings.dart';
+import 'package:ondolbom/view/widgets/menu_header_icon.dart';
+import 'package:ondolbom/view/widgets/app_add_button.dart';
 import 'package:flutter/material.dart';
+import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/model/memos/memo.dart';
 import 'package:ondolbom/view/memos/memo_form_view.dart';
@@ -15,16 +21,25 @@ class MemoListView extends ConsumerWidget {
     final selected = ref.watch(memoContextProvider);
     final provider = memoVmProvider(selected);
     final feed = ref.watch(provider);
+    watchCareMenuRead(
+      context,
+      ref,
+      selected.familyRoomId,
+      'memos',
+      feed.hasValue && !feed.isLoading && !feed.hasError,
+    );
     final canWrite =
         selected.familyRoomId.isNotEmpty && selected.userId.isNotEmpty;
 
     return MemoLayout(
       roomName: selected.roomName,
-      title: '메모',
+      title: AppStrings.tr(context, '메모'),
+      action: const MenuHeaderIcon(icon: Icons.edit_outlined),
       onBack: Navigator.of(context).canPop()
           ? () => Navigator.of(context).pop()
           : null,
-      action: FilledButton.tonal(
+      floatingActionButton: AppAddButton(
+        tooltip: AppStrings.tr(context, '메모 쓰기'),
         onPressed: canWrite
             ? () => Navigator.of(context).push(
                 MaterialPageRoute<MemoFormResult>(
@@ -32,12 +47,11 @@ class MemoListView extends ConsumerWidget {
                 ),
               )
             : null,
-        child: const Text('메모 쓰기'),
       ),
       child: selected.familyRoomId.isEmpty
-          ? const _Message(
+          ? _Message(
               icon: Icons.home_outlined,
-              title: '아직 선택한 돌봄 공간이 없어요',
+              title: AppStrings.tr(context, '아직 선택한 돌봄 공간이 없어요'),
               description: '돌봄 공간을 연결하면 가족의 메모를 볼 수 있어요.',
             )
           : feed.when(
@@ -45,13 +59,13 @@ class MemoListView extends ConsumerWidget {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => _Message(
                 icon: Icons.wifi_off_rounded,
-                title: '메모를 불러오지 못했어요',
+                title: AppStrings.tr(context, '메모를 불러오지 못했어요'),
                 description: error is MemoFailure
                     ? error.message
                     : '잠시 후 다시 시도해 주세요.',
                 action: OutlinedButton(
                   onPressed: () => ref.invalidate(provider),
-                  child: const Text('다시 시도'),
+                  child: Text(AppStrings.tr(context, '다시 시도')),
                 ),
               ),
               data: (data) => RefreshIndicator(
@@ -65,44 +79,61 @@ class MemoListView extends ConsumerWidget {
                 },
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 104),
                   children: [
-                    Text(
-                      '가족과 나누는 돌봄 이야기',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontSize: 13,
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: AppColors.of(context).peachSoft,
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.auto_stories_outlined,
+                            color: AppColors.of(context).sageDark,
+                            size: 26,
+                          ),
+                          SizedBox(height: 12),
+                          Text(
+                            AppStrings.tr(context, '가족과 나누는 돌봄 이야기'),
+                            style: TextStyle(
+                              fontSize: 19,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          SizedBox(height: 6),
+                          Text(
+                            AppStrings.tr(
+                              context,
+                              '오늘의 안부와 기억하고 싶은 순간을 남겨 주세요.',
+                            ),
+                            style: TextStyle(
+                              fontSize: 12,
+                              height: 1.6,
+                              color: AppColors.of(context).textPrimary,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 16),
                     if (data.items.isEmpty)
-                      const SizedBox(
+                      SizedBox(
                         height: 300,
                         child: _Message(
                           icon: Icons.edit_note_rounded,
-                          title: '아직 작성된 메모가 없어요',
+                          title: AppStrings.tr(context, '아직 작성된 메모가 없어요'),
                           description: '가족에게 전하고 싶은 첫 이야기를 남겨 보세요.',
                         ),
                       )
                     else
-                      Card(
-                        clipBehavior: Clip.antiAlias,
-                        child: Column(
-                          children: [
-                            for (var i = 0; i < data.items.length; i++) ...[
-                              if (i > 0)
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 20),
-                                  child: Divider(height: 1),
-                                ),
-                              _MemoCard(
-                                memo: data.items[i],
-                                selected: selected,
-                              ),
-                            ],
-                          ],
+                      for (final memo in data.items)
+                        Card(
+                          clipBehavior: Clip.antiAlias,
+                          child: _MemoCard(memo: memo, selected: selected),
                         ),
-                      ),
                     if (data.hasMore)
                       Padding(
                         padding: const EdgeInsets.only(top: 16),
@@ -121,9 +152,15 @@ class MemoListView extends ConsumerWidget {
                                       ).showSnackBar(
                                         SnackBar(
                                           content: Text(
-                                            error is MemoFailure
-                                                ? error.message
-                                                : '메모를 더 불러오지 못했어요.',
+                                            AppStrings.error(
+                                              context,
+                                              error is MemoFailure
+                                                  ? error.message
+                                                  : AppStrings.tr(
+                                                      context,
+                                                      '메모를 더 불러오지 못했어요.',
+                                                    ),
+                                            ),
                                           ),
                                         ),
                                       );
@@ -131,7 +168,9 @@ class MemoListView extends ConsumerWidget {
                                   }
                                 },
                           child: Text(
-                            data.loadingMore ? '불러오는 중…' : '이전 메모 더 보기',
+                            data.loadingMore
+                                ? AppStrings.tr(context, '불러오는 중…')
+                                : AppStrings.tr(context, '이전 메모 더 보기'),
                           ),
                         ),
                       ),
@@ -162,12 +201,14 @@ class _MemoCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              memo.memoContent ?? '',
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 15, height: 1.65),
+            MemoMetadata(
+              author: memo.authorLabel,
+              date: memo.writtenAt,
+              likes: memo.likes ?? 0,
+              likeButton: MemoLikeButton(memo: memo, selected: selected),
             ),
+            const SizedBox(height: 12),
+            _MemoPreview(content: memo.memoContent ?? ''),
             const SizedBox(height: 12),
             if (memo.hasImage) ...[
               MemoImageView(
@@ -178,17 +219,11 @@ class _MemoCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
             ],
-            MemoMetadata(
-              author: memo.authorLabel,
-              date: memo.writtenAt,
-              likes: memo.likes ?? 0,
-              likeButton: MemoLikeButton(memo: memo, selected: selected),
-            ),
             const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerRight,
               child: Text(
-                '눌러서 자세히 보기',
+                AppStrings.tr(context, '메모 읽기  →'),
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 11,
@@ -199,6 +234,57 @@ class _MemoCard extends StatelessWidget {
         ),
       ),
     ),
+  );
+}
+
+class _MemoPreview extends StatelessWidget {
+  const _MemoPreview({required this.content});
+
+  final String content;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final style = DefaultTextStyle.of(
+        context,
+      ).style.merge(const TextStyle(fontSize: 15, height: 1.65));
+      final painter = TextPainter(
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+        locale: Localizations.maybeLocaleOf(context),
+        maxLines: 3,
+      );
+      bool fits(String text) {
+        painter.text = TextSpan(text: text, style: style);
+        painter.layout(maxWidth: constraints.maxWidth);
+        return !painter.didExceedMaxLines;
+      }
+
+      var preview = content;
+      // 명시적 줄바꿈에서도 생략 표시를 보장하고 이모지 결합 문자는 보존한다.
+      if (!fits(content)) {
+        final characters = content.characters.toList();
+        var lower = 0;
+        var upper = characters.length;
+        while (lower < upper) {
+          final middle = (lower + upper + 1) ~/ 2;
+          if (fits('${characters.take(middle).join()}…')) {
+            lower = middle;
+          } else {
+            upper = middle - 1;
+          }
+        }
+        preview = '${characters.take(lower).join().trimRight()}…';
+      }
+      painter.dispose();
+      return Text(
+        preview,
+        style: style,
+        maxLines: 3,
+        overflow: TextOverflow.ellipsis,
+        semanticsLabel: content,
+      );
+    },
   );
 }
 
@@ -249,19 +335,11 @@ class _MemoDetailViewState extends ConsumerState<MemoDetailView> {
     setState(() => _deleting = true);
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('메모를 삭제할까요?'),
-        content: const Text('삭제한 메모는 목록에서 사라져요.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('취소'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('삭제하기'),
-          ),
-        ],
+      builder: (context) => DiscardChangesDialog(
+        title: AppStrings.tr(context, '메모를 삭제할까요?'),
+        message: AppStrings.tr(context, '삭제한 메모는 목록에서 사라져요.'),
+        continueLabel: AppStrings.tr(context, '취소'),
+        discardLabel: AppStrings.tr(context, '삭제하기'),
       ),
     );
     if (!mounted) return;
@@ -279,7 +357,9 @@ class _MemoDetailViewState extends ConsumerState<MemoDetailView> {
         if (!mounted) return;
         final messenger = ScaffoldMessenger.of(context);
         Navigator.of(context).pop();
-        messenger.showSnackBar(const SnackBar(content: Text('메모를 삭제했어요.')));
+        messenger.showSnackBar(
+          SnackBar(content: Text(AppStrings.tr(context, '메모를 삭제했어요.'))),
+        );
       });
     } catch (error) {
       if (!mounted) return;
@@ -287,7 +367,12 @@ class _MemoDetailViewState extends ConsumerState<MemoDetailView> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            error is MemoFailure ? error.message : '삭제하지 못했어요. 다시 시도해 주세요.',
+            AppStrings.error(
+              context,
+              error is MemoFailure
+                  ? error.message
+                  : AppStrings.tr(context, '삭제하지 못했어요. 다시 시도해 주세요.'),
+            ),
           ),
         ),
       );
@@ -306,7 +391,7 @@ class _MemoDetailViewState extends ConsumerState<MemoDetailView> {
       canPop: !_deleting || _finished,
       child: MemoLayout(
         roomName: widget.selected.roomName,
-        title: '메모 상세',
+        title: AppStrings.tr(context, '메모 상세'),
         onBack: _deleting ? null : () => Navigator.of(context).pop(),
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -326,7 +411,7 @@ class _MemoDetailViewState extends ConsumerState<MemoDetailView> {
                       disabled: _deleting,
                     ),
                   ),
-                  const Divider(height: 36),
+                  const Divider(height: 32),
                   SelectableText(
                     _content,
                     style: const TextStyle(fontSize: 16, height: 1.8),
@@ -344,20 +429,26 @@ class _MemoDetailViewState extends ConsumerState<MemoDetailView> {
                         OutlinedButton.icon(
                           onPressed: _deleting || !_canManage ? null : _edit,
                           icon: const Icon(Icons.edit_outlined),
-                          label: const Text('수정'),
+                          label: Text(AppStrings.tr(context, '수정')),
                         ),
                         OutlinedButton.icon(
                           onPressed: _deleting || !_canManage ? null : _delete,
                           icon: const Icon(Icons.delete_outline),
-                          label: Text(_deleting ? '삭제 중…' : '삭제'),
+                          label: Text(
+                            _deleting
+                                ? AppStrings.tr(context, '삭제 중…')
+                                : AppStrings.tr(context, '삭제'),
+                          ),
                         ),
                       ],
                     ),
                   ],
                   if (current != widget.selected)
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.only(top: 12),
-                      child: Text('선택한 공간이 변경됐어요. 목록으로 돌아가 주세요.'),
+                      child: Text(
+                        AppStrings.tr(context, '선택한 공간이 변경됐어요. 목록으로 돌아가 주세요.'),
+                      ),
                     ),
                 ],
               ),
@@ -387,7 +478,14 @@ class _Message extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 42, color: Theme.of(context).colorScheme.primary),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppColors.of(context).peachSoft,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 36, color: AppColors.of(context).sageDark),
+          ),
           const SizedBox(height: 18),
           Text(
             title,

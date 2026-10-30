@@ -1,5 +1,6 @@
 # Firebase·DB를 대체한 API 테스트다. 실제 인증이나 DB 동시성 검증과는 구분한다.
 import unittest
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 from fastapi import HTTPException
@@ -90,7 +91,7 @@ class AuthTests(unittest.TestCase):
         self.assertNotIn('withdrawn_at', response.json()['user'])
 
     def test_withdrawn_profile_forbidden(self):
-        row = dict(user_id='local-id', user_email=None, name=None, phone=None, withdrawn_at='2026-10-23')
+        row = dict(user_id='local-id', user_email=None, name=None, phone=None, withdrawn_at=datetime(2026, 10, 23), server_now=datetime(2026, 10, 29))
         self.assertEqual(self.query_profile(row).status_code, 403)
 
     def test_db_failure_is_not_an_unregistered_profile(self):

@@ -1,3 +1,9 @@
+import 'package:ondolbom/view/widgets/care_menu_read.dart';
+import 'package:ondolbom/l10n/app_strings.dart';
+import 'package:ondolbom/view/widgets/menu_header_icon.dart';
+import 'package:ondolbom/view/widgets/app_add_button.dart';
+import 'package:ondolbom/view/widgets/app_back_button.dart';
+import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/view/schedules/schedule_detail.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -39,46 +45,48 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
     final room = rooms.selectedRoom;
     if (room == null || room.familyRoomId != widget.familyRoomId) {
       return Scaffold(
-        appBar: AppBar(title: const Text('돌봄 일정')),
-        body: const Center(child: Text('가족 공간을 다시 선택해 주세요.')),
+        appBar: AppBar(
+          leadingWidth: 62,
+          leading: const AppBackLeading(),
+          title: Text(AppStrings.tr(context, '돌봄 일정')),
+        ),
+        body: Center(child: Text(AppStrings.tr(context, '돌봄 공간을 다시 선택해 주세요.'))),
       );
     }
     final schedules = ref.watch(scheduleListProvider(query));
+    watchCareMenuRead(
+      context,
+      ref,
+      widget.familyRoomId,
+      'schedules',
+      schedules.hasValue && !schedules.isLoading && !schedules.hasError,
+    );
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFBF7),
+      backgroundColor: AppColors.resolve(context, const Color(0xFFFFFBF7)),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFFFBF7),
-        foregroundColor: const Color(0xFF403C39),
-        titleTextStyle: const TextStyle(
-          fontSize: 22,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF403C39),
+        leadingWidth: 62,
+        leading: const AppBackLeading(),
+        backgroundColor: AppColors.resolve(context, const Color(0xFFFFFBF7)),
+        foregroundColor: AppColors.resolve(context, const Color(0xFF403C39)),
+        titleTextStyle: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.w800,
+          color: AppColors.resolve(context, Color(0xFF403C39)),
         ),
-        title: const Text('돌봄 일정'),
-        actions: [
-          IconButton(
-            tooltip: '새로고침',
-            onPressed: () => ref.invalidate(scheduleListProvider(query)),
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
+        title: Text(AppStrings.tr(context, '돌봄 일정')),
+        actions: const [MenuHeaderIcon(icon: Icons.calendar_month_outlined)],
       ),
+      floatingActionButton:
+          rooms.selectedParticipation?.isRepresentative == true
+          ? AppAddButton(
+              key: const ValueKey('schedule-add'),
+              tooltip: AppStrings.tr(context, '일정 등록'),
+              onPressed: () => createAction(room.careRecipientName),
+            )
+          : null,
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(12, 18, 12, 28),
+        padding: const EdgeInsets.fromLTRB(12, 18, 12, 104),
         children: [
-          Text('${room.careRecipientName} 님의 돌봄 공간'),
-          const SizedBox(height: 16),
-          if (rooms.selectedParticipation?.isRepresentative == true)
-            Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton.tonalIcon(
-                key: const ValueKey('schedule-add'),
-                onPressed: () => createAction(room.careRecipientName),
-                icon: const Icon(Icons.add),
-                label: const Text('일정 등록'),
-              ),
-            ),
-          const SizedBox(height: 12),
           calendar(schedules.asData?.value ?? const []),
           const SizedBox(height: 24),
           schedules.when(
@@ -88,10 +96,15 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
             ),
             error: (error, _) => Column(
               children: [
-                Text(error.toString().replaceFirst('Exception: ', '')),
+                Text(
+                  AppStrings.error(
+                    context,
+                    error.toString().replaceFirst('Exception: ', ''),
+                  ),
+                ),
                 TextButton(
                   onPressed: () => ref.invalidate(scheduleListProvider(query)),
-                  child: const Text('다시 조회'),
+                  child: Text(AppStrings.tr(context, '다시 조회')),
                 ),
               ],
             ),
@@ -119,9 +132,11 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
     }
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.of(context).surface,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFE8DFD7)),
+        border: Border.all(
+          color: AppColors.resolve(context, const Color(0xFFE8DFD7)),
+        ),
       ),
       padding: const EdgeInsets.fromLTRB(12, 14, 12, 18),
       child: Column(
@@ -129,7 +144,7 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
           Row(
             children: [
               IconButton(
-                tooltip: '이전 달',
+                tooltip: AppStrings.tr(context, '이전 달'),
                 onPressed:
                     displayedMonth.year == 1900 && displayedMonth.month == 1
                     ? null
@@ -138,17 +153,17 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
               ),
               Expanded(
                 child: Text(
-                  '${displayedMonth.year}년 ${displayedMonth.month}월',
+                  AppStrings.monthYear(context, displayedMonth),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 19,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF403C39),
+                    color: AppColors.resolve(context, Color(0xFF403C39)),
                   ),
                 ),
               ),
               IconButton(
-                tooltip: '다음 달',
+                tooltip: AppStrings.tr(context, '다음 달'),
                 onPressed:
                     displayedMonth.year == 2100 && displayedMonth.month == 12
                     ? null
@@ -159,38 +174,56 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
           ),
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  '돌봄이 필요한 날을 확인하세요',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF78716A)),
+                  AppStrings.tr(context, '돌봄이 필요한 날을 확인하세요'),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.resolve(context, Color(0xFF78716A)),
+                  ),
                 ),
               ),
-              TextButton(onPressed: todayAction, child: const Text('오늘')),
+              TextButton(
+                onPressed: todayAction,
+                child: Text(AppStrings.tr(context, '오늘')),
+              ),
             ],
           ),
           const SizedBox(height: 10),
           Row(
-            children: ['일', '월', '화', '수', '목', '금', '토']
-                .asMap()
-                .entries
-                .map(
-                  (entry) => Expanded(
-                    child: Center(
-                      child: Text(
-                        entry.value,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: entry.key == 0
-                              ? const Color(0xFFD07858)
-                              : entry.key == 6
-                              ? const Color(0xFF7C9FA9)
-                              : const Color(0xFF78716A),
+            children:
+                (AppStrings.isEnglish(context)
+                        ? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+                        : ['일', '월', '화', '수', '목', '금', '토'])
+                    .asMap()
+                    .entries
+                    .map(
+                      (entry) => Expanded(
+                        child: Center(
+                          child: Text(
+                            entry.value,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: entry.key == 0
+                                  ? AppColors.resolve(
+                                      context,
+                                      const Color(0xFFD07858),
+                                    )
+                                  : entry.key == 6
+                                  ? AppColors.resolve(
+                                      context,
+                                      const Color(0xFF7C9FA9),
+                                    )
+                                  : AppColors.resolve(
+                                      context,
+                                      const Color(0xFF78716A),
+                                    ),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                )
-                .toList(),
+                    )
+                    .toList(),
           ),
           const SizedBox(height: 12),
           GridView.builder(
@@ -217,7 +250,11 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
               return Semantics(
                 selected: selected,
                 button: true,
-                label: '${date.month}월 $day일, 일정 $count건',
+                label: AppStrings.format(context, "{0}월 {1}일, 일정 {2}건", [
+                  date.month,
+                  day,
+                  count,
+                ]),
                 child: InkWell(
                   key: ValueKey('schedule-day-$day'),
                   borderRadius: BorderRadius.circular(13),
@@ -226,11 +263,17 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
                     margin: const EdgeInsets.all(1),
                     decoration: BoxDecoration(
                       color: selected
-                          ? const Color(0xFFFFD6B5)
+                          ? AppColors.of(context).peachLight
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(13),
                       border: selected
-                          ? Border.all(color: const Color(0xFFC78159), width: 2)
+                          ? Border.all(
+                              color: AppColors.resolve(
+                                context,
+                                const Color(0xFFC78159),
+                              ),
+                              width: 2,
+                            )
                           : null,
                       boxShadow: selected
                           ? [
@@ -252,16 +295,29 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
                                 ? FontWeight.bold
                                 : FontWeight.normal,
                             color: today && !selected
-                                ? const Color(0xFF99522F)
-                                : const Color(0xFF403C39),
+                                ? AppColors.resolve(
+                                    context,
+                                    const Color(0xFF99522F),
+                                  )
+                                : AppColors.resolve(
+                                    context,
+                                    const Color(0xFF403C39),
+                                  ),
                           ),
                         ),
                         const SizedBox(height: 5),
                         Text(
-                          count == 0 ? '' : '$count건',
-                          style: const TextStyle(
+                          count == 0
+                              ? ''
+                              : AppStrings.format(context, "{0}건", [count]),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
                             fontSize: 10,
-                            color: Color(0xFF6C5A4B),
+                            color: AppColors.resolve(
+                              context,
+                              Color(0xFF6C5A4B),
+                            ),
                           ),
                         ),
                       ],
@@ -287,28 +343,36 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
           children: [
             Expanded(
               child: Text(
-                '${selectedDate.month}월 ${selectedDate.day}일',
-                style: const TextStyle(
+                AppStrings.format(context, "{0}월 {1}일", [
+                  selectedDate.month,
+                  selectedDate.day,
+                ]),
+                style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF403C39),
+                  color: AppColors.resolve(context, Color(0xFF403C39)),
                 ),
               ),
             ),
             Text(
-              '${items.length}개 일정',
-              style: const TextStyle(fontSize: 15, color: Color(0xFF78716A)),
+              AppStrings.format(context, "{0}개 일정", [items.length]),
+              style: TextStyle(
+                fontSize: 15,
+                color: AppColors.resolve(context, Color(0xFF78716A)),
+              ),
             ),
           ],
         ),
         const SizedBox(height: 18),
         if (items.isEmpty)
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(vertical: 32),
             child: Center(
               child: Text(
-                '등록된 돌봄 일정이 없어요',
-                style: TextStyle(color: Color(0xFF78716A)),
+                AppStrings.tr(context, '등록된 돌봄 일정이 없어요'),
+                style: TextStyle(
+                  color: AppColors.resolve(context, Color(0xFF78716A)),
+                ),
               ),
             ),
           ),
@@ -316,9 +380,11 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
           (item) => Container(
             margin: const EdgeInsets.only(bottom: 14),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.of(context).surface,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFE8DFD7)),
+              border: Border.all(
+                color: AppColors.resolve(context, const Color(0xFFE8DFD7)),
+              ),
             ),
             child: Material(
               color: Colors.transparent,
@@ -342,16 +408,25 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
                               ),
                               decoration: BoxDecoration(
                                 color: item.acceptedBy == null
-                                    ? const Color(0xFFF0F2EE)
-                                    : const Color(0xFFFFEBD9),
+                                    ? AppColors.resolve(
+                                        context,
+                                        const Color(0xFFF0F2EE),
+                                      )
+                                    : AppColors.resolve(
+                                        context,
+                                        const Color(0xFFFFEBD9),
+                                      ),
                                 borderRadius: BorderRadius.circular(24),
                               ),
                               child: Text(
                                 item.assignment,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF756B60),
+                                  color: AppColors.resolve(
+                                    context,
+                                    Color(0xFF756B60),
+                                  ),
                                 ),
                               ),
                             ),
@@ -359,9 +434,12 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
                           const SizedBox(width: 10),
                           Text(
                             '${item.startTime} – ${item.endTime}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF78716A),
+                              color: AppColors.resolve(
+                                context,
+                                Color(0xFF78716A),
+                              ),
                             ),
                           ),
                         ],
@@ -369,10 +447,10 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
                       const SizedBox(height: 18),
                       Text(
                         item.title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF403C39),
+                          color: AppColors.resolve(context, Color(0xFF403C39)),
                         ),
                       ),
                       const SizedBox(height: 14),
@@ -380,22 +458,36 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
                         spacing: 8,
                         runSpacing: 6,
                         children: [
-                          const Text(
-                            '담당자',
-                            style: TextStyle(color: Color(0xFF78716A)),
+                          Text(
+                            AppStrings.tr(context, '담당자'),
+                            style: TextStyle(
+                              color: AppColors.resolve(
+                                context,
+                                Color(0xFF78716A),
+                              ),
+                            ),
                           ),
                           Text(
                             item.acceptedBy == null
-                                ? '모집 중 · 1명'
-                                : '${item.acceptedName ?? '가족'} · 1명',
-                            style: const TextStyle(
-                              color: Color(0xFF99522F),
+                                ? AppStrings.tr(context, '모집 중')
+                                : item.acceptedName ??
+                                      AppStrings.tr(context, '가족'),
+                            style: TextStyle(
+                              color: AppColors.resolve(
+                                context,
+                                Color(0xFF99522F),
+                              ),
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           Text(
-                            item.state,
-                            style: const TextStyle(color: Color(0xFF78716A)),
+                            AppStrings.tr(context, item.state),
+                            style: TextStyle(
+                              color: AppColors.resolve(
+                                context,
+                                Color(0xFF78716A),
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -404,18 +496,32 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
                         children: [
                           Expanded(
                             child: Text(
-                              '등록 · ${item.creatorName ?? '가족'}',
-                              style: const TextStyle(
+                              AppStrings.format(context, "등록 · {0}", [
+                                item.creatorName ??
+                                    AppStrings.tr(context, '가족'),
+                              ]),
+                              style: TextStyle(
                                 fontSize: 13,
-                                color: Color(0xFF78716A),
+                                color: AppColors.resolve(
+                                  context,
+                                  Color(0xFF78716A),
+                                ),
                               ),
                             ),
                           ),
                           OutlinedButton(
                             onPressed: () => detailAction(item),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF403C39),
-                              side: const BorderSide(color: Color(0xFFD8C6BA)),
+                              foregroundColor: AppColors.resolve(
+                                context,
+                                const Color(0xFF403C39),
+                              ),
+                              side: BorderSide(
+                                color: AppColors.resolve(
+                                  context,
+                                  Color(0xFFD8C6BA),
+                                ),
+                              ),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 14,
                                 vertical: 10,
@@ -424,8 +530,8 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: const Text(
-                              '일정 확인',
+                            child: Text(
+                              AppStrings.tr(context, '일정 확인'),
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ),
@@ -479,18 +585,59 @@ class _ScheduleListState extends ConsumerState<ScheduleList> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          result.published ? '일정이 등록되었습니다.' : '일정이 등록되었습니다. 가족 알림은 발행 대기 중입니다.',
+          AppStrings.error(
+            context,
+            result.published
+                ? AppStrings.tr(context, '일정이 등록되었습니다.')
+                : AppStrings.tr(context, '일정이 등록되었습니다. 가족 알림은 발행 대기 중입니다.'),
+          ),
         ),
       ),
     );
   }
 
-  // 목록과 같은 월별 상태를 상세 화면에서도 사용한다.
-  void detailAction(Schedule item) {
-    showDialog<void>(
+  // 편집 결과를 받아 변경한 날짜의 최신 목록을 표시한다.
+  Future<void> detailAction(Schedule item) async {
+    final previousQuery = query;
+
+    final result = await showDialog<ScheduleEditResult>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => ScheduleDetail(item: item, query: query),
+      builder: (_) => ScheduleDetail(item: item, query: previousQuery),
+    );
+
+    if (!mounted || result == null) {
+      return;
+    }
+
+    if (ref.read(familyRoomProvider).selectedRoomId != widget.familyRoomId) {
+      return;
+    }
+
+    // 변경 전 월의 조회 결과를 갱신한다.
+    ref.invalidate(scheduleListProvider(previousQuery));
+
+    setState(() {
+      selectedDate = DateUtils.dateOnly(result.date);
+      displayedMonth = DateTime(result.date.year, result.date.month);
+    });
+
+    // 다른 달로 변경했다면 해당 월도 새로 조회한다.
+    if (query != previousQuery) {
+      ref.invalidate(scheduleListProvider(query));
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          AppStrings.error(
+            context,
+            result.changed
+                ? AppStrings.tr(context, '일정을 변경했습니다.')
+                : AppStrings.tr(context, '변경된 내용이 없습니다.'),
+          ),
+        ),
+      ),
     );
   }
 }

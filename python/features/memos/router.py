@@ -1,3 +1,4 @@
+from python.features.notifications import space_events
 import logging
 from uuid import uuid4
 
@@ -44,14 +45,14 @@ class MemoCreate(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     family_room_id: str = Field(min_length=1, max_length=50)
-    memo_content: str = Field(min_length=1, max_length=10000)
+    memo_content: str = Field(min_length=1, max_length=2000)
 
 
 class MemoUpdate(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
     family_room_id: str = Field(min_length=1, max_length=50)
-    memo_content: str = Field(min_length=1, max_length=10000)
+    memo_content: str = Field(min_length=1, max_length=2000)
 
 
 class MemoLikeCreate(BaseModel):
@@ -84,7 +85,7 @@ def like_memo(
                 (data.family_room_id, current_user_id),
             )
             if cursor.fetchone() is None:
-                raise HTTPException(403, "해당 가족 공간에 좋아요를 등록할 수 없습니다.")
+                raise HTTPException(403, "해당 돌봄 공간에 좋아요를 등록할 수 없습니다.")
 
             key = (memo_id, data.family_room_id, data.author_user_id)
             # 메모 행 잠금으로 같은 메모의 동시 요청·삭제를 직렬화한다.
@@ -155,7 +156,7 @@ def _lock_owned_memo(cursor, family_room_id: str, memo_id: str, user_id: str):
         (family_room_id, user_id),
     )
     if cursor.fetchone() is None:
-        raise HTTPException(403, "해당 가족 공간에 접근할 수 없습니다.")
+        raise HTTPException(403, "해당 돌봄 공간에 접근할 수 없습니다.")
 
     cursor.execute(
         """SELECT user_id FROM memo
@@ -281,7 +282,7 @@ def _insert_memo(memo: MemoCreate, current_user_id: str, image_data: bytes | Non
             if cursor.fetchone() is None:
                 raise HTTPException(
                     status_code=403,
-                    detail="해당 가족 공간에 메모를 작성할 수 없습니다.",
+                    detail="해당 돌봄 공간에 메모를 작성할 수 없습니다.",
                 )
 
             memo_id = str(uuid4())
@@ -298,7 +299,10 @@ def _insert_memo(memo: MemoCreate, current_user_id: str, image_data: bytes | Non
                 """,
                 params,
             )
+        # 텍스트·사진 메모의 공통 작성 경로에서만 알림을 준비한다. 수정에는 발행하지 않는다.
+        notice = space_events.prepare(conn, memo.family_room_id, current_user_id, 'memo_created', memo_id)
         conn.commit()
+        space_events.publish_safely(notice)
         return {"result": "OK", "memo_id": memo_id}
 
     except HTTPException:
@@ -320,8 +324,8 @@ def _insert_memo(memo: MemoCreate, current_user_id: str, image_data: bytes | Non
 
 def _form_content(family_room_id: str, memo_content: str) -> dict:
     room, content = family_room_id.strip(), memo_content.strip()
-    if not 1 <= len(room) <= 50 or not 1 <= len(content) <= 10000:
-        raise HTTPException(422, "공간 ID와 1~10,000자의 메모 내용을 입력해 주세요.")
+    if not 1 <= len(room) <= 50 or not 1 <= len(content) <= 2000:
+        raise HTTPException(422, "공간 ID와 1~2,000자의 메모 내용을 입력해 주세요.")
     return {"family_room_id": room, "memo_content": content}
 
 
@@ -344,7 +348,7 @@ async def _single_memo_image(
 @router.post("/insert-with-image", status_code=201)
 def insert_memo_with_image(
     family_room_id: str = Form(min_length=1, max_length=50),
-    memo_content: str = Form(min_length=1, max_length=10000),
+    memo_content: str = Form(min_length=1, max_length=2000),
     image: UploadFile | None = Depends(_single_memo_image),
     current_user_id: str = Depends(get_current_user_id),
 ):
@@ -357,7 +361,7 @@ def insert_memo_with_image(
 def update_memo_with_image(
     memo_id: str = Path(min_length=1, max_length=50, pattern=r"\S"),
     family_room_id: str = Form(min_length=1, max_length=50),
-    memo_content: str = Form(min_length=1, max_length=10000),
+    memo_content: str = Form(min_length=1, max_length=2000),
     image: UploadFile | None = Depends(_single_memo_image),
     remove_image: bool = Form(default=False),
     current_user_id: str = Depends(get_current_user_id),
@@ -392,7 +396,7 @@ def select_memo_image(
                 (family_room_id, current_user_id),
             )
             if cursor.fetchone() is None:
-                raise HTTPException(403, "해당 가족 공간에 접근할 수 없습니다.")
+                raise HTTPException(403, "해당 돌봄 공간에 접근할 수 없습니다.")
             cursor.execute(
                 """SELECT m.memo_image FROM memo AS m
                    JOIN family_room AS f ON f.family_room_id = m.family_room_id
@@ -448,7 +452,7 @@ def select_memos(
             if cursor.fetchone() is None:
                 raise HTTPException(
                     status_code=403,
-                    detail="해당 가족 공간에 접근할 수 없습니다.",
+                    detail="해당 돌봄 공간에 접근할 수 없습니다.",
                 )
             cursor.execute(
                 """

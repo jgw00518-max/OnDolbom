@@ -1,3 +1,6 @@
+import 'package:ondolbom/l10n/app_strings.dart';
+import 'package:ondolbom/theme/app_colors.dart';
+import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/model/exports/export_options.dart';
@@ -65,216 +68,353 @@ class _ExportViewState extends ConsumerState<ExportView> {
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('메모·채팅 내보내기')),
+      appBar: AppBar(
+        leadingWidth: 62,
+        leading: const AppBackLeading(),
+        title: Text(
+          AppStrings.tr(context, '메모·채팅 내보내기'),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+        ),
+      ),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            Text(
-              widget.selected.roomName,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 24),
-            const Text('내보낼 기간', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _dateField(
-                    '시작일',
-                    _start,
-                    'export-start',
-                    enabled ? () => _pickDate(true) : null,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _dateField(
-                    '종료일',
-                    _end,
-                    'export-end',
-                    enabled ? () => _pickDate(false) : null,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '종료일은 오늘까지 선택할 수 있어요.',
-              style: TextStyle(color: colors.onSurfaceVariant),
-            ),
-            const SizedBox(height: 24),
-            const Text('내보낼 범위', style: TextStyle(fontWeight: FontWeight.bold)),
-            CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              controlAffinity: ListTileControlAffinity.leading,
-              title: const Text('메모'),
-              value: _memos,
-              onChanged: enabled
-                  ? (value) => _change(() => _memos = value ?? false)
-                  : null,
-            ),
-            CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              controlAffinity: ListTileControlAffinity.leading,
-              title: const Text('채팅'),
-              value: _chats,
-              onChanged: enabled
-                  ? (value) => _change(() => _chats = value ?? false)
-                  : null,
-            ),
-            if (!_memos && !_chats)
-              Text(
-                '메모 또는 채팅을 하나 이상 선택해 주세요.',
-                style: TextStyle(color: colors.error),
-              ),
-            const SizedBox(height: 24),
-            const Text(
-              '이미지 포함 여부',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            RadioGroup<bool>(
-              groupValue: _includeImages,
-              onChanged: (value) {
-                if (enabled && value != null) {
-                  _change(() => _includeImages = value);
-                }
-              },
-              child: Row(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: RadioListTile<bool>(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('포함'),
-                      value: true,
-                      enabled: enabled,
-                    ),
-                  ),
-                  Expanded(
-                    child: RadioListTile<bool>(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('제외'),
-                      value: false,
-                      enabled: enabled,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text('파일 형식', style: TextStyle(fontWeight: FontWeight.bold)),
-            RadioGroup<ExportFormat>(
-              groupValue: _format,
-              onChanged: (value) {
-                if (enabled && value != null) {
-                  _change(() => _format = value);
-                }
-              },
-              child: Row(
-                children: [
-                  Expanded(
-                    child: RadioListTile<ExportFormat>(
-                      key: const Key('export-format-html'),
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('HTML'),
-                      value: ExportFormat.html,
-                      enabled: enabled,
-                    ),
-                  ),
-                  Expanded(
-                    child: RadioListTile<ExportFormat>(
-                      key: const Key('export-format-pdf'),
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('PDF'),
-                      value: ExportFormat.pdf,
-                      enabled: enabled,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Text(
-              _format == ExportFormat.html
-                  ? 'HTML 문서와 이미지를 ZIP으로 받아 압축 해제 후 열 수 있어요.'
-                  : 'PDF 문서 한 개로 받아 바로 열 수 있어요.',
-              style: TextStyle(color: colors.onSurfaceVariant),
-            ),
-            const SizedBox(height: 8),
-            const Text('투약 정보·투약일지는 포함되지 않습니다.'),
-            const SizedBox(height: 24),
-            if (!allowed)
-              Text(
-                '계정 또는 가족 공간이 변경됐어요. 화면을 다시 열어 주세요.',
-                style: TextStyle(color: colors.error),
-              )
-            else ...[
-              if (state.busy) ...[
-                const LinearProgressIndicator(),
-                const SizedBox(height: 12),
-                Text(
-                  state.phase == ExportPhase.generating
-                      ? '파일을 생성하고 있어요…'
-                      : '파일을 저장하고 있어요…',
-                  semanticsLabel: '내보내기 진행 상태',
-                ),
-                const SizedBox(height: 16),
-              ],
-              if (state.error != null) ...[
-                Semantics(
-                  liveRegion: true,
-                  child: Text(
-                    state.error!,
-                    style: TextStyle(color: colors.error),
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-              if (state.message != null) ...[
-                Semantics(liveRegion: true, child: Text(state.message!)),
-                const SizedBox(height: 16),
-              ],
-              if (state.file != null) ...[
-                Text(state.file!.name),
-                const SizedBox(height: 12),
-                FilledButton.icon(
-                  key: const Key('export-save'),
-                  onPressed: enabled
-                      ? () => ref
-                            .read(exportVmProvider(widget.selected).notifier)
-                            .save()
-                      : null,
-                  icon: const Icon(Icons.download_outlined),
-                  label: const Text('파일 다운로드'),
-                ),
-                const SizedBox(height: 12),
-              ],
-              OutlinedButton.icon(
-                key: const Key('export-generate'),
-                onPressed: enabled && (_memos || _chats)
-                    ? () => ref
-                          .read(exportVmProvider(widget.selected).notifier)
-                          .generate(
-                            ExportOptions(
-                              startDate: _start,
-                              endDate: _end,
-                              memos: _memos,
-                              chats: _chats,
-                              includeImages: _includeImages,
-                              format: _format,
+                  _ExportSection(
+                    title: AppStrings.tr(context, '내보낼 기간'),
+                    icon: Icons.date_range_outlined,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _dateField(
+                              AppStrings.tr(context, '시작일'),
+                              _start,
+                              'export-start',
+                              enabled ? () => _pickDate(true) : null,
                             ),
-                          )
-                    : null,
-                icon: const Icon(Icons.folder_zip_outlined),
-                label: Text(
-                  state.file != null
-                      ? '파일 다시 생성'
-                      : state.error != null
-                      ? '다시 요청'
-                      : '파일 생성',
-                ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _dateField(
+                              AppStrings.tr(context, '종료일'),
+                              _end,
+                              'export-end',
+                              enabled ? () => _pickDate(false) : null,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        AppStrings.tr(context, '종료일은 오늘까지 선택할 수 있어요.'),
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.6,
+                          color: AppColors.of(context).textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  _ExportSection(
+                    title: AppStrings.tr(context, '내보낼 범위'),
+                    icon: Icons.checklist_rounded,
+                    children: [
+                      CheckboxListTile(
+                        activeColor: AppColors.of(context).sageDark,
+                        checkColor: AppColors.of(context).surface,
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        title: Text(AppStrings.tr(context, '메모')),
+                        value: _memos,
+                        onChanged: enabled
+                            ? (value) => _change(() => _memos = value ?? false)
+                            : null,
+                      ),
+                      CheckboxListTile(
+                        activeColor: AppColors.of(context).sageDark,
+                        checkColor: AppColors.of(context).surface,
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        title: Text(AppStrings.tr(context, '채팅')),
+                        value: _chats,
+                        onChanged: enabled
+                            ? (value) => _change(() => _chats = value ?? false)
+                            : null,
+                      ),
+                      if (!_memos && !_chats)
+                        Text(
+                          AppStrings.tr(context, '메모 또는 채팅을 하나 이상 선택해 주세요.'),
+                          style: TextStyle(
+                            color: colors.error,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  _ExportSection(
+                    title: AppStrings.tr(context, '이미지 포함 여부'),
+                    icon: Icons.image_outlined,
+                    children: [
+                      RadioGroup<bool>(
+                        groupValue: _includeImages,
+                        onChanged: (value) {
+                          if (enabled && value != null) {
+                            _change(() => _includeImages = value);
+                          }
+                        },
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: RadioListTile<bool>(
+                                activeColor: AppColors.of(context).sageDark,
+                                contentPadding: EdgeInsets.zero,
+                                title: Text(AppStrings.tr(context, '포함')),
+                                value: true,
+                                enabled: enabled,
+                              ),
+                            ),
+                            Expanded(
+                              child: RadioListTile<bool>(
+                                activeColor: AppColors.of(context).sageDark,
+                                contentPadding: EdgeInsets.zero,
+                                title: Text(AppStrings.tr(context, '제외')),
+                                value: false,
+                                enabled: enabled,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  _ExportSection(
+                    title: AppStrings.tr(context, '파일 형식'),
+                    icon: Icons.description_outlined,
+                    children: [
+                      RadioGroup<ExportFormat>(
+                        groupValue: _format,
+                        onChanged: (value) {
+                          if (enabled && value != null) {
+                            _change(() => _format = value);
+                          }
+                        },
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: RadioListTile<ExportFormat>(
+                                activeColor: AppColors.of(context).sageDark,
+                                key: const Key('export-format-html'),
+                                contentPadding: EdgeInsets.zero,
+                                title: const Text('HTML'),
+                                value: ExportFormat.html,
+                                enabled: enabled,
+                              ),
+                            ),
+                            Expanded(
+                              child: RadioListTile<ExportFormat>(
+                                activeColor: AppColors.of(context).sageDark,
+                                key: const Key('export-format-pdf'),
+                                contentPadding: EdgeInsets.zero,
+                                title: const Text('PDF'),
+                                value: ExportFormat.pdf,
+                                enabled: enabled,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        _format == ExportFormat.html
+                            ? AppStrings.tr(
+                                context,
+                                'HTML 문서와 이미지를 ZIP으로 받아 압축 해제 후 열 수 있어요.',
+                              )
+                            : AppStrings.tr(
+                                context,
+                                'PDF 문서 한 개로 받아 바로 열 수 있어요.',
+                              ),
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.6,
+                          color: AppColors.of(context).textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.of(context).peachSoft,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 18,
+                          color: AppColors.of(context).sageDark,
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            AppStrings.tr(context, '투약일지, 일정은 포함되지 않습니다.'),
+                            style: TextStyle(
+                              fontSize: 14,
+                              height: 1.6,
+                              color: AppColors.of(context).textPrimary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  if (!allowed)
+                    Text(
+                      AppStrings.tr(
+                        context,
+                        '계정 또는 돌봄 공간이 변경됐어요. 화면을 다시 열어 주세요.',
+                      ),
+                      style: TextStyle(color: colors.error),
+                    )
+                  else ...[
+                    if (state.busy) ...[
+                      const LinearProgressIndicator(),
+                      const SizedBox(height: 12),
+                      Text(
+                        state.phase == ExportPhase.generating
+                            ? AppStrings.tr(context, '파일을 생성하고 있어요…')
+                            : AppStrings.tr(context, '파일을 저장하고 있어요…'),
+                        semanticsLabel: AppStrings.tr(context, '내보내기 진행 상태'),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    if (state.error != null) ...[
+                      Semantics(
+                        liveRegion: true,
+                        child: Text(
+                          AppStrings.error(context, state.error!),
+                          style: TextStyle(
+                            color: colors.error,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    if (state.message != null) ...[
+                      Semantics(liveRegion: true, child: Text(state.message!)),
+                      const SizedBox(height: 16),
+                    ],
+                    if (state.file != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.of(context).sageLight,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.task_alt,
+                              color: AppColors.of(context).sageDark,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                state.file!.name,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  height: 1.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      FilledButton.icon(
+                        key: const Key('export-save'),
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size.fromHeight(50),
+                          textStyle: const TextStyle(fontSize: 16),
+                        ),
+                        onPressed: enabled
+                            ? () => ref
+                                  .read(
+                                    exportVmProvider(widget.selected).notifier,
+                                  )
+                                  .save()
+                            : null,
+                        icon: const Icon(Icons.download_outlined),
+                        label: Text(AppStrings.tr(context, '파일 다운로드')),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    OutlinedButton.icon(
+                      key: const Key('export-generate'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(50),
+                        backgroundColor: state.file == null
+                            ? AppColors.of(context).primary
+                            : AppColors.of(context).surface,
+                        foregroundColor: AppColors.of(context).textPrimary,
+                        side: state.file == null
+                            ? BorderSide.none
+                            : BorderSide(color: AppColors.of(context).border),
+                        textStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      onPressed: enabled && (_memos || _chats)
+                          ? () => ref
+                                .read(
+                                  exportVmProvider(widget.selected).notifier,
+                                )
+                                .generate(
+                                  ExportOptions(
+                                    startDate: _start,
+                                    endDate: _end,
+                                    memos: _memos,
+                                    chats: _chats,
+                                    includeImages: _includeImages,
+                                    format: _format,
+                                  ),
+                                )
+                          : null,
+                      icon: const Icon(Icons.folder_zip_outlined),
+                      label: Text(
+                        AppStrings.error(
+                          context,
+                          state.file != null
+                              ? AppStrings.tr(context, '파일 다시 생성')
+                              : state.error != null
+                              ? AppStrings.tr(context, '다시 요청')
+                              : AppStrings.tr(context, '파일 생성'),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
-            ],
-          ],
+            ),
+          ),
         ),
       ),
     );
@@ -294,19 +434,88 @@ class _ExportViewState extends ConsumerState<ExportView> {
         decoration: InputDecoration(
           labelText: label,
           enabled: onTap != null,
-          border: const OutlineInputBorder(),
+          filled: true,
+          fillColor: AppColors.of(context).background,
+          labelStyle: TextStyle(
+            color: AppColors.of(context).sageDark,
+            fontWeight: FontWeight.w700,
+          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: AppColors.of(context).border),
+          ),
           contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
+            horizontal: 10,
             vertical: 16,
           ),
         ),
         child: Row(
           children: [
-            Expanded(child: Text(exportDate(date))),
-            const Icon(Icons.calendar_month_outlined, size: 20),
+            Expanded(
+              child: Text(
+                exportDate(date),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Icon(
+              Icons.calendar_month_outlined,
+              size: 18,
+              color: AppColors.of(context).sageDark,
+            ),
           ],
         ),
       ),
     );
   }
+}
+
+class _ExportSection extends StatelessWidget {
+  const _ExportSection({
+    required this.title,
+    required this.icon,
+    required this.children,
+  });
+  final String title;
+  final IconData icon;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: AppColors.of(context).surface,
+    clipBehavior: Clip.antiAlias,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(22),
+      side: BorderSide(color: AppColors.of(context).border),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 20, color: AppColors.of(context).sageDark),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.of(context).textPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...children,
+        ],
+      ),
+    ),
+  );
 }

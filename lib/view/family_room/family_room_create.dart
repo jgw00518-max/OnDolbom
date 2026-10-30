@@ -1,3 +1,5 @@
+import 'package:ondolbom/l10n/app_strings.dart';
+import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
@@ -40,82 +42,157 @@ class _FamilyRoomCreateState extends ConsumerState<FamilyRoomCreate> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(familyRoomProvider);
-    final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
+      backgroundColor: AppColors.of(context).background,
       appBar: AppBar(
+        backgroundColor: AppColors.of(context).background,
+        surfaceTintColor: Colors.transparent,
+        foregroundColor: AppColors.of(context).textPrimary,
+        toolbarHeight: 88,
         automaticallyImplyLeading: false,
-        title: Row(
+        leadingWidth: 68,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 20),
+          child: Center(
+            child: SizedBox.square(
+              dimension: 42,
+              child: OutlinedButton(
+                onPressed: state.isLoading
+                    ? null
+                    : () => Navigator.pop(context),
+                style: OutlinedButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  backgroundColor: AppColors.of(context).surface,
+                  foregroundColor: AppColors.of(context).textPrimary,
+                  side: BorderSide(
+                    color: AppColors.resolve(context, Color(0xFFEaded7)),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                ),
+                child: const Icon(Icons.chevron_left, size: 24),
+              ),
+            ),
+          ),
+        ),
+        centerTitle: true,
+        title: Column(
           children: [
-            const Text('온돌봄'),
-            const SizedBox(width: 12),
-            OutlinedButton(
-              onPressed: state.isLoading ? null : () => Navigator.pop(context),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('나의 홈'),
-                  SizedBox(width: 4),
-                  Icon(Icons.keyboard_arrow_down, size: 18),
-                ],
+            Text(
+              'NEW FAMILY SPACE',
+              style: TextStyle(
+                color: AppColors.resolve(context, Color(0xFFA77762)),
+                fontSize: 8,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.5,
+              ),
+            ),
+            SizedBox(height: 3),
+            Text(
+              AppStrings.tr(context, '돌봄 공간 만들기'),
+              style: TextStyle(
+                color: AppColors.of(context).textPrimary,
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ],
         ),
+        actions: [
+          Container(
+            width: 42,
+            height: 42,
+            margin: const EdgeInsets.only(right: 20),
+            decoration: BoxDecoration(
+              color: AppColors.of(context).sageLight,
+              borderRadius: BorderRadius.circular(13),
+            ),
+            child: Icon(
+              Icons.home_outlined,
+              color: AppColors.of(context).sageDark,
+              size: 23,
+            ),
+          ),
+        ],
       ),
 
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+        padding: const EdgeInsets.fromLTRB(20, 15, 20, 28),
         children: [
-          // 페이지 제목
-          Row(
-            children: [
-              SizedBox(
-                width: 48,
-                height: 48,
-                child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
+          // 안내 카드는 표현만 담당하며 실제 생성·입력 검증은 기존 메서드를 사용한다.
+          Container(
+            padding: const EdgeInsets.all(22),
+            margin: const EdgeInsets.only(bottom: 25),
+            decoration: BoxDecoration(
+              color: AppColors.of(context).peachLight,
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  AppStrings.tr(context, '새로운 시작'),
+                  style: TextStyle(
+                    color: AppColors.resolve(context, Color(0xFF97624B)),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
                   ),
-                  onPressed: state.isLoading
-                      ? null
-                      : () => Navigator.pop(context),
-                  child: const Icon(Icons.chevron_left),
                 ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text(
-                  '가족 공간 만들기',
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                SizedBox(height: 8),
+                Text(
+                  AppStrings.tr(context, '소중한 가족을 위한\n공간을 만들어 볼까요?'),
+                  style: TextStyle(
+                    color: AppColors.of(context).textPrimary,
+                    fontSize: 25,
+                    fontWeight: FontWeight.w800,
+                    height: 1.35,
+                    letterSpacing: -1,
+                  ),
                 ),
-              ),
-            ],
+                SizedBox(height: 10),
+                Text(
+                  AppStrings.tr(
+                    context,
+                    '돌봄 대상자의 기본 정보를 입력해 주세요.\n공간을 만든 뒤에도 언제든 수정할 수 있어요.',
+                  ),
+                  style: TextStyle(
+                    color: AppColors.resolve(context, Color(0xFF846A5E)),
+                    fontSize: 12,
+                    height: 1.65,
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
-          const Divider(),
-          const SizedBox(height: 20),
 
-          inputTitle('돌봄대상자 이름'),
+          inputTitle(AppStrings.tr(context, '돌봄 대상자 이름'), required: true),
           TextField(
             controller: nameController,
             enabled: !state.isLoading,
             maxLength: 30,
-            decoration: inputDecoration(context).copyWith(counterText: ''),
+            decoration: inputDecoration(context).copyWith(
+              counterText: '',
+              hintText: AppStrings.tr(context, '이름을 입력해 주세요'),
+            ),
           ),
           const SizedBox(height: 24),
 
           // 남성은 1, 여성은 2로 저장하며 반드시 하나를 선택한다.
-          inputTitle('성별'),
+          inputTitle(AppStrings.tr(context, '성별'), required: true),
           SizedBox(
             width: double.infinity,
             child: SegmentedButton<int>(
-              segments: const [
-                ButtonSegment<int>(value: 1, label: Text('남성')),
-                ButtonSegment<int>(value: 2, label: Text('여성')),
+              segments: [
+                ButtonSegment<int>(
+                  value: 1,
+                  label: Text(AppStrings.tr(context, '남성')),
+                ),
+                ButtonSegment<int>(
+                  value: 2,
+                  label: Text(AppStrings.tr(context, '여성')),
+                ),
               ],
               selected: selectedGender == null ? <int>{} : {selectedGender!},
               emptySelectionAllowed: selectedGender == null,
@@ -123,16 +200,18 @@ class _FamilyRoomCreateState extends ConsumerState<FamilyRoomCreate> {
               style: ButtonStyle(
                 backgroundColor: WidgetStateProperty.resolveWith<Color>(
                   (states) => states.contains(WidgetState.selected)
-                      ? const Color(0xFFFFEBD9)
-                      : Colors.white,
+                      ? AppColors.resolve(context, const Color(0xFFFFEBD9))
+                      : AppColors.resolve(context, Colors.white),
                 ),
                 foregroundColor: WidgetStateProperty.resolveWith<Color>(
                   (states) => states.contains(WidgetState.selected)
-                      ? const Color(0xFF99522F)
-                      : const Color(0xFF78716A),
+                      ? AppColors.resolve(context, const Color(0xFF99522F))
+                      : AppColors.resolve(context, const Color(0xFF78716A)),
                 ),
-                side: const WidgetStatePropertyAll(
-                  BorderSide(color: Color(0xFFE8DFD7)),
+                side: WidgetStatePropertyAll(
+                  BorderSide(
+                    color: AppColors.resolve(context, Color(0xFFE8DFD7)),
+                  ),
                 ),
                 padding: const WidgetStatePropertyAll(
                   EdgeInsets.symmetric(vertical: 16),
@@ -149,34 +228,39 @@ class _FamilyRoomCreateState extends ConsumerState<FamilyRoomCreate> {
           ),
           const SizedBox(height: 24),
 
-          inputTitle('생년월일'),
+          inputTitle(AppStrings.tr(context, '생년월일')),
           TextField(
             controller: birthController,
             enabled: !state.isLoading,
             readOnly: true,
             onTap: () => birthAction(),
             decoration: inputDecoration(context).copyWith(
-              hintText: '년-월-일',
+              hintText: AppStrings.tr(context, '년-월-일'),
               suffixIcon: const Icon(Icons.calendar_month_outlined),
             ),
           ),
           const SizedBox(height: 24),
 
-          inputTitle('돌봄 장소'),
+          inputTitle(AppStrings.tr(context, '돌봄 장소')),
           TextField(
             controller: addressController,
             enabled: !state.isLoading,
             maxLength: 255,
-            decoration: inputDecoration(context).copyWith(counterText: ''),
+            decoration: inputDecoration(context).copyWith(
+              counterText: '',
+              hintText: AppStrings.tr(context, '예: 서울시 마포구'),
+            ),
           ),
           const SizedBox(height: 24),
 
-          inputTitle('특이사항'),
+          inputTitle(AppStrings.tr(context, '특이사항')),
           TextField(
             controller: notesController,
             enabled: !state.isLoading,
             maxLines: 4,
-            decoration: inputDecoration(context),
+            decoration: inputDecoration(context).copyWith(
+              hintText: AppStrings.tr(context, '건강 상태나 돌봄 시 참고할 내용을 적어주세요'),
+            ),
           ),
         ],
       ),
@@ -192,8 +276,14 @@ class _FamilyRoomCreateState extends ConsumerState<FamilyRoomCreate> {
                   height: 56,
                   child: OutlinedButton(
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: colors.onSurface,
-                      backgroundColor: Colors.white,
+                      foregroundColor: AppColors.resolve(
+                        context,
+                        const Color(0xFF6D6561),
+                      ),
+                      side: BorderSide(
+                        color: AppColors.resolve(context, Color(0xFFDED3CC)),
+                      ),
+                      backgroundColor: AppColors.of(context).surface,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -201,8 +291,8 @@ class _FamilyRoomCreateState extends ConsumerState<FamilyRoomCreate> {
                     onPressed: state.isLoading
                         ? null
                         : () => Navigator.pop(context),
-                    child: const Text(
-                      '취소',
+                    child: Text(
+                      AppStrings.tr(context, '취소'),
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.bold,
@@ -218,15 +308,25 @@ class _FamilyRoomCreateState extends ConsumerState<FamilyRoomCreate> {
                   height: 56,
                   child: FilledButton(
                     style: FilledButton.styleFrom(
-                      backgroundColor: colors.secondaryContainer,
-                      foregroundColor: colors.onSecondaryContainer,
+                      backgroundColor: AppColors.resolve(
+                        context,
+                        AppColors.primary,
+                        onAccent: true,
+                      ),
+                      foregroundColor: AppColors.resolve(
+                        context,
+                        AppColors.textPrimary,
+                        onAccent: true,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
                     onPressed: state.isLoading ? null : () => createAction(),
                     child: Text(
-                      state.isLoading ? '생성 중...' : '공간 만들기',
+                      state.isLoading
+                          ? AppStrings.tr(context, '생성 중...')
+                          : AppStrings.tr(context, '공간 만들기'),
                       style: const TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.bold,
@@ -269,18 +369,18 @@ class _FamilyRoomCreateState extends ConsumerState<FamilyRoomCreate> {
     final name = nameController.text.trim();
 
     if (name.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('돌봄대상자 이름을 입력해 주세요.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppStrings.tr(context, '돌봄대상자 이름을 입력해 주세요.'))),
+      );
       return;
     }
 
     final gender = selectedGender;
 
     if (gender == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('성별을 선택해 주세요.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppStrings.tr(context, '성별을 선택해 주세요.'))),
+      );
       return;
     }
 
@@ -308,39 +408,72 @@ class _FamilyRoomCreateState extends ConsumerState<FamilyRoomCreate> {
       final message =
           ref.read(familyRoomProvider).errorMessage ?? '공간을 생성하지 못했습니다.';
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppStrings.error(context, message))),
+      );
     }
   }
 
   // 입력칸 위 제목
-  Widget inputTitle(String title) {
+  Widget inputTitle(String title, {bool required = false}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Text(
-        title,
-        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+      padding: const EdgeInsets.only(bottom: 9),
+      child: Row(
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              color: AppColors.of(context).textPrimary,
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: BoxDecoration(
+              color: required
+                  ? AppColors.of(context).peachSoft
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: Text(
+              required
+                  ? AppStrings.tr(context, '필수')
+                  : AppStrings.tr(context, '선택'),
+              style: TextStyle(
+                color: required
+                    ? AppColors.resolve(context, const Color(0xFFA46F59))
+                    : AppColors.resolve(context, const Color(0xFFAAA09B)),
+                fontSize: 10,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   // 모든 입력칸에 같은 스타일 적용
   InputDecoration inputDecoration(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
     return InputDecoration(
       filled: true,
-      fillColor: Colors.white,
-      contentPadding: const EdgeInsets.all(20),
+      fillColor: AppColors.of(context).surface,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 17),
+      hintStyle: TextStyle(
+        color: AppColors.resolve(context, Color(0xFFB4AAA5)),
+        fontSize: 13,
+      ),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: colors.outline),
+        borderSide: BorderSide(
+          color: AppColors.resolve(context, const Color(0xFFE5DBD5)),
+        ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: colors.primary, width: 2),
+        borderSide: BorderSide(color: AppColors.of(context).primary, width: 2),
       ),
     );
   }

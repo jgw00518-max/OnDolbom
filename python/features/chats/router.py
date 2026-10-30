@@ -16,6 +16,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.websockets import WebSocketDisconnect
 
 from python.database import connect
+from python.features.chats import read_status
 from python.features.auth.firebase_auth import require_firebase_user, verify_firebase_token
 from python.features.chats.connection_manager import ChatConnection, manager
 from python.features.memos.images import read_image
@@ -89,7 +90,7 @@ def _membership(cursor, room_id, user_id, *, lock=False):
         sql += ' FOR UPDATE'
     cursor.execute(sql, (room_id, user_id))
     if cursor.fetchone() is None:
-        raise HTTPException(403, '현재 참여 중인 가족 공간의 채팅만 이용할 수 있습니다.')
+        raise HTTPException(403, '현재 참여 중인 돌봄 공간의 채팅만 이용할 수 있습니다.')
 
 
 # 이력·실시간 전달에는 이미지 존재 여부만 포함하고 BLOB는 별도로 조회한다.
@@ -106,6 +107,28 @@ def _public_message(row):
         result['chat_content'] = '삭제된 메시지입니다.'
         result['has_image'] = 0
     return result
+
+
+class ChatRead(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    family_room_id: str = Field(min_length=1,max_length=50)
+    chat_seq: int = Field(ge=0,strict=True)
+
+
+@router.get('/unread')
+def chat_unread(current_user_id: str = Depends(get_current_user_id)):
+    try:
+        return {'counts':read_status.unread_counts(current_user_id)}
+    except (pymysql.MySQLError,ValueError):
+        raise HTTPException(503,'채팅 미읽음 수를 조회하지 못했습니다.') from None
+
+
+@router.post('/read')
+def chat_read(data: ChatRead,current_user_id: str = Depends(get_current_user_id)):
+    try:
+        return read_status.mark_read(data.family_room_id,current_user_id,data.chat_seq)
+    except (pymysql.MySQLError,ValueError):
+        raise HTTPException(503,'채팅 읽음 처리를 완료하지 못했습니다.') from None
 
 
 @router.get('/messages')
@@ -226,6 +249,11 @@ def _save(room_id, user_id, message, image_data=None):
                 row = cursor.fetchone()
                 if row is None:
                     raise HTTPException(503, '저장한 메시지를 확인하지 못했습니다.')
+        if not duplicate:
+            # 메시지와 푸시 대기를 함께 확정한다. 동일 UUID 재전송은 새 작업을 만들지 않는다.
+            with connection.cursor() as cursor:
+                cursor.execute("""INSERT INTO chat_push_outbox (chat_seq,family_room_id,user_id)
+                    VALUES (%s,%s,%s)""", (row['chat_seq'],room_id,user_id))
         connection.commit()
         return _public_message(row), duplicate
     except HTTPException:
@@ -362,7 +390,7 @@ async def create_image_message(
     """한 장의 이미지와 선택적 텍스트를 저장한다. 같은 UUID 재요청은 원본을 반환한다."""
     room_id = family_room_id.strip()
     if not room_id:
-        raise HTTPException(422, '가족 공간 ID를 확인해 주세요.')
+        raise HTTPException(422, '돌봄 공간 ID를 확인해 주세요.')
     message = ImageMessageCreate(client_message_id=client_message_id, content=content)
     image_data = await run_in_threadpool(read_image, [image])
     row, duplicate = await run_in_threadpool(_save, room_id, current_user_id, message, image_data)
@@ -378,7 +406,7 @@ def get_message_image(
     family_room_id: str = Query(min_length=1, max_length=50),
     current_user_id: str = Depends(get_current_user_id),
 ):
-    """현재 가족 공간 참여자에게만 삭제되지 않은 메시지의 이미지를 반환한다."""
+    """현재 돌봄 공간 참여자에게만 삭제되지 않은 메시지의 이미지를 반환한다."""
     connection = None
     try:
         connection = connect()
@@ -424,7 +452,7 @@ async def chat_socket(socket: WebSocket, family_room_id: str):
     peer = None
     try:
         if not 1 <= len(family_room_id) <= 50:
-            raise HTTPException(422, '가족 공간 ID를 확인해 주세요.')
+            raise HTTPException(422, '돌봄 공간 ID를 확인해 주세요.')
         first = Authenticate.model_validate(await asyncio.wait_for(_receive(socket), timeout=10))
         user_id, expires_at = await run_in_threadpool(_session, first.token, family_room_id)
         peer = ChatConnection(socket, first.token, user_id, expires_at)

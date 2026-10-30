@@ -1,3 +1,5 @@
+import 'package:ondolbom/l10n/app_strings.dart';
+import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
 /// 회원가입의 표시만 담당한다. 실제 인증·재발송·가입 처리는 SignupView/VM에서 유지한다.
@@ -37,25 +39,33 @@ class SignupLayout extends StatelessWidget {
       asideDescription;
   final String asideEyebrow, stepLabel;
   final bool showBack, allowBackWhileBusy;
-  static const ink = Color(0xFF3E3A39);
-  static const peach = Color(0xFFF6B08A);
-  static const paper = Color(0xFFFFFAF7);
+  static const ink = AppColors.textPrimary;
+  static const peach = AppColors.primary;
+  static const paper = AppColors.background;
 
   static InputDecoration inputDecoration(
+    BuildContext context,
     String hint, {
     bool confirmed = false,
   }) {
     final border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(13),
       borderSide: BorderSide(
-        color: confirmed ? const Color(0xFFE4E8DF) : const Color(0xFFE6DED9),
+        color: confirmed
+            ? AppColors.resolve(context, const Color(0xFFE4E8DF))
+            : AppColors.resolve(context, const Color(0xFFE6DED9)),
       ),
     );
     return InputDecoration(
       hintText: hint,
-      hintStyle: const TextStyle(color: Color(0xFFB3AAA5), fontSize: 14),
+      hintStyle: TextStyle(
+        color: AppColors.resolve(context, Color(0xFFB3AAA5)),
+        fontSize: 14,
+      ),
       filled: true,
-      fillColor: confirmed ? const Color(0xFFF3F6EF) : paper,
+      fillColor: confirmed
+          ? AppColors.resolve(context, const Color(0xFFF3F6EF))
+          : AppColors.resolve(context, paper),
       isDense: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 17, vertical: 16),
       constraints: const BoxConstraints(minHeight: 52),
@@ -64,13 +74,17 @@ class SignupLayout extends StatelessWidget {
       disabledBorder: border,
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(13),
-        borderSide: const BorderSide(color: peach),
+        borderSide: BorderSide(color: AppColors.resolve(context, peach)),
       ),
       errorMaxLines: 3,
     );
   }
 
-  Widget _formPanel(bool mobile, double padding) => Padding(
+  Widget _formPanel(
+    BuildContext context,
+    bool mobile,
+    double padding,
+  ) => Padding(
     padding: EdgeInsets.fromLTRB(
       padding,
       mobile ? 32 : 52,
@@ -86,10 +100,10 @@ class SignupLayout extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (mobile) ...[
-            const Text(
-              '온돌봄',
+            Text(
+              AppStrings.tr(context, '온돌봄'),
               style: TextStyle(
-                color: ink,
+                color: AppColors.resolve(context, ink),
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
                 letterSpacing: -0.72,
@@ -99,8 +113,8 @@ class SignupLayout extends StatelessWidget {
           ],
           Text(
             eyebrow ?? 'STEP $step OF 3',
-            style: const TextStyle(
-              color: Color(0xFF8D6554),
+            style: TextStyle(
+              color: AppColors.resolve(context, Color(0xFF8D6554)),
               fontSize: 11,
               fontWeight: FontWeight.w800,
               letterSpacing: 2.2,
@@ -110,12 +124,12 @@ class SignupLayout extends StatelessWidget {
           Text(
             title ??
                 switch (step) {
-                  1 => '이메일로 시작하기',
-                  2 => '인증번호 확인',
-                  _ => '비밀번호 만들기',
+                  1 => AppStrings.tr(context, '이메일로 시작하기'),
+                  2 => AppStrings.tr(context, '인증번호 확인'),
+                  _ => AppStrings.tr(context, '비밀번호 만들기'),
                 },
-            style: const TextStyle(
-              color: ink,
+            style: TextStyle(
+              color: AppColors.resolve(context, ink),
               fontSize: 32,
               height: 1.25,
               fontWeight: FontWeight.w800,
@@ -126,12 +140,12 @@ class SignupLayout extends StatelessWidget {
           Text(
             description ??
                 switch (step) {
-                  1 => '가입에 사용할 이메일 주소를 입력해 주세요.',
-                  2 => '이메일에서 확인한 인증번호를 입력해 주세요.',
-                  _ => '안전하게 사용할 비밀번호를 설정해 주세요.',
+                  1 => AppStrings.tr(context, '가입에 사용할 이메일 주소를 입력해 주세요.'),
+                  2 => AppStrings.tr(context, '이메일에서 확인한 인증번호를 입력해 주세요.'),
+                  _ => AppStrings.tr(context, '안전하게 사용할 비밀번호를 설정해 주세요.'),
                 },
-            style: const TextStyle(
-              color: Color(0xFF827B78),
+            style: TextStyle(
+              color: AppColors.resolve(context, Color(0xFF827B78)),
               fontSize: 14,
               height: 1.65,
             ),
@@ -156,9 +170,17 @@ class SignupLayout extends StatelessWidget {
             child: FilledButton(
               onPressed: busy ? null : onSubmit,
               style: FilledButton.styleFrom(
-                backgroundColor: peach,
+                backgroundColor: AppColors.resolve(
+                  context,
+                  peach,
+                  onAccent: true,
+                ),
                 disabledBackgroundColor: peach.withValues(alpha: 0.3),
-                foregroundColor: ink,
+                foregroundColor: AppColors.resolve(
+                  context,
+                  ink,
+                  onAccent: true,
+                ),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -166,12 +188,12 @@ class SignupLayout extends StatelessWidget {
               ),
               child: Text(
                 busy
-                    ? '처리 중…'
+                    ? AppStrings.tr(context, '처리 중…')
                     : buttonLabel ??
                           switch (step) {
-                            1 => '인증번호 전송',
-                            2 => '인증번호 확인',
-                            _ => '이메일로 가입',
+                            1 => AppStrings.tr(context, '인증번호 전송'),
+                            2 => AppStrings.tr(context, '인증번호 확인'),
+                            _ => AppStrings.tr(context, '이메일로 가입'),
                           },
                 style: const TextStyle(
                   fontSize: 15,
@@ -187,10 +209,10 @@ class SignupLayout extends StatelessWidget {
               child: error == null
                   ? const SizedBox.shrink()
                   : Text(
-                      error!,
+                      AppStrings.error(context, error!),
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Color(0xFFB3261E),
+                      style: TextStyle(
+                        color: AppColors.resolve(context, Color(0xFFB3261E)),
                         fontSize: 12,
                       ),
                     ),
@@ -202,9 +224,11 @@ class SignupLayout extends StatelessWidget {
               child: TextButton.icon(
                 onPressed: busy && !allowBackWhileBusy ? null : onBack,
                 icon: const Icon(Icons.arrow_back, size: 16),
-                style: TextButton.styleFrom(foregroundColor: ink),
-                label: const Text(
-                  '로그인으로 돌아가기',
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.resolve(context, ink),
+                ),
+                label: Text(
+                  AppStrings.tr(context, '로그인으로 돌아가기'),
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                 ),
               ),
@@ -216,18 +240,18 @@ class SignupLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: paper,
+    backgroundColor: AppColors.resolve(context, paper),
     body: SafeArea(
       child: LayoutBuilder(
         builder: (context, constraints) {
           if (constraints.maxWidth <= 760) {
             return SingleChildScrollView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              child: _formPanel(true, 24),
+              child: _formPanel(context, true, 24),
             );
           }
           return ColoredBox(
-            color: const Color(0xFFFCEEE3),
+            color: AppColors.of(context).peachSoft,
             child: Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(
@@ -238,12 +262,15 @@ class SignupLayout extends StatelessWidget {
                   width: (constraints.maxWidth - 48).clamp(0.0, 900.0),
                   clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
-                    color: paper,
+                    color: AppColors.resolve(context, paper),
                     borderRadius: BorderRadius.circular(32),
                     border: Border.all(color: ink.withValues(alpha: 0.08)),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF604636).withValues(alpha: 0.16),
+                        color: AppColors.resolve(
+                          context,
+                          const Color(0xFF604636),
+                        ).withValues(alpha: 0.16),
                         offset: const Offset(0, 30),
                         blurRadius: 80,
                       ),
@@ -268,6 +295,7 @@ class SignupLayout extends StatelessWidget {
                           child: ConstrainedBox(
                             constraints: const BoxConstraints(minHeight: 620),
                             child: _formPanel(
+                              context,
                               false,
                               (constraints.maxWidth * 0.06).clamp(42.0, 74.0),
                             ),
@@ -295,9 +323,9 @@ class SignupField extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Text(
-        label,
-        style: const TextStyle(
-          color: SignupLayout.ink,
+        AppStrings.tr(context, label),
+        style: TextStyle(
+          color: AppColors.resolve(context, SignupLayout.ink),
           fontSize: 13,
           fontWeight: FontWeight.w700,
         ),
@@ -321,7 +349,7 @@ class _SignupAside extends StatelessWidget {
   final String eyebrow, stepLabel;
   @override
   Widget build(BuildContext context) => ColoredBox(
-    color: const Color(0xFFFFD6B5),
+    color: AppColors.of(context).peachLight,
     child: Stack(
       children: [
         Positioned(
@@ -330,9 +358,9 @@ class _SignupAside extends StatelessWidget {
           child: Container(
             width: 290,
             height: 290,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Color(0xFFB7C8A1),
+              color: AppColors.of(context).sage,
             ),
           ),
         ),
@@ -341,10 +369,10 @@ class _SignupAside extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                '온돌봄',
+              Text(
+                AppStrings.tr(context, '온돌봄'),
                 style: TextStyle(
-                  color: SignupLayout.ink,
+                  color: AppColors.resolve(context, SignupLayout.ink),
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
                 ),
@@ -352,8 +380,8 @@ class _SignupAside extends StatelessWidget {
               const SizedBox(height: 105),
               Text(
                 eyebrow,
-                style: const TextStyle(
-                  color: Color(0xFF8D6554),
+                style: TextStyle(
+                  color: AppColors.resolve(context, Color(0xFF8D6554)),
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 2.2,
@@ -361,9 +389,9 @@ class _SignupAside extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                heading ?? '온돌봄과 함께할 준비가 거의 끝났어요.',
-                style: const TextStyle(
-                  color: SignupLayout.ink,
+                heading ?? AppStrings.tr(context, '온돌봄과 함께할 준비가 거의 끝났어요.'),
+                style: TextStyle(
+                  color: AppColors.resolve(context, SignupLayout.ink),
                   fontSize: 31,
                   height: 1.35,
                   fontWeight: FontWeight.w800,
@@ -372,16 +400,20 @@ class _SignupAside extends StatelessWidget {
               ),
               const SizedBox(height: 17),
               Text(
-                description ?? '간단한 이메일 인증 후 새로운 계정을 만들어 보세요.',
-                style: const TextStyle(
-                  color: Color(0xFF82705F),
+                description ??
+                    AppStrings.tr(context, '간단한 이메일 인증 후 새로운 계정을 만들어 보세요.'),
+                style: TextStyle(
+                  color: AppColors.resolve(context, Color(0xFF82705F)),
                   fontSize: 13,
                   height: 1.7,
                 ),
               ),
               const SizedBox(height: 60),
               Semantics(
-                label: '$stepLabel $step단계',
+                label: AppStrings.format(context, "{0} {1}단계", [
+                  stepLabel,
+                  step,
+                ]),
                 child: Row(
                   children: [
                     for (var i = 1; i <= 3; i++)
@@ -394,12 +426,15 @@ class _SignupAside extends StatelessWidget {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: i <= step
-                                ? SignupLayout.ink
+                                ? AppColors.resolve(context, SignupLayout.ink)
                                 : Colors.transparent,
                             border: Border.all(
                               color: i <= step
-                                  ? SignupLayout.ink
-                                  : SignupLayout.ink.withValues(alpha: 0.2),
+                                  ? AppColors.resolve(context, SignupLayout.ink)
+                                  : AppColors.resolve(
+                                      context,
+                                      SignupLayout.ink,
+                                    ).withValues(alpha: 0.2),
                             ),
                           ),
                           child: Text(
@@ -407,7 +442,10 @@ class _SignupAside extends StatelessWidget {
                             style: TextStyle(
                               color: i <= step
                                   ? Colors.white
-                                  : SignupLayout.ink.withValues(alpha: 0.55),
+                                  : AppColors.resolve(
+                                      context,
+                                      SignupLayout.ink,
+                                    ).withValues(alpha: 0.55),
                               fontSize: 11,
                               fontWeight: FontWeight.w800,
                             ),

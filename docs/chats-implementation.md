@@ -357,7 +357,7 @@ python -m unittest python.tests.test_chat_mutations python.tests.test_chats pyth
 
 ## 범위와 제한
 
-- 텍스트·이미지 전송, 본문 수정·전체 삭제·변경 조회·실시간 전달 API를 구현했다. 읽음 API는 포함하지 않는다.
+- 텍스트·이미지 전송, 본문 수정·전체 삭제·변경 조회·실시간 전달 API를 구현했다. 읽음 API·미읽음 배지·채팅 FCM은 [채팅 알림](chat-notifications.md)에 추가 구현했다.
 - 공간별 연결은 메모리에 있으므로 단일 프로세스 기준이다. 여러 worker·서버에는 Redis 등 전달 계층이 필요하다.
 - Firebase 검증·공간 권한 재확인과 DB 작업은 스레드풀에서 실행하여 이벤트 루프를 막지 않는다.
 - 전달 직전 검증은 현재 참여 여부 기준이다. 가입 시점 이전 기록을 숨기는 정책은 적용하지 않았다.
@@ -404,3 +404,7 @@ flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
 ```powershell
 flutter test test/chat_test.dart
 ```
+
+## 채팅 알림 추가
+
+읽음 상태·미읽음 숫자·푸시 큐는 [채팅 알림 문서](chat-notifications.md)를 따른다. 새 환경은 `python/features/chats/notifications_schema.sql`을 API 실행 전에 적용한다.

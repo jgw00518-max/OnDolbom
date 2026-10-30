@@ -1,3 +1,10 @@
+import 'package:ondolbom/l10n/app_strings.dart';
+import 'package:ondolbom/view/family_room/membership_exit_dialog.dart';
+import 'package:ondolbom/view/family_room/representative_transfer_dialog.dart';
+import 'package:ondolbom/vm/auth/auth_vm.dart';
+import 'package:ondolbom/theme/app_colors.dart';
+import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
+import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -12,19 +19,17 @@ class FamilyMemberList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final members = ref.watch(familyMembersProvider(familyRoomId));
+    final state = ref.watch(familyRoomProvider);
+    final canManage =
+        state.selectedRoomId == familyRoomId &&
+        state.selectedParticipation?.isRepresentative == true &&
+        state.selectedParticipation?.isActive == true;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('함께하는 가족'),
-        actions: [
-          IconButton(
-            tooltip: '새로고침',
-            onPressed: () {
-              ref.invalidate(familyMembersProvider(familyRoomId));
-            },
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
+        leadingWidth: 62,
+        leading: const AppBackLeading(),
+        title: Text(AppStrings.tr(context, '함께하는 가족')),
       ),
       body: members.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -35,7 +40,10 @@ class FamilyMemberList extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  error.toString().replaceFirst('Exception: ', ''),
+                  AppStrings.error(
+                    context,
+                    error.toString().replaceFirst('Exception: ', ''),
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
@@ -43,7 +51,7 @@ class FamilyMemberList extends ConsumerWidget {
                   onPressed: () {
                     ref.invalidate(familyMembersProvider(familyRoomId));
                   },
-                  child: const Text('다시 조회'),
+                  child: Text(AppStrings.tr(context, '다시 조회')),
                 ),
               ],
             ),
@@ -51,35 +59,86 @@ class FamilyMemberList extends ConsumerWidget {
         ),
         data: (items) {
           if (items.isEmpty) {
-            return const Center(child: Text('참여 중인 가족이 없습니다.'));
+            return Center(
+              child: Text(AppStrings.tr(context, '참여 중인 가족이 없습니다.')),
+            );
           }
 
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
               Text(
-                '우리 공간의 가족 ${items.length}명',
-                style: const TextStyle(
+                AppStrings.format(context, "우리 공간의 가족 {0}명", [items.length]),
+                style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF403C39),
+                  color: AppColors.resolve(context, Color(0xFF403C39)),
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                '소중한 일상을 함께 돌보는 가족들이에요.',
+              Text(
+                AppStrings.tr(context, '소중한 일상을 함께 돌보는 가족들이에요.'),
                 style: TextStyle(
                   fontSize: 14,
-                  color: Color(0xFF78716A),
+                  color: AppColors.resolve(context, Color(0xFF78716A)),
                   height: 1.6,
                 ),
               ),
               const SizedBox(height: 24),
-              for (final member in items)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 14),
-                  child: memberCard(member),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.of(context).surface,
+                  border: Border.all(color: AppColors.of(context).border),
+                  borderRadius: BorderRadius.circular(24),
                 ),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    for (var i = 0; i < items.length; i++) ...[
+                      if (i > 0)
+                        Divider(
+                          height: 1,
+                          indent: 20,
+                          endIndent: 20,
+                          color: AppColors.of(context).border,
+                        ),
+                      FamilyMemberCard(
+                        member: items[i],
+                        canManage:
+                            canManage &&
+                            items[i].userId !=
+                                state.selectedParticipation?.userId,
+                        onTransfer: state.isLoading
+                            ? null
+                            : () => _transfer(context, ref, items[i]),
+                        onRemove: state.isLoading
+                            ? null
+                            : () async {
+                                final removed = await showDialog<bool>(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (_) => MembershipExitDialog(
+                                    familyRoomId: familyRoomId,
+                                    target: items[i],
+                                  ),
+                                );
+                                if (!context.mounted || removed != true) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      AppStrings.tr(
+                                        context,
+                                        '가족의 공간 참여를 종료했습니다.',
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ],
           );
         },
@@ -87,91 +146,212 @@ class FamilyMemberList extends ConsumerWidget {
     );
   }
 
-  // 가족 이름·이메일과 현재 공간의 역할을 표시한다.
-  Widget memberCard(FamilyMember member) {
-    final name = member.name?.trim();
-    final displayName = name == null || name.isEmpty ? '가족' : name;
-
-    final email = member.email?.trim();
-    final displayEmail = email == null || email.isEmpty
-        ? '등록된 이메일이 없습니다.'
-        : email;
-
-    final badgeColor = member.isRepresentative
-        ? const Color(0xFFFFEBD9)
-        : const Color(0xFFF0F4E9);
-
-    final roleColor = member.isRepresentative
-        ? const Color(0xFF99522F)
-        : const Color(0xFF526345);
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE8DFD7)),
+  Future<void> _transfer(
+    BuildContext context,
+    WidgetRef ref,
+    FamilyMember target,
+  ) async {
+    final uid = ref.read(firebaseAuthProvider).currentUser?.uid;
+    final notifier = ref.read(familyRoomProvider.notifier);
+    final transferred = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => RepresentativeTransferDialog(
+        familyRoomId: familyRoomId,
+        target: target,
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-            radius: 25,
-            backgroundColor: badgeColor,
-            child: Icon(
-              member.isRepresentative
-                  ? Icons.home_outlined
-                  : Icons.person_outline_rounded,
-              color: roleColor,
-              size: 28,
-            ),
+    );
+    if (!context.mounted ||
+        transferred != true ||
+        ref.read(firebaseAuthProvider).currentUser?.uid != uid ||
+        ref.read(familyRoomProvider).selectedRoomId != familyRoomId) {
+      return;
+    }
+    // 성공 응답으로 일반 가족 권한을 먼저 반영한 뒤 두 목록을 서버에서 다시 조회한다.
+    ref.invalidate(familyMembersProvider(familyRoomId));
+    await notifier.refreshRoomsPreservingState();
+    if (!context.mounted ||
+        ref.read(firebaseAuthProvider).currentUser?.uid != uid ||
+        ref.read(familyRoomProvider).selectedRoomId != familyRoomId) {
+      return;
+    }
+    final refreshFailed = ref.read(familyRoomProvider).errorMessage != null;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          AppStrings.error(
+            context,
+            refreshFailed
+                ? AppStrings.tr(
+                    context,
+                    '주보호자 이전은 완료됐지만 공간 정보를 새로고침하지 못했습니다. 목록을 다시 확인해 주세요.',
+                  )
+                : AppStrings.tr(context, '주보호자를 이전했습니다. 이제 일반 가족으로 참여합니다.'),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  displayName,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF403C39),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  displayEmail,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    height: 1.6,
-                    color: Color(0xFF78716A),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: badgeColor,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    member.roleName,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: roleColor,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
+}
+
+/// 이름·역할과 관리 버튼을 분리해 가족별 작업 대상을 명확히 보여 준다.
+class FamilyMemberCard extends StatelessWidget {
+  const FamilyMemberCard({
+    super.key,
+    required this.member,
+    this.canManage = false,
+    this.onRemove,
+    this.onTransfer,
+  });
+  final FamilyMember member;
+  final bool canManage;
+  final VoidCallback? onRemove;
+  final VoidCallback? onTransfer;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = member.name?.trim();
+    final displayName = name == null || name.isEmpty ? '가족' : name;
+    final email = member.email?.trim();
+    final owner = member.isRepresentative;
+    final actions = Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _button(
+          context,
+          AppStrings.tr(context, '이전'),
+          AppStrings.tr(context, '주보호자 이전'),
+          Icons.workspace_premium_outlined,
+          AppColors.of(context).sageDark,
+          onPressed: onTransfer,
+        ),
+        _button(
+          context,
+          AppStrings.tr(context, '강퇴'),
+          AppStrings.tr(context, '가족 강퇴'),
+          Icons.person_remove_outlined,
+          Theme.of(context).colorScheme.error,
+          onPressed: onRemove,
+        ),
+      ],
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // 작은 화면·큰 글씨에서는 버튼을 다음 줄로 내려 이름과 겹치지 않게 한다.
+          final stacked =
+              constraints.maxWidth < 300 ||
+              MediaQuery.textScalerOf(context).scale(14) > 18;
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              CircleAvatar(
+                radius: 25,
+                backgroundColor: owner
+                    ? AppColors.of(context).peachLight
+                    : AppColors.of(context).sageLight,
+                child: Text(
+                  displayName.characters.first,
+                  style: TextStyle(
+                    color: AppColors.of(context).sageDark,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 5,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          displayName,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.of(context).textPrimary,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.of(context).peachSoft,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            member.roleName,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.of(context).textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      email == null || email.isEmpty
+                          ? AppStrings.tr(context, '등록된 이메일이 없습니다.')
+                          : email,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.of(context).textSecondary,
+                      ),
+                    ),
+                    if (canManage && !owner && stacked) ...[
+                      const SizedBox(height: 12),
+                      actions,
+                    ],
+                  ],
+                ),
+              ),
+              if (canManage && !owner && !stacked) ...[
+                const SizedBox(width: 12),
+                actions,
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _button(
+    BuildContext context,
+    String label,
+    String feature,
+    IconData icon,
+    Color color, {
+    VoidCallback? onPressed,
+  }) => Tooltip(
+    message: feature,
+    child: OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 16),
+      label: Text(AppStrings.tr(context, label)),
+      style: OutlinedButton.styleFrom(
+        foregroundColor:
+            ThemeData.estimateBrightnessForColor(
+                  Color.lerp(color, Colors.white, 0.14)!,
+                ) ==
+                Brightness.dark
+            ? Colors.white
+            : AppColors.textPrimary,
+        backgroundColor: Color.lerp(color, Colors.white, 0.14),
+        minimumSize: const Size(64, 44),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        side: BorderSide(color: Color.lerp(color, Colors.white, 0.14)!),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    ),
+  );
 }

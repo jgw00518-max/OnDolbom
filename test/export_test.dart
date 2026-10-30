@@ -496,14 +496,13 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('가족 공간의 마지막 버튼에서 내보내기 화면으로 이동한다', (tester) async {
+  testWidgets('공간 설정에서 내보내기 화면으로 이동한다', (tester) async {
     await mount(tester, home: true);
-    await tester.scrollUntilVisible(find.text('메모·채팅 내보내기'), 200);
-    expect(
-      tester.getTopLeft(find.text('메모·채팅 내보내기')).dy,
-      greaterThan(tester.getTopLeft(find.text('오늘의 일정')).dy),
-    );
-    await tester.tap(find.text('메모·채팅 내보내기'));
+    expect(find.text('메모 및 채팅 내보내기'), findsNothing);
+    await tester.ensureVisible(find.text('공간 설정'));
+    await tester.tap(find.text('공간 설정'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('메모 및 채팅 내보내기'));
     await tester.pumpAndSettle();
     expect(find.byType(ExportView), findsOneWidget);
     expect(find.byType(CheckboxListTile), findsNWidgets(2));

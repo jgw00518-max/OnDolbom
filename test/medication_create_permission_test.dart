@@ -20,7 +20,7 @@ void main() {
         (_) async => fixture.response([fixture.medicationJson(1, '가족 약')]),
       ),
     );
-    expect(find.text('약 추가'), findsNothing);
+    expect(find.byTooltip('약 추가'), findsNothing);
     await tester.tap(find.textContaining('가족 약'));
     await tester.pumpAndSettle();
     expect(find.text('투약 정보'), findsOneWidget);
@@ -50,7 +50,7 @@ void main() {
     final container = ProviderScope.containerOf(
       tester.element(find.byType(MedicationListView)),
     );
-    await tester.tap(find.text('약 추가'));
+    await tester.tap(find.byTooltip('약 추가'));
     await tester.pumpAndSettle();
     await fixture.fill(tester, 'info', '입력할 약');
     await fixture.fill(tester, 'dosage', '1');
@@ -61,7 +61,7 @@ void main() {
     expect(find.text('현재 공간의 주보호자만 투약일지를 작성할 수 있어요.'), findsOneWidget);
     expect(
       tester
-          .widget<FilledButton>(find.widgetWithText(FilledButton, '추가'))
+          .widget<FilledButton>(find.widgetWithText(FilledButton, '약 추가하기'))
           .onPressed,
       isNull,
     );

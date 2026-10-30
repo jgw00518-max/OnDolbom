@@ -28,6 +28,14 @@ class ProfileLoadException implements Exception {
   String toString() => message;
 }
 
+// Firebase 인증은 본인 확인에만 사용하고 서비스 진입은 재활성화 전까지 차단한다.
+class AccountInactiveException extends ProfileLoadException {
+  const AccountInactiveException(this.reactivationUntil, this.canReactivate)
+    : super('탈퇴 처리된 계정입니다.');
+  final String reactivationUntil;
+  final bool canReactivate;
+}
+
 // 최초 등록 요청 상태를 폼과 홈의 버튼 활성화 여부에 공유한다.
 final profileRegistrationProvider =
     NotifierProvider.autoDispose<ProfileRegistrationVm, AsyncValue<void>>(
@@ -74,10 +82,16 @@ class ProfileRegistrationVm extends Notifier<AsyncValue<void>> {
               )
               .timeout(const Duration(seconds: 15));
           if (response.statusCode == 401 && attempt == 0) continue;
+          // 이메일 인증 직후의 캐시된 토큰이라면 한 번 갱신하되 서버 인증 조건은 우회하지 않는다.
+          if (response.statusCode == 403 &&
+              attempt == 0 &&
+              getProfileAccessError(response) == '회원가입 이메일 인증을 먼저 완료해 주세요.') {
+            continue;
+          }
           if (response.statusCode != 200) {
             throw ProfileLoadException(switch (response.statusCode) {
               401 => '다시 로그인해 주세요.',
-              403 => '이 계정은 서비스를 이용할 수 없습니다.',
+              403 => getProfileAccessError(response),
               409 => '계정 연결 정보가 충돌합니다. 기존 계정을 확인해 주세요.',
               422 => '이름·전화번호 형식과 로그인 이메일을 확인해 주세요.',
               _ => '저장하지 못했습니다. 잠시 후 다시 시도해 주세요.',
@@ -147,10 +161,20 @@ final userProfileProvider = FutureProvider.autoDispose<UserProfile?>(
             )
             .timeout(const Duration(seconds: 15));
         if (response.statusCode == 401 && attempt == 0) continue;
+        if (response.statusCode == 403) {
+          final payload = jsonDecode(utf8.decode(response.bodyBytes));
+          final detail = payload is Map ? payload['detail'] : null;
+          if (detail is Map && detail['code'] == 'account_inactive') {
+            throw AccountInactiveException(
+              detail['reactivation_until'].toString(),
+              detail['can_reactivate'] == true,
+            );
+          }
+        }
         if (response.statusCode != 200) {
           throw ProfileLoadException(switch (response.statusCode) {
             401 => '로그인이 만료되었습니다. 다시 로그인해 주세요.',
-            403 => '이 계정은 서비스를 이용할 수 없습니다.',
+            403 => getProfileAccessError(response),
             503 => getServerError(response),
             _ => '사용자 정보를 확인하지 못했습니다. 다시 시도해 주세요.',
           });
@@ -179,12 +203,19 @@ final userProfileProvider = FutureProvider.autoDispose<UserProfile?>(
 String getServerError(http.Response response) {
   try {
     final body =
-        jsonDecode(utf8.decode(response.bodyBytes))
-            as Map<String, dynamic>;
+        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
 
-    return body['detail'] as String? ??
-        '서버 설정을 확인해 주세요.';
+    return body['detail'] as String? ?? '서버 설정을 확인해 주세요.';
   } catch (_) {
     return '서버 응답을 확인하지 못했습니다.';
   }
+}
+
+// 이메일 미인증과 탈퇴 계정을 같은 이용 제한 문구로 오해하지 않도록 구분한다.
+String getProfileAccessError(http.Response response) {
+  final detail = getServerError(response);
+  if (detail == '회원가입 이메일 인증을 먼저 완료해 주세요.' || detail == '탈퇴 처리된 계정입니다.') {
+    return detail;
+  }
+  return '이 계정은 서비스를 이용할 수 없습니다.';
 }

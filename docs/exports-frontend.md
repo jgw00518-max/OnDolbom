@@ -2,7 +2,8 @@
 
 ## 화면과 사용 순서
 
-현재 가족 공간 홈의 맨 아래, 오늘의 일정 카드 다음에 `메모·채팅 내보내기` 버튼을 둔다.
+가족 공간 홈 우측 상단 `⋮` 메뉴에 `메모·채팅 내보내기`를 둔다.
+기존 화면 맨 아래의 내보내기 버튼은 제거했다. 공간 삭제 항목은 현재 활성 주보호자에게만 표시한다.
 주보호자와 일반 가족 모두 같은 버튼을 사용하며 실제 접근 권한은 서버가 확인한다.
 
 1. 가로로 배치된 시작일·종료일 칸을 각각 눌러 달력에서 선택한다.
@@ -80,7 +81,7 @@ HTML은 압축을 해제하고 `index.html`을 열며, PDF는 PDF 뷰어에서 �
 | `lib/vm/exports/export_save_failure.dart` | 저장 실패 원인 분류·사용자 안내 |
 | `lib/vm/exports/export_os_error_*.dart` | OS별 파일 시스템 오류 코드·웹용 대체 구현 |
 | `lib/view/exports/export_view.dart` | 기간·범위·이미지 옵션·생성·다운로드 화면 |
-| `lib/view/family_room/family_room_home.dart` | 가족 공간 맨 아래 진입 버튼 |
+| `lib/view/family_room/family_room_home.dart` | 우측 상단 메뉴의 내보내기 진입 항목 |
 | `test/export_test.dart` | API 옵션·저장 재시도·권한 변경·날짜 상한·화면 연결 검증 |
 | `test/export_save_failure_test.dart` | 플러그인·OS 오류 분류·모호한 오류의 일반 안내·개인정보 비노출 |
 

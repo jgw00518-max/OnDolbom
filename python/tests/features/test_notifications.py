@@ -23,6 +23,15 @@ class NotificationTests(TestCase):
         app.dependency_overrides.clear()
         self.client.close()
 
+    def test_urgent_registration_skips_created_event(self):
+        self.cursor.fetchone.return_value = dict(
+            family_room_id='space', created_at='stamp', created_by='guardian',
+            within_reminder_window=1)
+        with patch(BASE + 'store.prepare') as prepare:
+            self.assertFalse(prepare_schedule_notifications(self.connection, 7))
+        prepare.assert_not_called()
+        self.cursor.fetchall.assert_not_called()
+
     def test_missing_token_rejected_before_db(self):
         app.dependency_overrides.clear()
         with patch(BASE + 'router.connect') as connect:
@@ -65,11 +74,12 @@ class NotificationTests(TestCase):
 
     def test_prepare_freezes_all_current_family_without_committing(self):
         stamp = datetime(2026, 10, 23)
-        self.cursor.fetchone.return_value = dict(family_room_id='space', created_at=stamp)
+        self.cursor.fetchone.return_value = dict(family_room_id='space', created_at=stamp, created_by='creator')
         self.cursor.fetchall.return_value = [{'user_id': 'creator'}, {'user_id': 'family'}]
         with patch(BASE + 'store.prepare') as prepare:
             prepare_schedule_notifications(self.connection, 7)
         self.assertEqual(prepare.call_args.args[0]['recipient_ids'], ['creator', 'family'])
+        self.assertEqual(prepare.call_args.args[0]['actor_id'], 'creator')
         self.connection.commit.assert_not_called()
         self.assertIn('u.withdrawn_at IS NULL', self.cursor.execute.call_args.args[0])
 

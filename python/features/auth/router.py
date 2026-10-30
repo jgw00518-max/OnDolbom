@@ -53,13 +53,13 @@ class ProfileRegistration(BaseModel):
         return f"{digits[:3]}-{digits[3:7]}-{digits[7:]}"
 
 
-def _find_profile(cursor, uid: str):
+def _find_profile(cursor, uid: str, *, lock=False):
     # 현재 DB collation은 대소문자를 구분하지 않아 BINARY로 UID 정확 비교를 보강한다.
     cursor.execute(
         """SELECT user_id, user_email, name, phone, withdrawn_at
            FROM `user`
            WHERE user_firebase_uid = %s AND BINARY user_firebase_uid = BINARY %s
-           LIMIT 1""", (uid, uid),
+           LIMIT 1""" + (" FOR UPDATE" if lock else ""), (uid, uid),
     )
     return cursor.fetchone()
 
@@ -134,6 +134,41 @@ def register_profile(payload: ProfileRegistration, claims: dict = Depends(requir
             connection.close()
 
 
+@router.put("/profile", response_model=CurrentUserResponse)
+def update_profile(payload: ProfileRegistration, claims: dict = Depends(require_firebase_user)):
+    """현재 계정의 이름·전화번호만 수정한다. 최초 등록 및 이메일 변경과 구분한다."""
+    connection = None
+    try:
+        connection = connect()
+        with connection.cursor() as cursor:
+            existing = _find_profile(cursor, claims['uid'], lock=True)
+            if existing is None:
+                raise HTTPException(404, '등록된 사용자 정보가 없습니다.')
+            _registered_response(existing)  # 탈퇴 계정은 수정할 수 없다.
+            cursor.execute('''UPDATE `user` SET name=%s, phone=%s
+                WHERE user_id=%s AND user_firebase_uid=%s
+                AND BINARY user_firebase_uid=BINARY %s AND withdrawn_at IS NULL''',
+                (payload.name, payload.phone, existing['user_id'], claims['uid'], claims['uid']))
+            # 값이 동일한 UPDATE도 정상 처리한다. 실제 저장된 행을 다시 읽어 응답한다.
+            row = _find_profile(cursor, claims['uid'])
+        if row is None:
+            raise RuntimeError('Updated profile not found')
+        response = _registered_response(row)
+        connection.commit()
+        return response
+    except HTTPException:
+        if connection is not None:
+            connection.rollback()
+        raise
+    except (MySQLError, ValueError, RuntimeError):
+        if connection is not None:
+            connection.rollback()
+        raise HTTPException(503, '저장 결과를 확인하지 못했습니다. 프로필을 다시 조회해 주세요.') from None
+    finally:
+        if connection is not None:
+            connection.close()
+
+
 @router.get("/me", response_model=CurrentUserResponse)
 def get_current_user(claims: dict = Depends(require_firebase_user)):
     # 사용자 UID를 쿼리 인자에서 받지 않고 인증 의존성이 검증한 claims만 사용한다.
@@ -143,7 +178,7 @@ def get_current_user(claims: dict = Depends(require_firebase_user)):
         with connection.cursor() as cursor:
             # 현재 UID 컬럼의 collation은 대소문자를 구분하지 않으므로 정확 비교도 적용한다.
             cursor.execute(
-                """SELECT user_id, user_email, name, phone, withdrawn_at
+                """SELECT user_id, user_email, name, phone, withdrawn_at, CURRENT_TIMESTAMP AS server_now
                    FROM `user`
                    WHERE user_firebase_uid = %s AND BINARY user_firebase_uid = BINARY %s
                    LIMIT 1""",
@@ -154,10 +189,57 @@ def get_current_user(claims: dict = Depends(require_firebase_user)):
         if row is None:
             return CurrentUserResponse(registered=False, user=None)
         if row["withdrawn_at"] is not None:
-            raise HTTPException(403, "탈퇴 처리된 계정입니다.")
+            from datetime import timedelta
+            now = row['server_now']
+            until = row['withdrawn_at'] + timedelta(days=30)
+            raise HTTPException(403, {'code': 'account_inactive',
+                'reactivation_until': str(until), 'can_reactivate': now < until})
         return CurrentUserResponse(registered=True, user=UserProfile(**row))
     except (MySQLError, ValueError):
         raise HTTPException(503, "사용자 정보를 조회하지 못했습니다. 서버 DB 설정과 연결을 확인해 주세요.") from None
     finally:
         if connection is not None:
             connection.close()
+
+
+@router.delete('/account')
+async def delete_account(claims: dict = Depends(require_firebase_user)):
+    from starlette.concurrency import run_in_threadpool
+    from python.features.auth.withdrawal import withdraw_account
+    from python.features.chats.connection_manager import manager
+    try:
+        result = await run_in_threadpool(withdraw_account, claims)
+    except (MySQLError, ValueError):
+        raise HTTPException(503, '회원 탈퇴를 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.') from None
+    # 현재 서버에서 열려 있는 채팅 연결도 종료한다. 다른 서버는 기존 참여 검증으로 차단한다.
+    for room in result['rooms']:
+        await manager.close_member(room, result['user_id'])
+    return {'result': 'OK'}
+
+
+@router.post('/account/reactivate')
+def reactivate_account(claims: dict = Depends(require_firebase_user)):
+    connection = connect()
+    try:
+        with connection.cursor() as cursor:
+            row = _find_profile(cursor, claims['uid'], lock=True)
+            if row is None:
+                raise HTTPException(404, '복구할 계정이 없습니다.')
+            if row['withdrawn_at'] is not None:
+                # 기기 시각을 신뢰하지 않고 DB 시각으로 정확한 30일 경계를 판단한다.
+                cursor.execute("""UPDATE `user` SET withdrawn_at=NULL
+                    WHERE user_id=%s AND withdrawn_at > DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 30 DAY)""", (row['user_id'],))
+                if cursor.rowcount != 1:
+                    raise HTTPException(410, '탈퇴 후 30일이 지나 계정을 복구할 수 없습니다.')
+        connection.commit()
+        from python.features.activity.cache import badge_cache
+        badge_cache.invalidate(claims['uid'])
+        return {'result': 'OK'}
+    except HTTPException:
+        connection.rollback()
+        raise
+    except (MySQLError, ValueError):
+        connection.rollback()
+        raise HTTPException(503, '계정을 활성화하지 못했습니다. 다시 시도해 주세요.') from None
+    finally:
+        connection.close()

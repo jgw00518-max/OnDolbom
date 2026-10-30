@@ -34,7 +34,7 @@ final receivedInvitesProvider = FutureProvider.autoDispose<List<FamilyInvite>>((
   return ref.read(inviteVmProvider).fetchReceivedInvites();
 }, retry: (retryCount, error) => null);
 
-// 로그인한 사용자가 주보호자로 관리하는 공간의 보낸 초대를 조회한다.
+// 로그인한 사용자가 본인 이름으로 보낸 초대만 조회한다.
 final sentInvitesProvider = FutureProvider.autoDispose<List<FamilyInvite>>((
   ref,
 ) async {
@@ -54,6 +54,43 @@ class InviteVm {
 
   String get baseUrl {
     return ref.read(apiBaseUrlProvider).replaceAll(RegExp(r'/+$'), '');
+  }
+
+  // 원본 초대를 취소하지 않고 본인 초대함의 처리된 기록만 삭제한다.
+  Future<int> deleteInviteHistory(
+    List<String> ids, {
+    required bool sent,
+  }) async {
+    final user = ref.read(firebaseAuthProvider).currentUser;
+    if (user == null) throw Exception('로그인이 필요합니다.');
+    final uid = user.uid;
+    final token = await getLoginToken(uid);
+    var deleted = 0;
+    for (var offset = 0; offset < ids.length; offset += 400) {
+      final chunk = ids.skip(offset).take(400).toList();
+      final response = await ref
+          .read(inviteHttpClientProvider)
+          .post(
+            Uri.parse('$baseUrl/invites/history/delete'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'side': sent ? 'sent' : 'received',
+              'invite_ids': chunk,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+      checkLoginUser(uid);
+      if (response.statusCode != 200) {
+        throw Exception(getErrorMessage(response, '초대 기록을 삭제하지 못했습니다.'));
+      }
+      deleted +=
+          (jsonDecode(utf8.decode(response.bodyBytes))['deleted_count'] as num)
+              .toInt();
+    }
+    return deleted;
   }
 
   // 요청할 때 현재 사용자의 로그인 토큰을 가져온다.
@@ -160,7 +197,7 @@ class InviteVm {
     }
   } // build
 
-  // 주보호자가 가족 공간에 초대를 등록한다.
+  // 주보호자가 돌봄 공간에 초대를 등록한다.
   Future<bool> createInvite({
     required String familyRoomId,
     required String email,
@@ -197,6 +234,27 @@ class InviteVm {
     final body = jsonDecode(utf8.decode(response.bodyBytes));
     return body['email_sent'] == true;
   } // build
+
+  // 만료된 원본 ID로 요청하며 서버가 새 초대 ID와 7일 유효기간을 부여한다.
+  Future<bool> resendInvite(String inviteId) async {
+    final user = ref.read(firebaseAuthProvider).currentUser;
+    if (user == null) throw Exception('로그인이 필요합니다.');
+    final uid = user.uid;
+    final token = await getLoginToken(uid);
+    final response = await ref
+        .read(inviteHttpClientProvider)
+        .post(
+          Uri.parse('$baseUrl/invites/${Uri.encodeComponent(inviteId)}/resend'),
+          headers: {'Authorization': 'Bearer $token'},
+        )
+        .timeout(const Duration(seconds: 45));
+    checkLoginUser(uid);
+    if (response.statusCode != 201) {
+      throw Exception(getErrorMessage(response, '초대를 재요청하지 못했습니다.'));
+    }
+    final body = jsonDecode(utf8.decode(response.bodyBytes));
+    return body['email_sent'] == true;
+  }
 
   // 본인에게 온 초대를 거절한다.
   Future<void> rejectInvite(String inviteId) async {

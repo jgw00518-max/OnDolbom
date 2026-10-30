@@ -1,10 +1,17 @@
 from datetime import date
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field, field_validator
+from fastapi import APIRouter, HTTPException, Path
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from python.database import connect
+from python.features.family_room.membership import end_membership, transfer_representative
+from python.features.family_room.delete_notifications import (
+    notification_id as deletion_notification_id,
+    prepare_notification as prepare_deletion_notification,
+    publish_notification as publish_deletion_notification,
+)
+import logging
 
 import os
 
@@ -12,9 +19,66 @@ from fastapi import Depends, Header, HTTPException
 
 from pymysql import MySQLError
 from python.features.auth.firebase_auth import require_firebase_user
+from python.features.chats.connection_manager import manager as chat_manager
+from starlette.concurrency import run_in_threadpool
 
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+def _soft_delete_family_room(family_room_id: str, user_id: str) -> dict:
+    """공간과 권한을 잠그고 삭제 안내를 준비한다. 공간의 연결 데이터는 보존한다."""
+    connection = None
+    try:
+        connection = connect()
+        with connection.cursor() as cursor:
+            # 초대 수락·대상자 수정과 동일하게 공간부터 잠근다.
+            cursor.execute('''SELECT family_room_deleted_at, created_at, care_recipient_name FROM family_room
+                WHERE family_room_id = %s FOR UPDATE''', (family_room_id,))
+            room = cursor.fetchone()
+            if room is None:
+                raise HTTPException(404, "돌봄 공간을 찾을 수 없습니다.")
+            cursor.execute('''SELECT p.participate_seq, p.is_representative
+                FROM participate AS p JOIN `user` AS u ON u.user_id = p.user_id
+                WHERE p.family_room_id = %s AND p.user_id = %s
+                  AND p.is_active = 1 AND p.left_at IS NULL
+                  AND u.withdrawn_at IS NULL
+                LIMIT 1 FOR UPDATE''', (family_room_id, user_id))
+            member = cursor.fetchone()
+            if member is None or member["is_representative"] != 1:
+                raise HTTPException(403, "현재 공간의 주보호자만 돌봄 공간을 삭제할 수 있습니다.")
+            deleted_at = room["family_room_deleted_at"]
+            already_deleted = deleted_at is not None
+            if not already_deleted:
+                cursor.execute('''UPDATE family_room
+                    SET family_room_deleted_at = CURRENT_TIMESTAMP
+                    WHERE family_room_id = %s AND family_room_deleted_at IS NULL''',
+                               (family_room_id,))
+                cursor.execute('''SELECT family_room_deleted_at FROM family_room
+                    WHERE family_room_id = %s''', (family_room_id,))
+                deleted_at = cursor.fetchone()["family_room_deleted_at"]
+                prepare_deletion_notification(connection, family_room_id, room, deleted_at, user_id)
+        connection.commit()
+        # 발행 실패는 확정된 삭제를 되돌리지 않으며 기존 worker가 pending을 재시도한다.
+        try:
+            publish_deletion_notification(
+                deletion_notification_id(family_room_id, room['created_at'], deleted_at))
+        except Exception:
+            logger.error('공간 삭제 확정 후 알림 발행 실패; pending 재시도 필요')
+        return {"result": "OK", "family_room_id": family_room_id,
+                "family_room_deleted_at": deleted_at, "already_deleted": already_deleted}
+    except HTTPException:
+        if connection is not None:
+            connection.rollback()
+        raise
+    except (MySQLError, ValueError):
+        if connection is not None:
+            connection.rollback()
+        raise HTTPException(503, "돌봄 공간을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.") from None
+    finally:
+        if connection is not None:
+            connection.close()
 
 
 # 화면에서 입력받는 대상자 정보
@@ -94,7 +158,7 @@ def create_family_room(
             # 서버에서 중복 가능성이 낮은 공간 ID를 생성한다.
             family_room_id = str(uuid4())
 
-            # 1. 대상자 정보와 가족 공간을 저장한다.
+            # 1. 대상자 정보와 돌봄 공간을 저장한다.
             cursor.execute(
                 """
                 INSERT INTO family_room (
@@ -201,7 +265,7 @@ def create_family_room(
 
         raise HTTPException(
             status_code=500,
-            detail="가족 공간 생성 중 오류가 발생했습니다.",
+            detail="돌봄 공간 생성 중 오류가 발생했습니다.",
         ) from None
 
     finally:
@@ -257,7 +321,58 @@ def get_current_user_id(
         if conn is not None:
             conn.close()
 
-# Depends(get_dev_user_id) 부분을 
+# 공간 소프트 삭제. 이미 삭제된 공간도 현재 주보호자만 재요청할 수 있다.
+@router.delete("/{family_room_id}")
+async def delete_family_room(
+    family_room_id: str = Path(min_length=1, max_length=50, pattern=r"^\S+$"),
+    current_user_id: str = Depends(get_current_user_id),
+) -> dict:
+    result = await run_in_threadpool(_soft_delete_family_room, family_room_id, current_user_id)
+    # DB 삭제가 확정된 이후에만 연결을 닫는다. 실패 시 연결을 건드리지 않는다.
+    await chat_manager.close_room(family_room_id, code=4403)
+    return result
+
+
+class RepresentativeTransfer(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra='forbid')
+
+    target_user_id: str = Field(min_length=1, max_length=50, pattern=r'^\S+$')
+
+
+@router.post("/{family_room_id}/transfer-representative")
+async def transfer_family_room_representative(
+    data: RepresentativeTransfer,
+    family_room_id: str = Path(min_length=1, max_length=50, pattern=r'^\S+$'),
+    current_user_id: str = Depends(get_current_user_id),
+) -> dict:
+    # 참여는 종료하지 않으므로 역할 교체 시 채팅 연결을 끊지 않는다.
+    return await run_in_threadpool(
+        transfer_representative, family_room_id, current_user_id, data.target_user_id,
+    )
+
+
+# DB 참여 종료가 확정된 사용자만 이 프로세스의 채팅 연결에서 제외한다.
+@router.post("/{family_room_id}/leave")
+async def leave_family_room(
+    family_room_id: str = Path(min_length=1, max_length=50),
+    current_user_id: str = Depends(get_current_user_id),
+):
+    result = await run_in_threadpool(end_membership, family_room_id, current_user_id)
+    await chat_manager.close_member(family_room_id, result['user_id'])
+    return result
+
+
+@router.post("/{family_room_id}/members/{participate_seq}/remove")
+async def remove_family_member(
+    family_room_id: str = Path(min_length=1, max_length=50),
+    participate_seq: int = Path(gt=0),
+    current_user_id: str = Depends(get_current_user_id),
+):
+    result = await run_in_threadpool(end_membership, family_room_id, current_user_id, participate_seq)
+    await chat_manager.close_member(family_room_id, result['user_id'])
+    return result
+
+
 # 공간 생성 API
 @router.post("", status_code=201)
 def create_family_room_api(
@@ -272,7 +387,7 @@ current_user_id: str = Depends(get_current_user_id),
         current_user_id=current_user_id,
     )
 
-# 현재 사용자가 참여 중인 가족 공간 목록
+# 현재 사용자가 참여 중인 돌봄 공간 목록
 @router.get("")
 def get_family_rooms(
     # 변경 후
@@ -372,7 +487,7 @@ current_user_id: str = Depends(get_current_user_id),
     except Exception:
         raise HTTPException(
             status_code=500,
-            detail="가족 공간 목록을 불러오지 못했습니다.",
+            detail="돌봄 공간 목록을 불러오지 못했습니다.",
         ) from None
 
     finally:
@@ -412,7 +527,7 @@ def get_family_members(
             if cursor.fetchone() is None:
                 raise HTTPException(
                     status_code=403,
-                    detail="현재 참여 중인 가족 공간만 조회할 수 있습니다.",
+                    detail="현재 참여 중인 돌봄 공간만 조회할 수 있습니다.",
                 )
 
             # 현재 참여 가족만 조회하고 주보호자를 먼저 표시한다.
@@ -484,7 +599,7 @@ def update_family_recipient(
             if cursor.fetchone() is None:
                 raise HTTPException(
                     status_code=403,
-                    detail="이용할 수 없는 가족 공간입니다.",
+                    detail="이용할 수 없는 돌봄 공간입니다.",
                 )
 
             # 최초 작성자가 아니라 현재 주보호자 권한으로 검사한다.

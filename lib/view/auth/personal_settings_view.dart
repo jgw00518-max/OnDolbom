@@ -1,77 +1,566 @@
+import 'package:ondolbom/vm/settings/locale_vm.dart';
+import 'package:ondolbom/l10n/app_strings.dart';
+import 'package:ondolbom/vm/settings/theme_vm.dart';
+import 'package:ondolbom/view/auth/account_withdrawal_button.dart';
+import 'package:ondolbom/model/settings/text_size_preferences.dart';
+import 'package:ondolbom/vm/settings/text_size_vm.dart';
+import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/vm/auth/auth_vm.dart';
-import 'package:ondolbom/vm/auth/personal_settings_vm.dart';
 import 'package:ondolbom/vm/auth/user_profile_vm.dart';
+import 'package:ondolbom/view/auth/profile_edit_view.dart';
+import 'package:ondolbom/view/widgets/push_bridge.dart';
 
 class PersonalSettingsView extends ConsumerWidget {
   const PersonalSettingsView({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(userProfileProvider).asData?.value;
+    final profileState = ref.watch(userProfileProvider);
+    final profile = profileState.asData?.value;
     final user = ref.watch(authUserProvider).asData?.value;
-    final settings = ref.watch(personalSettingsProvider);
+    final textSettings = ref.watch(textSizeProvider);
+    final textSize = textSettings.asData?.value;
+    final themeState = ref.watch(themeModeProvider);
+    final appearance = themeState.asData?.value;
+    final localeState = ref.watch(localeSettingProvider);
+    final language = localeState.asData?.value;
+    final name = profile?.name?.trim().isNotEmpty == true
+        ? profile!.name!
+        : '가족 사용자';
     return Scaffold(
-      appBar: AppBar(title: const Text('개인 설정')),
-      body: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
-          Text('내 정보', style: Theme.of(context).textTheme.titleLarge),
-          ListTile(
-            title: const Text('이름'),
-            subtitle: Text(profile?.name ?? '등록 정보 없음'),
-          ),
-          ListTile(
-            title: const Text('이메일'),
-            subtitle: Text(profile?.email ?? user?.email ?? '등록 정보 없음'),
-          ),
-          ListTile(
-            title: const Text('전화번호'),
-            subtitle: Text(profile?.phone ?? '등록 정보 없음'),
-          ),
-          const Divider(),
-          Text('이 기기의 로그인 설정', style: Theme.of(context).textTheme.titleLarge),
-          settings.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.all(24),
-              child: Center(child: CircularProgressIndicator()),
+      backgroundColor: AppColors.of(context).background,
+      appBar: AppBar(
+        backgroundColor: AppColors.of(context).background,
+        surfaceTintColor: Colors.transparent,
+        foregroundColor: AppColors.of(context).textPrimary,
+        toolbarHeight: 88,
+        centerTitle: true,
+        leadingWidth: 62,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 14),
+          child: Center(
+            child: SizedBox.square(
+              dimension: 42,
+              child: OutlinedButton(
+                onPressed: () => Navigator.maybePop(context),
+                style: OutlinedButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  backgroundColor: AppColors.of(context).surface,
+                  foregroundColor: AppColors.of(context).textPrimary,
+                  side: BorderSide(color: AppColors.of(context).border),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                ),
+                child: const Icon(Icons.chevron_left),
+              ),
             ),
-            error: (error, _) => Column(
-              children: [
-                Text(error.toString()),
-                TextButton(
-                  onPressed: () => ref.invalidate(personalSettingsProvider),
-                  child: const Text('설정 다시 불러오기'),
-                ),
-              ],
+          ),
+        ),
+        title: Column(
+          children: [
+            Text(
+              'MY PREFERENCES',
+              style: TextStyle(
+                color: AppColors.resolve(context, Color(0xFFA77762)),
+                fontSize: 8,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.3,
+              ),
             ),
-            data: (value) => Column(
-              children: [
-                SwitchListTile(
-                  title: const Text('아이디 저장'),
-                  subtitle: const Text('현재 로그인한 이메일을 로그인 화면에 표시합니다.'),
-                  value: value.rememberEmail,
-                  onChanged: settings.isLoading
-                      ? null
-                      : (v) => ref
-                            .read(personalSettingsProvider.notifier)
-                            .save(rememberEmail: v),
-                ),
-                SwitchListTile(
-                  title: const Text('자동 로그인'),
-                  subtitle: const Text('앱을 다시 실행할 때 로그인 상태를 유지합니다.'),
-                  value: value.autoLogin,
-                  onChanged: settings.isLoading
-                      ? null
-                      : (v) => ref
-                            .read(personalSettingsProvider.notifier)
-                            .save(autoLogin: v),
-                ),
-              ],
+            SizedBox(height: 3),
+            Text(
+              AppStrings.tr(context, '개인 설정'),
+              style: TextStyle(
+                color: AppColors.of(context).textPrimary,
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          Container(
+            width: 42,
+            height: 42,
+            margin: const EdgeInsets.only(right: 20),
+            decoration: BoxDecoration(
+              color: AppColors.of(context).sageLight,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(
+              Icons.settings_outlined,
+              color: AppColors.of(context).sageDark,
+              size: 23,
             ),
           ),
         ],
       ),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+            children: [
+              _section(context, 'PROFILE'),
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: AppColors.of(context).peachLight,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 58,
+                      height: 58,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: AppColors.of(context).primary,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.of(
+                            context,
+                          ).surface.withValues(alpha: 0.65),
+                          width: 3,
+                        ),
+                      ),
+                      child: Text(
+                        name.characters.first,
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 13),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name,
+                            style: TextStyle(
+                              color: AppColors.of(context).textPrimary,
+                              fontSize: 19,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            profile?.email ??
+                                user?.email ??
+                                AppStrings.tr(context, '등록 정보 없음'),
+                            style: TextStyle(
+                              color: AppColors.resolve(
+                                context,
+                                Color(0xFF866E63),
+                              ),
+                              fontSize: 11,
+                              height: 1.5,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            profile?.phone ??
+                                AppStrings.tr(context, '전화번호 등록 정보 없음'),
+                            style: TextStyle(
+                              color: AppColors.resolve(
+                                context,
+                                Color(0xFF866E63),
+                              ),
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Tooltip(
+                      message: AppStrings.tr(context, '프로필 수정'),
+                      child: TextButton.icon(
+                        onPressed: profile == null || profileState.isLoading
+                            ? null
+                            : () => Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => const ProfileEditView(),
+                                ),
+                              ),
+                        style: TextButton.styleFrom(
+                          backgroundColor: AppColors.of(
+                            context,
+                          ).surface.withValues(alpha: 0.55),
+                          foregroundColor: AppColors.resolve(
+                            context,
+                            const Color(0xFF794F3C),
+                          ),
+                          minimumSize: const Size(0, 36),
+                          padding: const EdgeInsets.symmetric(horizontal: 9),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        icon: const Icon(Icons.edit_outlined, size: 14),
+                        label: Text(
+                          AppStrings.tr(context, '수정'),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (profileState.isLoading)
+                const Padding(
+                  padding: EdgeInsets.only(top: 10),
+                  child: LinearProgressIndicator(),
+                ),
+              if (profileState.hasError)
+                Column(
+                  children: [
+                    Text(
+                      AppStrings.error(context, profileState.error.toString()),
+                    ),
+                    TextButton(
+                      onPressed: () => ref.invalidate(userProfileProvider),
+                      child: Text(AppStrings.tr(context, '프로필 다시 조회')),
+                    ),
+                  ],
+                ),
+              const SizedBox(height: 28),
+              _section(context, 'APPEARANCE'),
+              _card(
+                context,
+                Column(
+                  children: [
+                    _settingRow(
+                      context,
+                      icon: _icon(
+                        Icons.dark_mode_outlined,
+                        AppColors.resolve(context, const Color(0xFFE8E4EF)),
+                        AppColors.resolve(context, const Color(0xFF6E6182)),
+                      ),
+                      title: AppStrings.tr(context, '다크 모드'),
+                      subtitle: AppStrings.tr(context, '어두운 환경에서 편안하게 이용해요'),
+                      trailing: Semantics(
+                        label: AppStrings.tr(context, '다크 모드'),
+                        child: Switch(
+                          value: appearance?.mode == ThemeMode.dark,
+                          onChanged: appearance == null || appearance.saving
+                              ? null
+                              : (value) => ref
+                                    .read(themeModeProvider.notifier)
+                                    .select(value),
+                        ),
+                      ),
+                    ),
+                    Divider(height: 1, color: AppColors.of(context).border),
+                    _settingRow(
+                      context,
+                      icon: _icon(
+                        Icons.language,
+                        AppColors.of(context).sageLight,
+                        AppColors.of(context).sageDark,
+                      ),
+                      title: AppStrings.tr(context, '언어 설정'),
+                      subtitle: AppStrings.tr(context, '앱에서 사용할 언어를 선택해요'),
+                      trailing: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 9),
+                        decoration: BoxDecoration(
+                          color: AppColors.of(context).background,
+                          border: Border.all(
+                            color: AppColors.of(context).border,
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: language?.locale.languageCode ?? 'ko',
+                            onChanged: language == null || language.saving
+                                ? null
+                                : (code) {
+                                    if (code != null) {
+                                      ref
+                                          .read(localeSettingProvider.notifier)
+                                          .select(code);
+                                    }
+                                  },
+                            style: TextStyle(
+                              color: AppColors.of(context).textPrimary,
+                              fontSize: 12,
+                            ),
+                            items: [
+                              DropdownMenuItem(value: 'ko', child: Text('한국어')),
+                              DropdownMenuItem(
+                                value: 'en',
+                                child: Text('English'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 28),
+              if (appearance?.error != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    AppStrings.error(context, appearance!.error!),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+              if (themeState.hasError)
+                TextButton(
+                  onPressed: () => ref.invalidate(themeModeProvider),
+                  child: Text(AppStrings.tr(context, '화면 설정 다시 불러오기')),
+                ),
+              _section(context, 'TEXT SIZE'),
+              _card(
+                context,
+                Column(
+                  children: [
+                    _settingRow(
+                      context,
+                      icon: _icon(
+                        Icons.text_fields,
+                        AppColors.of(context).peachSoft,
+                        AppColors.resolve(context, const Color(0xFF94644D)),
+                      ),
+                      title: AppStrings.tr(context, '글씨 크기'),
+                      subtitle: AppStrings.tr(context, '읽기 편한 크기로 조절해 보세요'),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(15),
+                      margin: const EdgeInsets.only(bottom: 14),
+                      decoration: BoxDecoration(
+                        color: AppColors.resolve(
+                          context,
+                          const Color(0xFFFFF8F3),
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 36,
+                            height: 36,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: AppColors.of(context).peachLight,
+                              borderRadius: BorderRadius.circular(11),
+                            ),
+                            child: Text(
+                              AppStrings.tr(context, '가'),
+                              style: TextStyle(
+                                color: AppColors.of(context).textPrimary,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              AppStrings.tr(context, '가족과 함께하는 따뜻한 하루'),
+                              style: TextStyle(
+                                color: AppColors.of(context).textPrimary,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // 전역 설정을 참조해 미리보기와 앱 전체에 같은 크기를 적용한다.
+                    Row(
+                      children: [
+                        for (final size in AppTextSize.values) ...[
+                          if (size != AppTextSize.small)
+                            const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: textSize == null || textSize.saving
+                                  ? null
+                                  : () => ref
+                                        .read(textSizeProvider.notifier)
+                                        .select(size),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: textSize?.size == size
+                                    ? AppColors.resolve(
+                                        context,
+                                        const Color(0xFF94644D),
+                                      )
+                                    : AppColors.of(context).textSecondary,
+                                backgroundColor: textSize?.size == size
+                                    ? AppColors.of(context).peachSoft
+                                    : AppColors.of(context).surface,
+                                side: BorderSide(
+                                  color: textSize?.size == size
+                                      ? AppColors.of(context).primary
+                                      : AppColors.of(context).border,
+                                ),
+                                minimumSize: const Size.fromHeight(40),
+                                padding: EdgeInsets.zero,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Text(
+                                AppStrings.tr(context, size.label),
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    if (textSettings.isLoading || (textSize?.saving ?? false))
+                      const Padding(
+                        padding: EdgeInsets.only(top: 10),
+                        child: LinearProgressIndicator(),
+                      ),
+                    if (textSize?.error != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: Text(
+                          AppStrings.error(context, textSize!.error!),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ),
+                    if (textSettings.hasError)
+                      Column(
+                        children: [
+                          Text(AppStrings.tr(context, '글씨 크기 설정을 불러오지 못했습니다.')),
+                          TextButton(
+                            onPressed: () => ref.invalidate(textSizeProvider),
+                            child: Text(
+                              AppStrings.tr(context, '글씨 크기 다시 불러오기'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    const SizedBox(height: 14),
+                  ],
+                ),
+              ),
+              if (language?.error != null)
+                Text(
+                  AppStrings.tr(context, language!.error!),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              if (localeState.hasError)
+                TextButton(
+                  onPressed: () => ref.invalidate(localeSettingProvider),
+                  child: Text(AppStrings.tr(context, '언어 설정 다시 불러오기')),
+                ),
+              const SizedBox(height: 28),
+              _section(context, 'NOTIFICATIONS'),
+              const PushSettingsTile(),
+              const SizedBox(height: 28),
+              const SizedBox(height: 32),
+              const AccountWithdrawalButton(),
+            ],
+          ),
+        ),
+      ),
     );
   }
+
+  Widget _section(BuildContext context, String label) => Padding(
+    padding: const EdgeInsets.only(left: 3, bottom: 10),
+    child: Text(
+      AppStrings.tr(context, label),
+      style: TextStyle(
+        color: AppColors.resolve(context, Color(0xFFA48F85)),
+        fontSize: 10,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 1.4,
+      ),
+    ),
+  );
+
+  Widget _card(BuildContext context, Widget child) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    decoration: BoxDecoration(
+      color: AppColors.of(context).surface,
+      border: Border.all(color: AppColors.of(context).border),
+      borderRadius: BorderRadius.circular(19),
+      boxShadow: [
+        BoxShadow(
+          color: AppColors.resolve(
+            context,
+            const Color(0xFF594135),
+          ).withValues(alpha: 0.04),
+          blurRadius: 22,
+          offset: const Offset(0, 7),
+        ),
+      ],
+    ),
+    child: Material(color: Colors.transparent, child: child),
+  );
+
+  Widget _icon(IconData icon, Color background, Color color) => Container(
+    width: 40,
+    height: 40,
+    decoration: BoxDecoration(
+      color: background,
+      borderRadius: BorderRadius.circular(13),
+    ),
+    child: Icon(icon, color: color, size: 22),
+  );
+
+  Widget _settingRow(
+    BuildContext context, {
+    required Widget icon,
+    required String title,
+    required String subtitle,
+    Widget? trailing,
+  }) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 18),
+    child: Row(
+      children: [
+        icon,
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  color: AppColors.of(context).textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  color: AppColors.of(context).textSecondary,
+                  fontSize: 11,
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (trailing != null) ...[const SizedBox(width: 8), trailing],
+      ],
+    ),
+  );
 }

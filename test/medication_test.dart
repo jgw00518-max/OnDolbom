@@ -82,6 +82,41 @@ Future<void> fill(WidgetTester tester, String name, String value) async {
 }
 
 void main() {
+  testWidgets('등록 순서와 무관하게 아침·점심·저녁 안에서 식전·식후 순서로 표시한다', (tester) async {
+    await mount(
+      tester,
+      MockClient(
+        (_) async => response([
+          {...medicationJson(4, '기타 약'), 'medication_time': '취침 전'},
+          {...medicationJson(3, '저녁 약'), 'medication_time': '저녁 식후 30분'},
+          {...medicationJson(2, '점심 약'), 'medication_time': '점심 식후 30분'},
+          medicationJson(1, '아침 약'),
+          {...medicationJson(5, '저녁 식전 약'), 'medication_time': '저녁 식전 30분'},
+          {...medicationJson(6, '점심 식전 약'), 'medication_time': '점심 식전 30분'},
+          {...medicationJson(7, '아침 식전 약'), 'medication_time': '아침 식전 30분'},
+        ]),
+      ),
+    );
+    tester.view.physicalSize = const Size(390, 2800);
+    await tester.pumpAndSettle();
+    final names = [
+      '아침 식전 약',
+      '아침 약',
+      '점심 식전 약',
+      '점심 약',
+      '저녁 식전 약',
+      '저녁 약',
+      '기타 약',
+    ];
+    for (var i = 0; i < names.length - 1; i++) {
+      expect(
+        tester.getTopLeft(find.textContaining(names[i])).dy,
+        lessThan(tester.getTopLeft(find.textContaining(names[i + 1])).dy),
+      );
+    }
+    expect(tester.takeException(), isNull);
+  });
+
   test('모델은 숫자·문자열 용량과 null을 처리한다', () {
     final numeric = Medication.fromJson(medicationJson(1, '테스트 약'));
     expect(numeric.doseLabel, '0.5정');
@@ -121,8 +156,8 @@ void main() {
     expect(find.text('1/2 완료'), findsOneWidget);
     expect(find.text('테스트 약 A 0.5정'), findsOneWidget);
     final card = tester.element(find.byType(Card).last);
-    expect(Theme.of(card).cardTheme.color, const Color(0xFFFFF3E9));
-    expect(Theme.of(card).colorScheme.primary, const Color(0xFFAD5B32));
+    expect(Theme.of(card).cardTheme.color, Colors.white);
+    expect(Theme.of(card).colorScheme.primary, const Color(0xFFF6B08A));
 
     await tester.tap(find.text('테스트 약 A 0.5정'));
     await tester.pumpAndSettle();
@@ -145,6 +180,7 @@ void main() {
             'family_room_id': 'room-a',
             'medication_info': '새 테스트 약',
             'medication_date': date,
+            'duration_days': 2,
             'medication_time': '아침 식후 30분',
             'dosage': '0.500',
             'dosage_unit': '정',
@@ -159,9 +195,10 @@ void main() {
       }),
       primary: true,
     );
-    await tester.tap(find.text('약 추가'));
+    await tester.tap(find.byTooltip('약 추가'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('추가'));
+    await tester.ensureVisible(find.text('약 추가하기'));
+    await tester.tap(find.text('약 추가하기'));
     await tester.pumpAndSettle();
     expect(posts, 0);
     await fill(tester, 'info', '새 테스트 약');
@@ -171,10 +208,11 @@ void main() {
     FocusManager.instance.primaryFocus?.unfocus();
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('추가'));
+    await tester.ensureVisible(find.text('약 추가하기'));
+    await tester.tap(find.text('약 추가하기'));
     await tester.pumpAndSettle();
     expect(posts, 1);
-    expect(find.byType(MedicationFormDialog), findsNothing);
+    expect(find.byType(MedicationFormView), findsNothing);
     expect(find.text('새 테스트 약 0.5정'), findsOneWidget);
   });
 
@@ -191,25 +229,26 @@ void main() {
       width: 320,
       primary: true,
     );
-    await tester.tap(find.text('약 추가'));
+    await tester.tap(find.byTooltip('약 추가'));
     await tester.pumpAndSettle();
     await fill(tester, 'info', '저장할 약');
     await fill(tester, 'dosage', '1');
     await fill(tester, 'unit', '포');
     FocusManager.instance.primaryFocus?.unfocus();
     await tester.pumpAndSettle();
-    await tester.tap(find.text('추가'));
+    await tester.ensureVisible(find.text('약 추가하기'));
+    await tester.tap(find.text('약 추가하기'));
     await tester.pump();
     await tester.tap(find.text('등록 중…'));
     expect(posts, 1);
     pending.complete(http.Response('{"detail":"error"}', 500));
     await tester.pumpAndSettle();
-    expect(find.byType(MedicationFormDialog), findsOneWidget);
+    expect(find.byType(MedicationFormView), findsOneWidget);
     final info = tester.widget<TextFormField>(
       find.byKey(const ValueKey('medication-info')),
     );
     expect(info.controller!.text, '저장할 약');
-    expect(find.text('추가'), findsOneWidget);
+    expect(find.text('약 추가하기'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

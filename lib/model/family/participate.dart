@@ -1,4 +1,4 @@
-// 누가 어떤 가족공간에 참여하고, 주보호자인지
+// 누가 어떤 돌봄 공간에 참여하고, 주보호자인지
 
 class Participate {
   final int participateSeq;

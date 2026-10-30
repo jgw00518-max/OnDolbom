@@ -14,6 +14,13 @@ python -m uvicorn python.main:app --reload
 - `main.py`: FastAPI 생성, 기능별 라우터 등록, `/health` 제공
 - `database.py`: `.env` 읽기, 필수 MySQL 설정 검사, DictCursor·수동 commit 연결 생성
 
+## 가족 공간 삭제
+
+`DELETE /family-room/{family_room_id}`로 현재 활성 주보호자가 가족 공간을 소프트 삭제합니다.
+`family_room_deleted_at`만 기록하고 모든 연결 데이터·이미지·참여·문의 이력을 보존합니다.
+삭제 확정 후 해당 공간의 현재 프로세스 채팅 연결을 종료합니다.
+권한·중복 요청·응답·제한은 [공간 삭제 API 안내](../docs/family-room-delete-api.md)를 참고합니다.
+
 ## 메모·채팅 내보내기
 
 `POST /exports/download`로 현재 참여 중인 가족 공간의 메모·채팅을 HTML·이미지 ZIP 또는 PDF로 받습니다.
@@ -182,3 +189,8 @@ Firebase ID 토큰 검증과 `GET /auth/me` 사용자 조회를 구현했습니�
 python -m pip install -r python/requirements-dev.txt
 python -m unittest discover -s python/tests -p "test_*.py" -v
 ```
+
+
+## 알림 worker
+
+알림 담당자 한 명만 별도 터미널에서 `python -m python.features.schedules.reminder_worker`를 실행합니다. 72시간 재알림·일정/채팅 푸시·재수락 만료·미발행 재시도를 한 명령으로 시작합니다. API의 기본 실행은 바뀌지 않습니다. 기존 별도 재수락 worker는 종료한 뒤 전환하세요. 자세한 내용은 [통합 실행 안내](../docs/notification-worker.md)를 참고합니다.

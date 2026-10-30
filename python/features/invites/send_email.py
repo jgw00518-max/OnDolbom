@@ -26,21 +26,22 @@ def send_invite_email(invite_email: str):
 
     # 메일 제목·발신자·수신자·본문을 작성한다.
     message = EmailMessage()
-    message["Subject"] = "[온돌봄] 가족 공간 초대가 도착했습니다."
+    message["Subject"] = "[온돌봄] 돌봄 공간 초대가 도착했습니다."
     message["From"] = formataddr((from_name, smtp_user))
     message["To"] = invite_email
 
     message.set_content(
         "가족과 함께하는 돌봄, 온돌봄\n\n"
-        "가족 공간 초대가 도착했어요.\n"
+        "돌봄 공간 초대가 도착했어요.\n"
+        "초대는 발송 후 7일 동안 유효합니다. 만료되면 초대한 가족에게 재요청해 주세요.\n"
         "온돌봄에서 가족들과 돌봄 일정을 나누고,\n"
         "소중한 일상을 함께 챙겨보세요.\n\n"
-        "[가족 공간 참여 방법]\n\n"
+        "[돌봄 공간 참여 방법]\n\n"
         "1. 온돌봄이 처음이라면, 이 메일을 받은 이메일 주소로\n"
         "   회원가입해 주세요.\n"
         "   이미 회원이라면 해당 이메일 주소로 로그인해 주세요.\n\n"
         "2. 공간 목록의 '받은 초대'에서 초대를 확인해 주세요.\n\n"
-        "3. 초대를 수락하면 가족 공간에 참여할 수 있어요.\n\n"
+        "3. 초대를 수락하면 돌봄 공간에 참여할 수 있어요.\n\n"
         "꼭 초대 메일을 받은 이메일 주소로 가입·로그인해 주세요.\n"
         "다른 이메일 주소로 이용하면 초대를 확인할 수 없어요.\n\n"
         "가족의 마음을 잇는 따뜻한 돌봄\n"
@@ -54,7 +55,7 @@ def send_invite_email(invite_email: str):
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>온돌봄 가족 공간 초대</title>
+          <title>온돌봄 돌봄 공간 초대</title>
         </head>
         <body style="margin:0; padding:0; background-color:#FFF8F1;
                      font-family:Arial,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
@@ -84,11 +85,11 @@ def send_invite_email(invite_email: str):
                     <td style="padding:32px 28px 24px;">
                       <p style="margin:0 0 14px; color:#71815F; font-size:13px;
                                 font-weight:bold; letter-spacing:1px;">
-                        가족 공간 초대장
+                        돌봄 공간 초대장
                       </p>
                       <h1 style="margin:0 0 20px; font-size:25px;
                                  line-height:1.5; color:#403C39;">
-                        함께 돌볼 가족 공간에<br>
+                        함께 돌볼 돌봄 공간에<br>
                         초대받으셨어요.
                       </h1>
                       <p style="margin:0; font-size:15px; line-height:1.9;
@@ -109,7 +110,7 @@ def send_invite_email(invite_email: str):
                           <td style="padding:24px;">
                             <p style="margin:0 0 20px; font-size:16px;
                                       font-weight:bold; color:#526345;">
-                              가족 공간에 참여하는 방법
+                              돌봄 공간에 참여하는 방법
                             </p>
 
                             <p style="margin:0 0 6px; font-size:15px;
@@ -140,7 +141,7 @@ def send_invite_email(invite_email: str):
                             </p>
                             <p style="margin:0; font-size:14px;
                                       line-height:1.8; color:#756B60;">
-                              초대를 수락하면 가족 공간에 참여해
+                              초대를 수락하면 돌봄 공간에 참여해
                               함께 돌봄을 시작할 수 있어요.
                             </p>
                           </td>
@@ -154,6 +155,8 @@ def send_invite_email(invite_email: str):
                       <p style="margin:0; padding:16px;
                                 background-color:#FFF5EC; border-radius:12px;
                                 color:#99522F; font-size:13px; line-height:1.8;">
+                        <strong>초대 유효기간은 발송 후 7일입니다.</strong><br>
+                        만료되면 초대한 가족에게 새 초대를 요청해 주세요.<br><br>
                         <strong>가입 전 확인해 주세요</strong><br>
                         꼭 초대 메일을 받은 이메일 주소로 가입·로그인해 주세요.
                         다른 이메일 주소로 이용하면 초대를 확인할 수 없어요.

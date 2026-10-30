@@ -29,6 +29,53 @@ class TestAuth extends Fake implements FirebaseAuth {
 }
 
 void main() {
+  test('프로필의 이메일 인증 필요와 탈퇴 오류를 구분한다', () {
+    for (final detail in ['회원가입 이메일 인증을 먼저 완료해 주세요.', '탈퇴 처리된 계정입니다.']) {
+      final response = http.Response(
+        jsonEncode({'detail': detail}),
+        403,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+      );
+      expect(getProfileAccessError(response), detail);
+    }
+    expect(
+      getProfileAccessError(http.Response('invalid', 403)),
+      '이 계정은 서비스를 이용할 수 없습니다.',
+    );
+  });
+
+  test('이메일 인증이 필요한 등록은 토큰을 한 번 갱신하고 안내를 유지한다', () async {
+    final user = TestUser();
+    final client = MockClient(
+      (_) async => http.Response(
+        jsonEncode({'detail': '회원가입 이메일 인증을 먼저 완료해 주세요.'}),
+        403,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+      ),
+    );
+    final container = ProviderContainer(
+      overrides: [
+        firebaseAuthProvider.overrideWithValue(TestAuth(user)),
+        authHttpClientProvider.overrideWithValue(client),
+      ],
+    );
+    addTearDown(container.dispose);
+    addTearDown(client.close);
+    final subscription = container.listen(
+      profileRegistrationProvider,
+      (_, _) {},
+    );
+    addTearDown(subscription.close);
+    await container
+        .read(profileRegistrationProvider.notifier)
+        .register('가족', '01012345678');
+    expect(user.refreshes, [false, true]);
+    expect(
+      container.read(profileRegistrationProvider).error.toString(),
+      contains('이메일 인증'),
+    );
+  });
+
   test(
     'Profile registration sends only name and phone with Firebase token',
     () async {

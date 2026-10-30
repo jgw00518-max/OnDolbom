@@ -1,8 +1,11 @@
+import 'package:ondolbom/l10n/app_strings.dart';
+import 'package:ondolbom/view/auth/account_reactivation_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/vm/auth/auth_vm.dart';
 import 'package:ondolbom/vm/auth/user_profile_vm.dart';
 import 'package:ondolbom/view/auth/profile_form_view.dart';
+import 'package:ondolbom/view/auth/widgets/login_loading_view.dart';
 import 'package:ondolbom/view/family_room/family_room_list.dart';
 
 class Home extends ConsumerWidget {
@@ -10,17 +13,24 @@ class Home extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authUserProvider).asData?.value;
     final operation = ref.watch(authVmProvider);
     // Firebase 로그인과 MySQL 사용자 등록은 별개이므로 서버 프로필을 추가 조회한다.
     final profile = ref.watch(userProfileProvider);
     final registration = ref.watch(profileRegistrationProvider);
+    final inactive = profile.error;
+    if (inactive is AccountInactiveException) {
+      return AccountReactivationView(account: inactive);
+    }
+
+    if (profile.isLoading) {
+      return const LoginLoadingView();
+    }
     // MySQL 사용자 정보 등록까지 완료하면 공간 목록을 보여준다.
     if (profile.asData?.value != null) {
       return const FamilyRoomList();
     }
     return Scaffold(
-      appBar: AppBar(title: const Text('온돌봄')),
+      appBar: AppBar(title: Text(AppStrings.tr(context, '온돌봄'))),
       body: SingleChildScrollView(
         child: Center(
           child: Padding(
@@ -28,9 +38,6 @@ class Home extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(user?.email ?? '로그인됨'),
-                const SizedBox(height: 12),
-                const Text('Firebase 로그인이 완료되었습니다.'),
                 profile.when(
                   loading: () => const Padding(
                     padding: EdgeInsets.all(12),
@@ -38,23 +45,28 @@ class Home extends ConsumerWidget {
                   ),
                   error: (error, _) => Column(
                     children: [
-                      Text(error.toString(), textAlign: TextAlign.center),
+                      Text(
+                        AppStrings.error(context, error.toString()),
+                        textAlign: TextAlign.center,
+                      ),
                       TextButton(
                         onPressed: () => ref.invalidate(userProfileProvider),
-                        child: const Text('사용자 정보 다시 확인'),
+                        child: Text(AppStrings.tr(context, '사용자 정보 다시 확인')),
                       ),
                     ],
                   ),
                   // 서버가 미등록으로 응답한 경우에만 필수 정보 입력 폼을 표시한다.
                   data: (value) => value == null
                       ? const ProfileFormView()
-                      : Text(
-                          '${value.name ?? value.email ?? '가족'}님, 사용자 정보가 연결되었습니다.',
-                          textAlign: TextAlign.center,
-                        ),
+                      : const SizedBox.shrink(),
                 ),
                 if (operation.hasError)
-                  Text(authErrorMessage(operation.error!)),
+                  Text(
+                    AppStrings.error(
+                      context,
+                      authErrorMessage(operation.error!),
+                    ),
+                  ),
                 const SizedBox(height: 24),
                 FilledButton(
                   // 프로필 저장 도중 계정을 바꾸지 않도록 로그아웃도 잠시 막는다.
@@ -63,7 +75,11 @@ class Home extends ConsumerWidget {
                       : () {
                           ref.read(authVmProvider.notifier).signOut();
                         },
-                  child: Text(operation.isLoading ? '처리 중…' : '로그아웃'),
+                  child: Text(
+                    operation.isLoading
+                        ? AppStrings.tr(context, '처리 중…')
+                        : AppStrings.tr(context, '로그아웃'),
+                  ),
                 ),
               ],
             ),

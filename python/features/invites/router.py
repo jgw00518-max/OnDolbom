@@ -1,3 +1,6 @@
+from python.features.notifications import space_events
+from typing import Literal
+from python.features.invites.history import visible_history, delete_history
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -5,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pymysql import MySQLError
 
 from python.database import connect
+from python.features.chats.read_status import initialize as initialize_chat_read
 from python.features.auth.firebase_auth import require_firebase_user
 
 from python.features.invites.send_email import send_invite_email
@@ -114,7 +118,7 @@ def check_inviter(conn, family_room_id: str, user_id: str):
         if cursor.fetchone() is None:
             raise HTTPException(
                 status_code=403,
-                detail="이용할 수 없는 가족 공간입니다.",
+                detail="이용할 수 없는 돌봄 공간입니다.",
             )
 
         cursor.execute(
@@ -140,22 +144,55 @@ def check_inviter(conn, family_room_id: str, user_id: str):
                 detail="현재 공간의 주보호자만 가족을 초대할 수 있습니다.",
             )
 # 주보호자가 가족에게 보낼 초대를 저장한다.
-# 실제 이메일 전송은 이후 단계에서 연결한다.
+# SMTP 발송과 발송 상태 확정은 신규 생성·만료 재요청에서 함께 사용한다.
 @router.post("", status_code=201)
 def create_invite(
     data: InviteCreate,
     current_user: dict = Depends(get_current_user),
 ) -> dict:
+    return _create_invite(data, current_user)
+
+
+@router.post("/{invite_id}/resend", status_code=201)
+def resend_invite(invite_id: str, current_user: dict = Depends(get_current_user)) -> dict:
+    """원래 발신자가 만료 초대 대신 새 초대를 만들고 이메일을 다시 보낸다."""
+    return _create_invite(None, current_user, resend_invite_id=invite_id)
+
+
+def _create_invite(data, current_user, resend_invite_id=None):
     conn = None
 
     try:
         conn = connect()
 
-        check_inviter(
-            conn,
-            data.family_room_id,
-            current_user["user_id"],
-        )
+        if resend_invite_id is not None:
+            # 공간 → 초대 순서로 잠그기 위해 먼저 본인 초대의 공간만 조회한다.
+            with conn.cursor() as cursor:
+                cursor.execute("""SELECT family_room_id FROM invite
+                    WHERE invite_id=%s AND inviter_id=%s AND invite_deleted_at IS NULL""",
+                    (resend_invite_id, current_user["user_id"]))
+                source = cursor.fetchone()
+            if source is None:
+                raise HTTPException(404, "본인이 보낸 초대가 없거나 확인할 수 없습니다.")
+            check_inviter(conn, source["family_room_id"], current_user["user_id"])
+            with conn.cursor() as cursor:
+                cursor.execute("""SELECT family_room_id, invite_email, invite_status,
+                    DATE_ADD(invite_at, INTERVAL 7 DAY) <= CURRENT_TIMESTAMP AS expired
+                    FROM invite WHERE invite_id=%s AND inviter_id=%s
+                    AND family_room_id=%s AND invite_deleted_at IS NULL FOR UPDATE""",
+                    (resend_invite_id, current_user["user_id"], source["family_room_id"]))
+                original = cursor.fetchone()
+            if original is None:
+                raise HTTPException(404, "초대가 없거나 확인할 수 없습니다.")
+            if not (original["invite_status"] == "만료" or
+                    (original["invite_status"] == "대기" and original["expired"])):
+                raise HTTPException(409, "만료된 초대만 재요청할 수 있습니다.")
+            # 수신 이메일·공간은 요청 본문으로 바꾸지 않고 기존 초대에서 결정한다.
+            data = InviteCreate(family_room_id=original["family_room_id"],
+                                invite_email=original["invite_email"])
+
+        if resend_invite_id is None:
+            check_inviter(conn, data.family_room_id, current_user["user_id"])
 
         # 이메일 비교는 앞뒤 공백과 대소문자를 구분하지 않는다.
         invite_email = data.invite_email.strip().lower()
@@ -377,6 +414,7 @@ def get_received_invites(
                     i.family_room_id,
                     i.invite_email,
                     i.invite_at,
+                    DATE_ADD(i.invite_at, INTERVAL 7 DAY) AS expires_at,
                     i.invite_status,
                     f.care_recipient_name,
                     u.name AS inviter_name
@@ -386,20 +424,20 @@ def get_received_invites(
                 JOIN `user` AS u
                   ON u.user_id = i.inviter_id
                 WHERE LOWER(TRIM(i.invite_email)) = %s
-                  AND i.invite_status IN (%s, %s) 
+                  AND i.invite_status IN (%s, %s, %s, %s, %s)
                   AND i.invite_deleted_at IS NULL
                   AND f.family_room_deleted_at IS NULL
                   AND u.withdrawn_at IS NULL
                 ORDER BY i.invite_at DESC, i.invite_id
                 """,
-                (email, "대기", "만료"),
+                (email, "대기", "만료", "수락", "거절", "취소"),
             )
 
             invites = cursor.fetchall()
 
         conn.commit()
 
-        return {"results": invites}
+        return {"results": visible_history(invites, current_user["user_id"], "received")}
 
     except HTTPException:
         raise
@@ -435,7 +473,7 @@ def accept_invite(
         conn = connect()
 
         with conn.cursor() as cursor:
-            # 잠글 가족 공간을 먼저 확인한다.
+            # 잠글 돌봄 공간을 먼저 확인한다.
             cursor.execute(
                 """
                 SELECT family_room_id
@@ -472,7 +510,7 @@ def accept_invite(
             if cursor.fetchone() is None:
                 raise HTTPException(
                     status_code=403,
-                    detail="이용할 수 없는 가족 공간입니다.",
+                    detail="이용할 수 없는 돌봄 공간입니다.",
                 )
 
             # 동시 수락 요청을 순서대로 처리한다.
@@ -554,7 +592,7 @@ def accept_invite(
             if cursor.fetchone() is not None:
                 raise HTTPException(
                     status_code=409,
-                    detail="이미 참여 중인 가족 공간입니다.",
+                    detail="이미 참여 중인 돌봄 공간입니다.",
                 )
 
             # 초대받은 계정을 일반 가족으로 등록한다.
@@ -569,6 +607,9 @@ def accept_invite(
                 """,
                 (user_id, family_room_id, 0),
             )
+
+            # 기존 대화는 조회할 수 있지만 신규 참여 전 메시지는 미읽음에 넣지 않는다.
+            initialize_chat_read(cursor, cursor.lastrowid, family_room_id)
 
             # 참여 등록과 초대 상태 변경을 함께 저장한다.
             cursor.execute(
@@ -599,7 +640,10 @@ def accept_invite(
                     detail="초대 상태가 변경되었습니다. 다시 조회해 주세요.",
                 )
 
+        # 실제 신규 참여가 확정되는 경로에서만 알림을 만든다. 중복 수락 응답은 이 경로를 타지 않는다.
+        notice = space_events.prepare(conn, family_room_id, user_id, 'member_joined', invite_id)
         conn.commit()
+        space_events.publish_safely(notice)
 
         return {
             "result": "OK",
@@ -681,7 +725,7 @@ def reject_invite(
             if cursor.fetchone() is None:
                 raise HTTPException(
                     status_code=403,
-                    detail="이용할 수 없는 가족 공간입니다.",
+                    detail="이용할 수 없는 돌봄 공간입니다.",
                 )
 
             # 수락·거절 요청이 동시에 처리되지 않도록 초대를 잠근다.
@@ -788,7 +832,7 @@ def reject_invite(
         if conn is not None:
             conn.close()
 
-# 현재 주보호자로 관리하는 공간의 보낸 초대를 조회한다.
+# 현재 참여 중인 공간에서 본인이 보낸 초대만 조회한다.
 @router.get("/sent")
 def get_sent_invites(
     current_user: dict = Depends(get_current_user),
@@ -800,7 +844,7 @@ def get_sent_invites(
         conn = connect()
 
         with conn.cursor() as cursor:
-            # 관리 중인 공간의 대기 초대 중 7일이 지난 건을 만료 처리한다.
+            # 본인이 보낸 대기 초대만 조회 시 만료 처리한다.
             cursor.execute(
                 """
                 UPDATE invite AS i
@@ -810,7 +854,7 @@ def get_sent_invites(
                   ON p.family_room_id = i.family_room_id
                 SET i.invite_status = %s
                 WHERE p.user_id = %s
-                  AND p.is_representative = 1
+                  AND i.inviter_id = p.user_id
                   AND p.left_at IS NULL
                   AND f.family_room_deleted_at IS NULL
                   AND i.invite_deleted_at IS NULL
@@ -821,7 +865,7 @@ def get_sent_invites(
                 ("만료", user_id, "대기"),
             )
 
-            # 공간별 역할을 검사하여 현재 주보호자인 공간만 조회한다.
+            # 주보호자 이전은 초대 발신자를 바꾸지 않는다. 본인 발신 기록만 조회한다.
             cursor.execute(
                 """
                 SELECT DISTINCT
@@ -829,7 +873,18 @@ def get_sent_invites(
                     i.family_room_id,
                     i.invite_email,
                     i.invite_at,
+                    DATE_ADD(i.invite_at, INTERVAL 7 DAY) AS expires_at,
                     i.invite_status,
+                    (i.inviter_id = p.user_id AND p.is_representative = 1 AND i.invite_status = '만료'
+                     AND NOT EXISTS (SELECT 1 FROM invite newer
+                         WHERE newer.family_room_id=i.family_room_id
+                         AND LOWER(TRIM(newer.invite_email))=LOWER(TRIM(i.invite_email))
+                         AND newer.invite_deleted_at IS NULL
+                         AND (newer.invite_status='발송대기' OR
+                              (newer.invite_status='대기' AND
+                               DATE_ADD(newer.invite_at, INTERVAL 7 DAY)>CURRENT_TIMESTAMP)))) AS can_resend,
+                    (p.is_representative = 1 AND i.invite_status = '대기'
+                     AND DATE_ADD(i.invite_at, INTERVAL 7 DAY)>CURRENT_TIMESTAMP) AS can_cancel,
                     f.care_recipient_name,
                     u.name AS inviter_name
                 FROM invite AS i
@@ -840,7 +895,7 @@ def get_sent_invites(
                 JOIN `user` AS u
                   ON u.user_id = i.inviter_id
                 WHERE p.user_id = %s
-                  AND p.is_representative = 1
+                  AND i.inviter_id = p.user_id
                   AND p.left_at IS NULL
                   AND f.family_room_deleted_at IS NULL
                   AND i.invite_deleted_at IS NULL
@@ -854,7 +909,7 @@ def get_sent_invites(
         # 조회 과정에서 변경한 만료 상태를 저장한다.
         conn.commit()
 
-        return {"results": invites}
+        return {"results": visible_history(invites, current_user["user_id"], "sent")}
 
     except (MySQLError, ValueError):
         if conn is not None:
@@ -1009,6 +1064,26 @@ def cancel_invite(
             detail="초대를 취소하지 못했습니다.",
         ) from None
 
+    finally:
+        if conn is not None:
+            conn.close()
+
+class InviteHistoryDelete(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    side: Literal['received', 'sent']
+    invite_ids: list[str] = Field(min_length=1, max_length=400)
+
+
+@router.post('/history/delete')
+def delete_invite_history(payload: InviteHistoryDelete,
+        current_user: dict = Depends(get_current_user)):
+    conn = None
+    try:
+        conn = connect()
+        deleted = delete_history(conn, current_user, payload.side, payload.invite_ids)
+        return dict(result='OK', deleted_count=deleted)
+    except MySQLError:
+        raise HTTPException(503, '초대 기록을 확인하지 못했습니다.') from None
     finally:
         if conn is not None:
             conn.close()

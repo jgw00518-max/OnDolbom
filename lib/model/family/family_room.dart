@@ -1,7 +1,7 @@
 // 어떤 공간인지, 대상자가 누구인지 
 
 class FamilyRoom {
-  // 가족 공간 정보
+  // 돌봄 공간 정보
   final String familyRoomId;
   final String createdBy;
   final DateTime? createdAt;

@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -32,7 +33,9 @@ class MemoLikeButton extends ConsumerWidget {
         selected.userId.isNotEmpty &&
         memo.familyRoomId == selected.familyRoomId;
     return Tooltip(
-      message: liked ? '좋아요를 눌렀어요. 취소할 수 없어요.' : '좋아요',
+      message: liked
+          ? AppStrings.tr(context, '좋아요를 눌렀어요. 취소할 수 없어요.')
+          : AppStrings.tr(context, '좋아요'),
       child: TextButton.icon(
         onPressed: disabled || !allowed || liked || action.isLoading
             ? null
@@ -44,9 +47,15 @@ class MemoLikeButton extends ConsumerWidget {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        error is MemoFailure
-                            ? error.message
-                            : '좋아요를 등록하지 못했어요. 다시 시도해 주세요.',
+                        AppStrings.error(
+                          context,
+                          error is MemoFailure
+                              ? error.message
+                              : AppStrings.tr(
+                                  context,
+                                  '좋아요를 등록하지 못했어요. 다시 시도해 주세요.',
+                                ),
+                        ),
                       ),
                     ),
                   );
@@ -63,7 +72,7 @@ class MemoLikeButton extends ConsumerWidget {
                 size: 18,
                 color: liked ? Theme.of(context).colorScheme.primary : null,
               ),
-        label: Text('좋아요 $likes'),
+        label: Text(AppStrings.format(context, "좋아요 {0}", [likes])),
       ),
     );
   }
