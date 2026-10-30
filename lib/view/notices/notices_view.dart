@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/view/widgets/menu_header_icon.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/view/widgets/activity_read_marker.dart';
@@ -12,9 +13,9 @@ const _noticeLine = AppColors.border;
 
 // 목록·상세에서 같은 장식과 상단 배치를 사용한다.
 AppBar _noticeHeader(BuildContext context, {required bool detail}) => AppBar(
-  backgroundColor: _noticePaper,
+  backgroundColor: AppColors.resolve(context, _noticePaper),
   surfaceTintColor: Colors.transparent,
-  foregroundColor: _noticeInk,
+  foregroundColor: AppColors.resolve(context, _noticeInk),
   toolbarHeight: 88,
   centerTitle: true,
   leadingWidth: 62,
@@ -27,9 +28,9 @@ AppBar _noticeHeader(BuildContext context, {required bool detail}) => AppBar(
           onPressed: () => Navigator.maybePop(context),
           style: OutlinedButton.styleFrom(
             padding: EdgeInsets.zero,
-            backgroundColor: AppColors.surface,
-            foregroundColor: _noticeInk,
-            side: const BorderSide(color: _noticeLine),
+            backgroundColor: AppColors.of(context).surface,
+            foregroundColor: AppColors.resolve(context, _noticeInk),
+            side: BorderSide(color: AppColors.resolve(context, _noticeLine)),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(13),
             ),
@@ -41,10 +42,10 @@ AppBar _noticeHeader(BuildContext context, {required bool detail}) => AppBar(
   ),
   title: Column(
     children: [
-      const Text(
+      Text(
         'ONDOLBOM NEWS',
         style: TextStyle(
-          color: Color(0xFFA77762),
+          color: AppColors.resolve(context, Color(0xFFA77762)),
           fontSize: 8,
           fontWeight: FontWeight.w800,
           letterSpacing: 1.3,
@@ -52,31 +53,36 @@ AppBar _noticeHeader(BuildContext context, {required bool detail}) => AppBar(
       ),
       const SizedBox(height: 3),
       Text(
-        detail ? '공지 상세' : '공지사항',
-        style: const TextStyle(
-          color: _noticeInk,
+        detail
+            ? AppStrings.tr(context, '공지 상세')
+            : AppStrings.tr(context, '공지사항'),
+        style: TextStyle(
+          color: AppColors.resolve(context, _noticeInk),
           fontSize: 24,
           fontWeight: FontWeight.w800,
         ),
       ),
     ],
   ),
-  actions: const [
+  actions: [
     MenuHeaderIcon(
       icon: Icons.campaign_outlined,
-      backgroundColor: AppColors.peachLight,
-      foregroundColor: Color(0xFF875C49),
+      backgroundColor: AppColors.of(context).peachLight,
+      foregroundColor: AppColors.resolve(context, Color(0xFF875C49)),
     ),
   ],
 );
 
-BoxDecoration _noticeCardDecoration() => BoxDecoration(
-  color: AppColors.surface,
-  border: Border.all(color: _noticeLine),
+BoxDecoration _noticeCardDecoration(BuildContext context) => BoxDecoration(
+  color: AppColors.of(context).surface,
+  border: Border.all(color: AppColors.resolve(context, _noticeLine)),
   borderRadius: BorderRadius.circular(22),
   boxShadow: [
     BoxShadow(
-      color: const Color(0xFF594135).withValues(alpha: 0.04),
+      color: AppColors.resolve(
+        context,
+        const Color(0xFF594135),
+      ).withValues(alpha: 0.04),
       blurRadius: 24,
       offset: const Offset(0, 8),
     ),
@@ -95,11 +101,13 @@ class _NoticesViewState extends ConsumerState<NoticesView> {
   Widget build(BuildContext context) {
     final result = ref.watch(noticesProvider(_offset));
     return Scaffold(
-      backgroundColor: _noticePaper,
+      backgroundColor: AppColors.resolve(context, _noticePaper),
       appBar: _noticeHeader(context, detail: false),
       body: result.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
+        loading: () => Center(
+          child: CircularProgressIndicator(
+            color: AppColors.of(context).primary,
+          ),
         ),
         error: (error, _) => NoticeError(
           message: error.toString(),
@@ -115,19 +123,22 @@ class _NoticesViewState extends ConsumerState<NoticesView> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '온돌봄의 새로운 소식',
-                            style: TextStyle(color: _noticeMuted, fontSize: 12),
+                            AppStrings.tr(context, '온돌봄의 새로운 소식'),
+                            style: TextStyle(
+                              color: AppColors.resolve(context, _noticeMuted),
+                              fontSize: 12,
+                            ),
                           ),
                           SizedBox(height: 7),
                           Text(
-                            '꼭 확인해 주세요',
+                            AppStrings.tr(context, '꼭 확인해 주세요'),
                             style: TextStyle(
-                              color: _noticeInk,
+                              color: AppColors.resolve(context, _noticeInk),
                               fontSize: 24,
                               fontWeight: FontWeight.w800,
                               letterSpacing: -0.8,
@@ -143,13 +154,16 @@ class _NoticesViewState extends ConsumerState<NoticesView> {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.peachSoft,
+                        color: AppColors.of(context).peachSoft,
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child: Text(
-                        '${page.items.length}개의 공지${page.hasMore || _offset > 0 ? ' · 현재 페이지' : ''}',
-                        style: const TextStyle(
-                          color: Color(0xFFA46F59),
+                        AppStrings.format(context, "{0}개의 공지{1}", [
+                          page.items.length,
+                          page.hasMore || _offset > 0 ? ' · 현재 페이지' : '',
+                        ]),
+                        style: TextStyle(
+                          color: AppColors.resolve(context, Color(0xFFA46F59)),
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
                         ),
@@ -159,14 +173,17 @@ class _NoticesViewState extends ConsumerState<NoticesView> {
                 ),
                 const SizedBox(height: 24),
                 if (page.items.isEmpty)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.all(32),
-                    child: Text('등록된 공지사항이 없습니다.', textAlign: TextAlign.center),
+                    child: Text(
+                      AppStrings.tr(context, '등록된 공지사항이 없습니다.'),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 for (final notice in page.items)
                   Container(
                     margin: const EdgeInsets.only(bottom: 14),
-                    decoration: _noticeCardDecoration(),
+                    decoration: _noticeCardDecoration(context),
                     child: Material(
                       color: Colors.transparent,
                       borderRadius: BorderRadius.circular(22),
@@ -193,13 +210,16 @@ class _NoticesViewState extends ConsumerState<NoticesView> {
                                 width: 42,
                                 height: 42,
                                 decoration: BoxDecoration(
-                                  color: AppColors.peachSoft,
+                                  color: AppColors.of(context).peachSoft,
                                   borderRadius: BorderRadius.circular(14),
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.campaign_outlined,
                                   size: 22,
-                                  color: Color(0xFFA46F59),
+                                  color: AppColors.resolve(
+                                    context,
+                                    Color(0xFFA46F59),
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 13),
@@ -212,16 +232,22 @@ class _NoticesViewState extends ConsumerState<NoticesView> {
                                         0,
                                         16,
                                       ),
-                                      style: const TextStyle(
-                                        color: _noticeMuted,
+                                      style: TextStyle(
+                                        color: AppColors.resolve(
+                                          context,
+                                          _noticeMuted,
+                                        ),
                                         fontSize: 10,
                                       ),
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
                                       notice.title,
-                                      style: const TextStyle(
-                                        color: _noticeInk,
+                                      style: TextStyle(
+                                        color: AppColors.resolve(
+                                          context,
+                                          _noticeInk,
+                                        ),
                                         fontSize: 16,
                                         fontWeight: FontWeight.w800,
                                         height: 1.45,
@@ -234,8 +260,11 @@ class _NoticesViewState extends ConsumerState<NoticesView> {
                                           .trim(),
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        color: _noticeMuted,
+                                      style: TextStyle(
+                                        color: AppColors.resolve(
+                                          context,
+                                          _noticeMuted,
+                                        ),
                                         fontSize: 12,
                                         height: 1.6,
                                       ),
@@ -244,10 +273,13 @@ class _NoticesViewState extends ConsumerState<NoticesView> {
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              const Icon(
+                              Icon(
                                 Icons.chevron_right,
                                 size: 19,
-                                color: Color(0xFFB1A59F),
+                                color: AppColors.resolve(
+                                  context,
+                                  Color(0xFFB1A59F),
+                                ),
                               ),
                             ],
                           ),
@@ -262,15 +294,19 @@ class _NoticesViewState extends ConsumerState<NoticesView> {
                       onPressed: _offset == 0
                           ? null
                           : () => setState(() => _offset -= 30),
-                      style: TextButton.styleFrom(foregroundColor: _noticeInk),
-                      child: const Text('이전'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.resolve(context, _noticeInk),
+                      ),
+                      child: Text(AppStrings.tr(context, '이전')),
                     ),
                     TextButton(
                       onPressed: page.hasMore
                           ? () => setState(() => _offset += 30)
                           : null,
-                      style: TextButton.styleFrom(foregroundColor: _noticeInk),
-                      child: const Text('다음'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.resolve(context, _noticeInk),
+                      ),
+                      child: Text(AppStrings.tr(context, '다음')),
                     ),
                   ],
                 ),
@@ -290,11 +326,13 @@ class NoticeDetailView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final result = ref.watch(noticeDetailProvider(noticeKey));
     return Scaffold(
-      backgroundColor: _noticePaper,
+      backgroundColor: AppColors.resolve(context, _noticePaper),
       appBar: _noticeHeader(context, detail: true),
       body: result.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
+        loading: () => Center(
+          child: CircularProgressIndicator(
+            color: AppColors.of(context).primary,
+          ),
         ),
         error: (e, _) => NoticeError(
           message: e.toString(),
@@ -316,14 +354,14 @@ class NoticeDetailView extends ConsumerWidget {
                       horizontal: 22,
                       vertical: 30,
                     ),
-                    decoration: _noticeCardDecoration(),
+                    decoration: _noticeCardDecoration(context),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           notice.title,
-                          style: const TextStyle(
-                            color: _noticeInk,
+                          style: TextStyle(
+                            color: AppColors.resolve(context, _noticeInk),
                             fontSize: 25,
                             fontWeight: FontWeight.w800,
                             height: 1.4,
@@ -333,17 +371,22 @@ class NoticeDetailView extends ConsumerWidget {
                         const SizedBox(height: 16),
                         Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.schedule,
                               size: 14,
-                              color: _noticeMuted,
+                              color: AppColors.resolve(context, _noticeMuted),
                             ),
                             const SizedBox(width: 7),
                             Expanded(
                               child: Text(
-                                '등록 ${notice.createdAt.toString().substring(0, 16)}',
-                                style: const TextStyle(
-                                  color: _noticeMuted,
+                                AppStrings.format(context, "등록 {0}", [
+                                  notice.createdAt.toString().substring(0, 16),
+                                ]),
+                                style: TextStyle(
+                                  color: AppColors.resolve(
+                                    context,
+                                    _noticeMuted,
+                                  ),
                                   fontSize: 11,
                                 ),
                               ),
@@ -354,27 +397,38 @@ class NoticeDetailView extends ConsumerWidget {
                           Padding(
                             padding: const EdgeInsets.only(top: 7),
                             child: Text(
-                              '수정 ${notice.updatedAt.toString().substring(0, 16)}',
-                              style: const TextStyle(
-                                color: _noticeMuted,
+                              AppStrings.format(context, "수정 {0}", [
+                                notice.updatedAt.toString().substring(0, 16),
+                              ]),
+                              style: TextStyle(
+                                color: AppColors.resolve(context, _noticeMuted),
                                 fontSize: 11,
                               ),
                             ),
                           ),
-                        const Divider(color: Color(0xFFF0E6DF), height: 42),
+                        Divider(
+                          color: AppColors.resolve(context, Color(0xFFF0E6DF)),
+                          height: 42,
+                        ),
                         SelectableText(
                           notice.content,
-                          style: const TextStyle(
-                            color: Color(0xFF746A64),
+                          style: TextStyle(
+                            color: AppColors.resolve(
+                              context,
+                              Color(0xFF746A64),
+                            ),
                             fontSize: 15,
                             height: 1.9,
                           ),
                         ),
                         const SizedBox(height: 32),
-                        const Text(
-                          '온돌봄 운영팀 드림',
+                        Text(
+                          AppStrings.tr(context, '온돌봄 운영팀 드림'),
                           style: TextStyle(
-                            color: Color(0xFFA46F59),
+                            color: AppColors.resolve(
+                              context,
+                              Color(0xFFA46F59),
+                            ),
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                           ),
@@ -386,8 +440,16 @@ class NoticeDetailView extends ConsumerWidget {
                   FilledButton(
                     onPressed: () => Navigator.maybePop(context),
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: _noticeInk,
+                      backgroundColor: AppColors.resolve(
+                        context,
+                        AppColors.primary,
+                        onAccent: true,
+                      ),
+                      foregroundColor: AppColors.resolve(
+                        context,
+                        _noticeInk,
+                        onAccent: true,
+                      ),
                       minimumSize: const Size.fromHeight(54),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
@@ -397,7 +459,7 @@ class NoticeDetailView extends ConsumerWidget {
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    child: const Text('목록으로 돌아가기'),
+                    child: Text(AppStrings.tr(context, '목록으로 돌아가기')),
                   ),
                 ],
               ),
@@ -421,7 +483,10 @@ class NoticeError extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(message, textAlign: TextAlign.center),
-          TextButton(onPressed: retry, child: const Text('다시 시도')),
+          TextButton(
+            onPressed: retry,
+            child: Text(AppStrings.tr(context, '다시 시도')),
+          ),
         ],
       ),
     ),

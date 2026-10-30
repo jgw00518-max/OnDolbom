@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/model/chats/chat_message.dart';
@@ -57,12 +58,12 @@ class _ChatEditDialogState extends ConsumerState<ChatEditDialog> {
     final sameContext = ref.watch(familyContextProvider) == widget.selected;
     if (!sameContext) {
       return AlertDialog(
-        title: const Text('메시지 수정'),
-        content: const Text('선택한 공간이나 로그인 계정이 변경되었습니다.'),
+        title: Text(AppStrings.tr(context, '메시지 수정')),
+        content: Text(AppStrings.tr(context, '선택한 공간이나 로그인 계정이 변경되었습니다.')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('닫기'),
+            child: Text(AppStrings.tr(context, '닫기')),
           ),
         ],
       );
@@ -83,7 +84,7 @@ class _ChatEditDialogState extends ConsumerState<ChatEditDialog> {
     return PopScope(
       canPop: !_saving,
       child: AlertDialog(
-        title: const Text('메시지 수정'),
+        title: Text(AppStrings.tr(context, '메시지 수정')),
         content: SingleChildScrollView(
           child: Form(
             key: _form,
@@ -92,7 +93,7 @@ class _ChatEditDialogState extends ConsumerState<ChatEditDialog> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (widget.message.hasImage)
-                  const Text('첨부 사진은 유지되며 설명만 수정합니다.'),
+                  Text(AppStrings.tr(context, '첨부 사진은 유지되며 설명만 수정합니다.')),
                 TextFormField(
                   key: const ValueKey('chat-edit-input'),
                   controller: _content,
@@ -100,21 +101,30 @@ class _ChatEditDialogState extends ConsumerState<ChatEditDialog> {
                   minLines: 2,
                   maxLines: 6,
                   maxLength: 4000,
-                  decoration: const InputDecoration(labelText: '메시지 내용'),
+                  decoration: InputDecoration(
+                    labelText: AppStrings.tr(context, '메시지 내용'),
+                  ),
                   validator: (value) {
                     final text = value?.trim() ?? '';
                     if (text.isEmpty && !widget.message.hasImage) {
-                      return '텍스트 메시지 내용은 비울 수 없습니다.';
+                      return AppStrings.tr(context, '텍스트 메시지 내용은 비울 수 없습니다.');
                     }
-                    if (text.runes.length > 4000) return '최대 4,000자까지 입력해 주세요.';
+                    if (text.runes.length > 4000) {
+                      return AppStrings.tr(context, '최대 4,000자까지 입력해 주세요.');
+                    }
                     return null;
                   },
                 ),
                 if (!allowed)
-                  const Text('메시지 또는 연결 상태가 변경되었습니다. 닫은 뒤 다시 확인해 주세요.'),
+                  Text(
+                    AppStrings.tr(
+                      context,
+                      '메시지 또는 연결 상태가 변경되었습니다. 닫은 뒤 다시 확인해 주세요.',
+                    ),
+                  ),
                 if (_error != null)
                   Text(
-                    _error!,
+                    AppStrings.error(context, _error!),
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.error,
                     ),
@@ -126,7 +136,7 @@ class _ChatEditDialogState extends ConsumerState<ChatEditDialog> {
         actions: [
           TextButton(
             onPressed: _saving ? null : () => Navigator.pop(context),
-            child: const Text('취소'),
+            child: Text(AppStrings.tr(context, '취소')),
           ),
           FilledButton(
             onPressed:
@@ -135,7 +145,11 @@ class _ChatEditDialogState extends ConsumerState<ChatEditDialog> {
                     !state.changing.contains(widget.message.seq)
                 ? _save
                 : null,
-            child: Text(_saving ? '저장 중…' : '저장'),
+            child: Text(
+              _saving
+                  ? AppStrings.tr(context, '저장 중…')
+                  : AppStrings.tr(context, '저장'),
+            ),
           ),
         ],
       ),

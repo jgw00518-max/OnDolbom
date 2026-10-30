@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/view/family_room/membership_exit_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,9 +27,9 @@ class SpaceSettingsView extends ConsumerWidget {
       return Scaffold(
         appBar: AppBar(
           leading: const AppBackLeading(),
-          title: const Text('공간 설정'),
+          title: Text(AppStrings.tr(context, '공간 설정')),
         ),
-        body: const Center(child: Text('공간을 선택해 주세요.')),
+        body: Center(child: Text(AppStrings.tr(context, '공간을 선택해 주세요.'))),
       );
     }
     return Scaffold(
@@ -36,19 +37,19 @@ class SpaceSettingsView extends ConsumerWidget {
         leading: const AppBackLeading(),
         leadingWidth: 62,
         centerTitle: true,
-        title: const Text('공간 설정'),
+        title: Text(AppStrings.tr(context, '공간 설정')),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 20),
             child: Container(
               padding: const EdgeInsets.all(11),
               decoration: BoxDecoration(
-                color: AppColors.sageLight,
+                color: AppColors.of(context).sageLight,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.settings_outlined,
-                color: AppColors.sageDark,
+                color: AppColors.of(context).sageDark,
               ),
             ),
           ),
@@ -63,16 +64,18 @@ class SpaceSettingsView extends ConsumerWidget {
             runSpacing: 12,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              const Column(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '우리 가족',
-                    style: TextStyle(color: AppColors.textSecondary),
+                    AppStrings.tr(context, '우리 가족'),
+                    style: TextStyle(
+                      color: AppColors.of(context).textSecondary,
+                    ),
                   ),
                   SizedBox(height: 8),
                   Text(
-                    '공간을 관리해요',
+                    AppStrings.tr(context, '공간을 관리해요'),
                     style: TextStyle(fontSize: 25, fontWeight: FontWeight.w800),
                   ),
                 ],
@@ -83,24 +86,28 @@ class SpaceSettingsView extends ConsumerWidget {
                       ? Icons.workspace_premium_outlined
                       : Icons.person_outline,
                   size: 18,
-                  color: AppColors.sageDark,
+                  color: AppColors.of(context).sageDark,
                 ),
-                label: Text(guardian ? '주보호자' : '일반 가족'),
-                backgroundColor: AppColors.sageLight,
+                label: Text(
+                  guardian
+                      ? AppStrings.tr(context, '주보호자')
+                      : AppStrings.tr(context, '일반 가족'),
+                ),
+                backgroundColor: AppColors.of(context).sageLight,
                 side: BorderSide.none,
               ),
             ],
           ),
           const SizedBox(height: 28),
-          _label('공간 정보'),
-          _group([
+          _label(AppStrings.tr(context, '공간 정보')),
+          _group(context, [
             if (guardian)
               _action(
                 context,
-                '가족 초대',
-                '새로운 가족을 공간에 초대해요',
+                AppStrings.tr(context, '가족 초대'),
+                AppStrings.tr(context, '새로운 가족을 공간에 초대해요'),
                 Icons.person_add_alt_outlined,
-                AppColors.sageLight,
+                AppColors.of(context).sageLight,
                 () async {
                   final sent = await Navigator.of(context).push<bool>(
                     MaterialPageRoute(
@@ -114,9 +121,15 @@ class SpaceSettingsView extends ConsumerWidget {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        sent
-                            ? '초대를 등록하고 이메일을 발송했습니다.'
-                            : '초대는 등록했지만 이메일 발송에 실패했습니다.',
+                        AppStrings.error(
+                          context,
+                          sent
+                              ? AppStrings.tr(context, '초대를 등록하고 이메일을 발송했습니다.')
+                              : AppStrings.tr(
+                                  context,
+                                  '초대는 등록했지만 이메일 발송에 실패했습니다.',
+                                ),
+                        ),
                       ),
                     ),
                   );
@@ -124,10 +137,10 @@ class SpaceSettingsView extends ConsumerWidget {
               ),
             _action(
               context,
-              '함께하는 가족',
-              '참여 중인 가족과 공간별 역할을 확인해요',
+              AppStrings.tr(context, '함께하는 가족'),
+              AppStrings.tr(context, '참여 중인 가족과 공간별 역할을 확인해요'),
               Icons.groups_outlined,
-              AppColors.sageLight,
+              AppColors.of(context).sageLight,
               () => _open(
                 context,
                 FamilyMemberList(familyRoomId: room.familyRoomId),
@@ -136,14 +149,14 @@ class SpaceSettingsView extends ConsumerWidget {
           ]),
           const SizedBox(height: 24),
           // 가족 조회는 눌렀을 때만 요청하고, 기록 내보내기는 공간 관리에 둔다.
-          _label('공간 관리'),
-          _group([
+          _label(AppStrings.tr(context, '공간 관리')),
+          _group(context, [
             _action(
               context,
-              '메모 및 채팅 내보내기',
-              '공간의 기록을 파일로 저장해요',
+              AppStrings.tr(context, '메모 및 채팅 내보내기'),
+              AppStrings.tr(context, '공간의 기록을 파일로 저장해요'),
               Icons.file_download_outlined,
-              AppColors.peachSoft,
+              AppColors.of(context).peachSoft,
               () {
                 final selected = ref.read(familyContextProvider);
                 if (selected.familyRoomId != room.familyRoomId) return;
@@ -153,17 +166,20 @@ class SpaceSettingsView extends ConsumerWidget {
 
             _action(
               context,
-              '공간에서 나가기',
-              '내 계정만 이 공간에서 나가요',
+              AppStrings.tr(context, '공간에서 나가기'),
+              AppStrings.tr(context, '내 계정만 이 공간에서 나가요'),
               Icons.logout,
-              AppColors.peachSoft,
+              AppColors.of(context).peachSoft,
               state.isLoading
                   ? null
                   : () async {
                       if (guardian) {
                         _notice(
                           context,
-                          '공간에서 나가려면 먼저 주보호자 이전이 필요해요. 함께하는 가족에서 이전해 주세요.',
+                          AppStrings.tr(
+                            context,
+                            '공간에서 나가려면 먼저 주보호자 이전이 필요해요. 함께하는 가족에서 이전해 주세요.',
+                          ),
                         );
                         return;
                       }
@@ -185,10 +201,10 @@ class SpaceSettingsView extends ConsumerWidget {
             if (guardian)
               _action(
                 context,
-                '돌봄 공간 삭제',
-                '공간을 삭제 처리하고 가족의 접근을 종료해요',
+                AppStrings.tr(context, '돌봄 공간 삭제'),
+                AppStrings.tr(context, '공간을 삭제 처리하고 가족의 접근을 종료해요'),
                 Icons.delete_outline,
-                AppColors.peachSoft,
+                AppColors.of(context).peachSoft,
                 state.isLoading
                     ? null
                     : () async {
@@ -221,10 +237,10 @@ class SpaceSettingsView extends ConsumerWidget {
         ),
       );
 
-  Widget _group(List<Widget> children) => Material(
-    color: AppColors.surface,
+  Widget _group(BuildContext context, List<Widget> children) => Material(
+    color: AppColors.of(context).surface,
     shape: RoundedRectangleBorder(
-      side: const BorderSide(color: AppColors.border),
+      side: BorderSide(color: AppColors.of(context).border),
       borderRadius: BorderRadius.circular(24),
     ),
     clipBehavior: Clip.antiAlias,
@@ -232,11 +248,11 @@ class SpaceSettingsView extends ConsumerWidget {
       children: [
         for (var i = 0; i < children.length; i++) ...[
           if (i > 0)
-            const Divider(
+            Divider(
               height: 1,
               indent: 20,
               endIndent: 20,
-              color: AppColors.border,
+              color: AppColors.of(context).border,
             ),
           children[i],
         ],
@@ -270,10 +286,16 @@ class SpaceSettingsView extends ConsumerWidget {
       padding: const EdgeInsets.only(top: 5),
       child: Text(
         subtitle,
-        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+        style: TextStyle(
+          fontSize: 12,
+          color: AppColors.of(context).textSecondary,
+        ),
       ),
     ),
-    trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+    trailing: Icon(
+      Icons.chevron_right,
+      color: AppColors.of(context).textSecondary,
+    ),
     onTap: action,
   );
 
@@ -282,5 +304,5 @@ class SpaceSettingsView extends ConsumerWidget {
 
   void _notice(BuildContext context, String message) => ScaffoldMessenger.of(
     context,
-  ).showSnackBar(SnackBar(content: Text(message)));
+  ).showSnackBar(SnackBar(content: Text(AppStrings.error(context, message))));
 }

@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/vm/activity/activity_vm.dart';
@@ -55,7 +56,7 @@ class _ActivityReadMarkerState extends ConsumerState<ActivityReadMarker> {
         if (_failed)
           TextButton(
             onPressed: _mark,
-            child: const Text('읽음 상태 저장 실패 · 다시 시도'),
+            child: Text(AppStrings.tr(context, '읽음 상태 저장 실패 · 다시 시도')),
           ),
         Expanded(child: widget.child),
       ],

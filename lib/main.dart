@@ -1,3 +1,8 @@
+import 'package:ondolbom/l10n/app_strings.dart';
+import 'package:ondolbom/vm/settings/locale_vm.dart';
+import 'package:ondolbom/model/settings/locale_preferences.dart';
+import 'package:ondolbom/model/settings/theme_preferences.dart';
+import 'package:ondolbom/vm/settings/theme_vm.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:ondolbom/theme/app_theme.dart';
 import 'package:ondolbom/view/widgets/app_text_scale.dart';
@@ -23,6 +28,18 @@ Future<void> main() async {
   // 네이티브 Firebase 호출 전에 Flutter 바인딩을 준비한다.
   WidgetsFlutterBinding.ensureInitialized();
   KakaoLogin.initialize();
+  var savedLocale = const Locale('ko', 'KR');
+  try {
+    savedLocale = await LocalePreferences().read();
+  } catch (_) {
+    /* 로컬 저장 실패는 인증 초기화를 막지 않는다. */
+  }
+  var savedThemeMode = ThemeMode.light;
+  try {
+    savedThemeMode = await ThemePreferences().read();
+  } catch (_) {
+    debugPrint('화면 설정을 불러오지 못해 밝은 모드로 시작합니다.');
+  }
 
   try {
     await Firebase.initializeApp(
@@ -48,6 +65,8 @@ Future<void> main() async {
     runApp(
       ProviderScope(
         overrides: [
+          initialLocaleProvider.overrideWithValue(savedLocale),
+          initialThemeModeProvider.overrideWithValue(savedThemeMode),
           pushServiceProvider.overrideWithValue(push),
           beforeSignOutProvider.overrideWithValue(push?.detach ?? () async {}),
         ],
@@ -59,7 +78,17 @@ Future<void> main() async {
     runApp(
       ProviderScope(
         child: MaterialApp(
+          locale: savedLocale,
+          supportedLocales: AppStrings.supportedLocales,
+          localizationsDelegates: const [
+            AppStrings.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
           theme: AppTheme.light,
+          darkTheme: AppTheme.dark,
+          themeMode: savedThemeMode,
           builder: (context, child) =>
               AppTextScale(child: child ?? const SizedBox.shrink()),
           home: const Scaffold(
@@ -86,19 +115,23 @@ class MyApp extends ConsumerWidget {
     final session = ref.watch(authUserProvider);
 
     return MaterialApp(
-      locale: const Locale('ko', 'KR'),
-      supportedLocales: const [
-        Locale('ko', 'KR')
-      ],
+      locale:
+          ref.watch(localeSettingProvider).asData?.value.locale ??
+          const Locale('ko', 'KR'),
+      supportedLocales: AppStrings.supportedLocales,
       localizationsDelegates: const [
+        AppStrings.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate
+        GlobalCupertinoLocalizations.delegate,
       ],
       debugShowCheckedModeBanner: false,
-      title: '온돌봄',
+      onGenerateTitle: (context) => AppStrings.tr(context, '온돌봄'),
       navigatorKey: _pushNavigatorKey,
       theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode:
+          ref.watch(themeModeProvider).asData?.value.mode ?? ThemeMode.light,
       // Navigator 바깥에 적용해 열린 화면과 팝업에도 같은 글씨 크기를 전달한다.
       builder: (context, child) => PushBridge(
         navigatorKey: _pushNavigatorKey,

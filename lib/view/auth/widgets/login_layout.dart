@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
@@ -41,34 +42,46 @@ class LoginLayout extends StatelessWidget {
   static const _muted = Color(0xFF716B68);
   static const _line = Color(0xFFE6DED9);
 
-  InputDecoration _decoration(String hint) => InputDecoration(
-    hintText: hint,
-    hintStyle: const TextStyle(color: Color(0xFFB3AAA5), fontSize: 14),
-    filled: true,
-    fillColor: _paper,
-    isDense: true,
-    constraints: const BoxConstraints(minHeight: 52),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 17, vertical: 16),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(13),
-      borderSide: const BorderSide(color: _line),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(13),
-      borderSide: const BorderSide(color: _line),
-    ),
-    disabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(13),
-      borderSide: const BorderSide(color: _line),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(13),
-      borderSide: const BorderSide(color: _peach),
-    ),
-    errorMaxLines: 2,
-  );
+  InputDecoration _decoration(BuildContext context, String hint) =>
+      InputDecoration(
+        hintText: hint,
+        hintStyle: TextStyle(
+          color: AppColors.resolve(context, Color(0xFFB3AAA5)),
+          fontSize: 14,
+        ),
+        filled: true,
+        fillColor: AppColors.resolve(context, _paper),
+        isDense: true,
+        constraints: const BoxConstraints(minHeight: 52),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 17,
+          vertical: 16,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(13),
+          borderSide: BorderSide(color: AppColors.resolve(context, _line)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(13),
+          borderSide: BorderSide(color: AppColors.resolve(context, _line)),
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(13),
+          borderSide: BorderSide(color: AppColors.resolve(context, _line)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(13),
+          borderSide: BorderSide(color: AppColors.resolve(context, _peach)),
+        ),
+        errorMaxLines: 2,
+      );
 
-  Widget _check(String label, bool value, ValueChanged<bool> change) => InkWell(
+  Widget _check(
+    BuildContext context,
+    String label,
+    bool value,
+    ValueChanged<bool> change,
+  ) => InkWell(
     onTap: busy ? null : () => change(!value),
     borderRadius: BorderRadius.circular(5),
     child: Padding(
@@ -84,11 +97,13 @@ class LoginLayout extends StatelessWidget {
               onChanged: busy ? null : (v) => change(v ?? false),
               fillColor: WidgetStateProperty.resolveWith(
                 (states) => states.contains(WidgetState.selected)
-                    ? _sage
-                    : Colors.white,
+                    ? AppColors.resolve(context, _sage)
+                    : AppColors.resolve(context, Colors.white),
               ),
-              checkColor: _ink,
-              side: const BorderSide(color: Color(0xFFD8CDC7)),
+              checkColor: AppColors.resolve(context, _ink),
+              side: BorderSide(
+                color: AppColors.resolve(context, Color(0xFFD8CDC7)),
+              ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(5),
               ),
@@ -96,17 +111,28 @@ class LoginLayout extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 7),
-          Text(label, style: const TextStyle(color: _muted, fontSize: 12)),
+          Text(
+            AppStrings.tr(context, label),
+            style: TextStyle(
+              color: AppColors.resolve(context, _muted),
+              fontSize: 12,
+            ),
+          ),
         ],
       ),
     ),
   );
 
-  Widget _options(bool stacked) {
+  Widget _options(BuildContext context, bool stacked) {
     final checks = [
-      _check('아이디 저장', rememberEmail, onRememberEmail),
+      _check(
+        context,
+        AppStrings.tr(context, '아이디 저장'),
+        rememberEmail,
+        onRememberEmail,
+      ),
       SizedBox(width: stacked ? 0 : 16, height: stacked ? 10 : 0),
-      _check('자동 로그인', autoLogin, onAutoLogin),
+      _check(context, AppStrings.tr(context, '자동 로그인'), autoLogin, onAutoLogin),
     ];
     return Padding(
       padding: const EdgeInsets.only(top: 17, bottom: 24),
@@ -129,13 +155,13 @@ class LoginLayout extends StatelessWidget {
               child: TextButton(
                 onPressed: busy ? null : onPasswordReset,
                 style: TextButton.styleFrom(
-                  foregroundColor: _ink,
+                  foregroundColor: AppColors.resolve(context, _ink),
                   padding: EdgeInsets.zero,
                   minimumSize: const Size(0, 24),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                child: const Text(
-                  '비밀번호 찾기',
+                child: Text(
+                  AppStrings.tr(context, '비밀번호 찾기'),
                   textAlign: TextAlign.right,
                   style: TextStyle(
                     fontSize: 12,
@@ -186,7 +212,8 @@ class LoginLayout extends StatelessWidget {
         ),
       );
 
-  Widget _formPanel({
+  Widget _formPanel(
+    BuildContext context, {
     required bool mobile,
     required bool stackedChecks,
     required double horizontalPadding,
@@ -207,10 +234,10 @@ class LoginLayout extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (mobile) ...[
-              const Text(
-                '온돌봄',
+              Text(
+                AppStrings.tr(context, '온돌봄'),
                 style: TextStyle(
-                  color: _ink,
+                  color: AppColors.resolve(context, _ink),
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.72,
@@ -218,20 +245,20 @@ class LoginLayout extends StatelessWidget {
               ),
               const SizedBox(height: 64),
             ],
-            const Text(
+            Text(
               'SIGN IN',
               style: TextStyle(
-                color: Color(0xFF8D6554),
+                color: AppColors.resolve(context, Color(0xFF8D6554)),
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 2.2,
               ),
             ),
             const SizedBox(height: 12),
-            const Text(
-              '로그인',
+            Text(
+              AppStrings.tr(context, '로그인'),
               style: TextStyle(
-                color: _ink,
+                color: AppColors.resolve(context, _ink),
                 fontSize: 32,
                 height: 1.25,
                 fontWeight: FontWeight.w800,
@@ -239,50 +266,58 @@ class LoginLayout extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              '계정에 로그인하고 서비스를 계속 이용해 보세요.',
+            Text(
+              AppStrings.tr(context, '계정에 로그인하고 서비스를 계속 이용해 보세요.'),
               style: TextStyle(
-                color: Color(0xFF827B78),
+                color: AppColors.resolve(context, Color(0xFF827B78)),
                 fontSize: 14,
                 height: 1.65,
               ),
             ),
             SizedBox(height: mobile ? 30 : 32),
-            const Text(
-              '아이디',
+            Text(
+              AppStrings.tr(context, '아이디'),
               style: TextStyle(
-                color: _ink,
+                color: AppColors.resolve(context, _ink),
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 9),
             Semantics(
-              label: '이메일',
+              label: AppStrings.tr(context, '이메일'),
               child: TextFormField(
                 controller: email,
                 enabled: !busy,
-                style: const TextStyle(color: _ink, fontSize: 14),
-                decoration: _decoration('이메일을 입력해 주세요'),
+                style: TextStyle(
+                  color: AppColors.resolve(context, _ink),
+                  fontSize: 14,
+                ),
+                decoration: _decoration(
+                  context,
+                  AppStrings.tr(context, '이메일을 입력해 주세요'),
+                ),
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
                 autofillHints: const [AutofillHints.email],
                 autocorrect: false,
                 validator: (value) {
                   final input = value?.trim() ?? '';
-                  if (input.isEmpty) return '이메일을 입력해 주세요.';
+                  if (input.isEmpty) {
+                    return AppStrings.tr(context, '이메일을 입력해 주세요.');
+                  }
                   if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(input)) {
-                    return '이메일 형식을 확인해 주세요.';
+                    return AppStrings.tr(context, '이메일 형식을 확인해 주세요.');
                   }
                   return null;
                 },
               ),
             ),
             const SizedBox(height: 18),
-            const Text(
-              '비밀번호',
+            Text(
+              AppStrings.tr(context, '비밀번호'),
               style: TextStyle(
-                color: _ink,
+                color: AppColors.resolve(context, _ink),
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
               ),
@@ -292,19 +327,26 @@ class LoginLayout extends StatelessWidget {
               controller: password,
               enabled: !busy,
               obscureText: true,
-              style: const TextStyle(color: _ink, fontSize: 14),
-              decoration: _decoration('비밀번호를 입력해 주세요'),
+              style: TextStyle(
+                color: AppColors.resolve(context, _ink),
+                fontSize: 14,
+              ),
+              decoration: _decoration(
+                context,
+                AppStrings.tr(context, '비밀번호를 입력해 주세요'),
+              ),
               autofillHints: const [AutofillHints.password],
               enableSuggestions: false,
               autocorrect: false,
               textInputAction: TextInputAction.done,
-              validator: (value) =>
-                  value == null || value.isEmpty ? '비밀번호를 입력해 주세요.' : null,
+              validator: (value) => value == null || value.isEmpty
+                  ? AppStrings.tr(context, '비밀번호를 입력해 주세요.')
+                  : null,
               onFieldSubmitted: (_) {
                 if (!busy) onSubmit();
               },
             ),
-            _options(stackedChecks),
+            _options(context, stackedChecks),
             Container(
               height: 54,
               decoration: BoxDecoration(
@@ -322,8 +364,16 @@ class LoginLayout extends StatelessWidget {
               child: FilledButton(
                 onPressed: busy ? null : onSubmit,
                 style: FilledButton.styleFrom(
-                  backgroundColor: _peach,
-                  foregroundColor: _ink,
+                  backgroundColor: AppColors.resolve(
+                    context,
+                    _peach,
+                    onAccent: true,
+                  ),
+                  foregroundColor: AppColors.resolve(
+                    context,
+                    _ink,
+                    onAccent: true,
+                  ),
                   disabledBackgroundColor: _peach.withValues(alpha: 0.3),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
@@ -331,7 +381,9 @@ class LoginLayout extends StatelessWidget {
                   ),
                 ),
                 child: Text(
-                  busy ? '로그인 중' : '로그인',
+                  busy
+                      ? AppStrings.tr(context, '로그인 중')
+                      : AppStrings.tr(context, '로그인'),
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -348,17 +400,17 @@ class LoginLayout extends StatelessWidget {
                   children: [
                     if (preferencesError != null)
                       Text(
-                        preferencesError!,
-                        style: const TextStyle(
-                          color: Color(0xFFB3261E),
+                        AppStrings.error(context, preferencesError!),
+                        style: TextStyle(
+                          color: AppColors.resolve(context, Color(0xFFB3261E)),
                           fontSize: 12,
                         ),
                       ),
                     if (authError != null)
                       Text(
-                        authError!,
-                        style: const TextStyle(
-                          color: Color(0xFFB3261E),
+                        AppStrings.error(context, authError!),
+                        style: TextStyle(
+                          color: AppColors.resolve(context, Color(0xFFB3261E)),
                           fontSize: 12,
                         ),
                       ),
@@ -366,17 +418,28 @@ class LoginLayout extends StatelessWidget {
                 ),
               ),
             ),
-            const Row(
+            Row(
               children: [
-                Expanded(child: Divider(color: Color(0xFFEEE6E1))),
+                Expanded(
+                  child: Divider(
+                    color: AppColors.resolve(context, Color(0xFFEEE6E1)),
+                  ),
+                ),
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 14),
                   child: Text(
-                    '간편 로그인',
-                    style: TextStyle(color: Color(0xFFA09894), fontSize: 11),
+                    AppStrings.tr(context, '간편 로그인'),
+                    style: TextStyle(
+                      color: AppColors.resolve(context, Color(0xFFA09894)),
+                      fontSize: 11,
+                    ),
                   ),
                 ),
-                Expanded(child: Divider(color: Color(0xFFEEE6E1))),
+                Expanded(
+                  child: Divider(
+                    color: AppColors.resolve(context, Color(0xFFEEE6E1)),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 18),
@@ -384,14 +447,22 @@ class LoginLayout extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 _social(
-                  'Google로 계속하기',
+                  AppStrings.tr(context, 'Google로 계속하기'),
                   'assets/images/auth/google.png',
                   onGoogle,
                 ),
                 const SizedBox(width: 12),
-                _social('카카오로 계속하기', 'assets/images/auth/kakao.png', onKakao),
+                _social(
+                  AppStrings.tr(context, '카카오로 계속하기'),
+                  'assets/images/auth/kakao.png',
+                  onKakao,
+                ),
                 const SizedBox(width: 12),
-                _social('네이버로 계속하기', 'assets/images/auth/naver.png', onNaver),
+                _social(
+                  AppStrings.tr(context, '네이버로 계속하기'),
+                  'assets/images/auth/naver.png',
+                  onNaver,
+                ),
               ],
             ),
             const SizedBox(height: 26),
@@ -400,27 +471,33 @@ class LoginLayout extends StatelessWidget {
               crossAxisAlignment: WrapCrossAlignment.center,
               spacing: 8,
               children: [
-                const Text(
-                  '아직 회원이 아니신가요?',
-                  style: TextStyle(color: Color(0xFF8D8581), fontSize: 12),
+                Text(
+                  AppStrings.tr(context, '아직 회원이 아니신가요?'),
+                  style: TextStyle(
+                    color: AppColors.resolve(context, Color(0xFF8D8581)),
+                    fontSize: 12,
+                  ),
                 ),
                 TextButton(
                   onPressed: busy ? null : onSignup,
                   style: TextButton.styleFrom(
-                    foregroundColor: _ink,
+                    foregroundColor: AppColors.resolve(context, _ink),
                     padding: EdgeInsets.zero,
                     minimumSize: const Size(0, 24),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                   child: Container(
                     padding: const EdgeInsets.only(bottom: 4),
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       border: Border(
-                        bottom: BorderSide(color: _peach, width: 2),
+                        bottom: BorderSide(
+                          color: AppColors.resolve(context, _peach),
+                          width: 2,
+                        ),
                       ),
                     ),
-                    child: const Text(
-                      '이메일로 회원가입',
+                    child: Text(
+                      AppStrings.tr(context, '이메일로 회원가입'),
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
@@ -438,7 +515,7 @@ class LoginLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: _paper,
+    backgroundColor: AppColors.resolve(context, _paper),
     body: SafeArea(
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -451,6 +528,7 @@ class LoginLayout extends StatelessWidget {
             return SingleChildScrollView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               child: _formPanel(
+                context,
                 mobile: true,
                 stackedChecks: stacked,
                 horizontalPadding: 24,
@@ -459,7 +537,7 @@ class LoginLayout extends StatelessWidget {
           }
           final shellWidth = (constraints.maxWidth - 48).clamp(0.0, 980.0);
           return ColoredBox(
-            color: AppColors.peachSoft,
+            color: AppColors.of(context).peachSoft,
             child: Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(
@@ -470,12 +548,15 @@ class LoginLayout extends StatelessWidget {
                   width: shellWidth,
                   clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
-                    color: _paper,
+                    color: AppColors.resolve(context, _paper),
                     borderRadius: BorderRadius.circular(32),
                     border: Border.all(color: _ink.withValues(alpha: 0.08)),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF604636).withValues(alpha: 0.16),
+                        color: AppColors.resolve(
+                          context,
+                          const Color(0xFF604636),
+                        ).withValues(alpha: 0.16),
                         offset: const Offset(0, 30),
                         blurRadius: 80,
                       ),
@@ -491,6 +572,7 @@ class LoginLayout extends StatelessWidget {
                           child: ConstrainedBox(
                             constraints: const BoxConstraints(minHeight: 690),
                             child: _formPanel(
+                              context,
                               mobile: false,
                               stackedChecks: stacked,
                               horizontalPadding: (constraints.maxWidth * 0.06)
@@ -515,18 +597,18 @@ class _WelcomePanel extends StatelessWidget {
   const _WelcomePanel();
   @override
   Widget build(BuildContext context) => ColoredBox(
-    color: AppColors.primary,
+    color: AppColors.of(context).primary,
     child: Stack(
       children: [
-        const Padding(
+        Padding(
           padding: EdgeInsets.symmetric(horizontal: 42, vertical: 44),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '온돌봄',
+                AppStrings.tr(context, '온돌봄'),
                 style: TextStyle(
-                  color: AppColors.textPrimary,
+                  color: AppColors.of(context).textPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
                 ),
@@ -535,7 +617,7 @@ class _WelcomePanel extends StatelessWidget {
               Text(
                 'WELCOME BACK',
                 style: TextStyle(
-                  color: Color(0xFF755747),
+                  color: AppColors.resolve(context, Color(0xFF755747)),
                   fontSize: 11,
                   letterSpacing: 2.2,
                   fontWeight: FontWeight.w800,
@@ -543,9 +625,9 @@ class _WelcomePanel extends StatelessWidget {
               ),
               SizedBox(height: 12),
               Text(
-                '오늘도,\n따뜻하게 시작해요.',
+                AppStrings.tr(context, '오늘도,\n따뜻하게 시작해요.'),
                 style: TextStyle(
-                  color: AppColors.textPrimary,
+                  color: AppColors.of(context).textPrimary,
                   fontSize: 34,
                   height: 1.28,
                   letterSpacing: -1.6,
@@ -554,9 +636,9 @@ class _WelcomePanel extends StatelessWidget {
               ),
               SizedBox(height: 18),
               Text(
-                '당신의 하루에 편안한 리듬을 더해드릴게요.',
+                AppStrings.tr(context, '당신의 하루에 편안한 리듬을 더해드릴게요.'),
                 style: TextStyle(
-                  color: Color(0xFF786052),
+                  color: AppColors.resolve(context, Color(0xFF786052)),
                   fontSize: 14,
                   height: 1.7,
                 ),
@@ -570,8 +652,8 @@ class _WelcomePanel extends StatelessWidget {
           child: Container(
             width: 74,
             height: 74,
-            decoration: const BoxDecoration(
-              color: AppColors.peachLight,
+            decoration: BoxDecoration(
+              color: AppColors.of(context).peachLight,
               shape: BoxShape.circle,
             ),
           ),
@@ -584,8 +666,8 @@ class _WelcomePanel extends StatelessWidget {
             child: Container(
               width: 380,
               height: 230,
-              decoration: const BoxDecoration(
-                color: AppColors.peachLight,
+              decoration: BoxDecoration(
+                color: AppColors.of(context).peachLight,
                 borderRadius: BorderRadius.vertical(
                   top: Radius.elliptical(190, 115),
                 ),
@@ -601,8 +683,8 @@ class _WelcomePanel extends StatelessWidget {
             child: Container(
               width: 360,
               height: 250,
-              decoration: const BoxDecoration(
-                color: AppColors.sage,
+              decoration: BoxDecoration(
+                color: AppColors.of(context).sage,
                 borderRadius: BorderRadius.vertical(
                   top: Radius.elliptical(180, 125),
                 ),

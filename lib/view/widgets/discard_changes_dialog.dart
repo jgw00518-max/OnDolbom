@@ -17,7 +17,7 @@ class DiscardChangesDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Dialog(
-    backgroundColor: AppColors.background,
+    backgroundColor: AppColors.of(context).background,
     surfaceTintColor: Colors.transparent,
     insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -30,15 +30,15 @@ class DiscardChangesDialog extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             ColoredBox(
-              color: AppColors.surface,
+              color: AppColors.of(context).surface,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
                 child: Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 21,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
+                    color: AppColors.of(context).textPrimary,
                   ),
                 ),
               ),
@@ -51,10 +51,10 @@ class DiscardChangesDialog extends StatelessWidget {
                 children: [
                   Text(
                     message,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       height: 1.6,
-                      color: AppColors.textSecondary,
+                      color: AppColors.of(context).textSecondary,
                     ),
                   ),
                   const SizedBox(height: 26),
@@ -81,8 +81,16 @@ class DiscardChangesDialog extends StatelessWidget {
                         child: FilledButton(
                           onPressed: () => Navigator.pop(context, true),
                           style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFFB87568),
-                            foregroundColor: Colors.white,
+                            backgroundColor: AppColors.resolve(
+                              context,
+                              const Color(0xFFB87568),
+                              onAccent: true,
+                            ),
+                            foregroundColor: AppColors.resolve(
+                              context,
+                              Colors.white,
+                              onAccent: true,
+                            ),
                             minimumSize: const Size(0, 48),
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,

@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/view/schedules/schedule_time_wheel.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
@@ -87,7 +88,11 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
       appBar: AppBar(
         leadingWidth: 62,
         leading: const AppBackLeading(),
-        title: Text(widget.initialSchedule == null ? '일정 등록' : '일정 변경'),
+        title: Text(
+          widget.initialSchedule == null
+              ? AppStrings.tr(context, '일정 등록')
+              : AppStrings.tr(context, '일정 변경'),
+        ),
       ),
       body: Form(
         key: formKey,
@@ -99,8 +104,8 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
               enabled: !isSaving,
               controller: nameController,
               maxLength: 50,
-              decoration: const InputDecoration(
-                labelText: '일정명 (선택)',
+              decoration: InputDecoration(
+                labelText: AppStrings.tr(context, '일정명 (선택)'),
                 border: OutlineInputBorder(),
               ),
             ),
@@ -109,7 +114,7 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
             // 날짜
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('날짜'),
+              title: Text(AppStrings.tr(context, '날짜')),
               subtitle: Text(
                 '${selectedDate.year}-'
                 '${selectedDate.month.toString().padLeft(2, '0')}-'
@@ -137,8 +142,8 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
               controller: memoController,
               minLines: 3,
               maxLines: 6,
-              decoration: const InputDecoration(
-                labelText: '일정 메모 (선택)',
+              decoration: InputDecoration(
+                labelText: AppStrings.tr(context, '일정 메모 (선택)'),
                 border: OutlineInputBorder(),
                 alignLabelWithHint: true,
               ),
@@ -149,7 +154,7 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: Text(
-                  errorMessage!,
+                  AppStrings.error(context, errorMessage!),
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ),
@@ -158,10 +163,10 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
               onPressed: isSaving ? null : () => saveAction(),
               child: Text(
                 isSaving
-                    ? '저장 중…'
+                    ? AppStrings.tr(context, '저장 중…')
                     : widget.initialSchedule == null
-                    ? '일정 등록'
-                    : '변경 내용 저장',
+                    ? AppStrings.tr(context, '일정 등록')
+                    : AppStrings.tr(context, '변경 내용 저장'),
               ),
             ),
           ],
@@ -195,11 +200,13 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          isStart ? '시작 시간' : '종료 시간',
-          style: const TextStyle(
+          isStart
+              ? AppStrings.tr(context, '시작 시간')
+              : AppStrings.tr(context, '종료 시간'),
+          style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
+            color: AppColors.of(context).textPrimary,
           ),
         ),
         const SizedBox(height: 10),
@@ -208,7 +215,8 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
             '${isStart ? 'start' : 'end'}-${selected?.hour}-${selected?.minute}',
           ),
           initialValue: selected,
-          validator: (value) => value == null ? '시간을 선택해 주세요.' : null,
+          validator: (value) =>
+              value == null ? AppStrings.tr(context, '시간을 선택해 주세요.') : null,
           builder: (field) => InkWell(
             key: ValueKey(isStart ? 'start-time' : 'end-time'),
             borderRadius: BorderRadius.circular(14),
@@ -224,7 +232,7 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
                       context: context,
                       isScrollControlled: true,
                       useSafeArea: true,
-                      backgroundColor: AppColors.surface,
+                      backgroundColor: AppColors.of(context).surface,
                       shape: const RoundedRectangleBorder(
                         borderRadius: BorderRadius.vertical(
                           top: Radius.circular(28),
@@ -250,7 +258,7 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
               decoration: InputDecoration(
                 enabled: !isSaving,
                 filled: true,
-                fillColor: AppColors.surface,
+                fillColor: AppColors.of(context).surface,
                 errorText: field.errorText,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -261,7 +269,7 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: AppColors.border),
+                  borderSide: BorderSide(color: AppColors.of(context).border),
                 ),
               ),
               child: Row(
@@ -269,19 +277,19 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
                   Expanded(
                     child: Text(
                       selected == null
-                          ? '시간 선택'
+                          ? AppStrings.tr(context, '시간 선택')
                           : '${selected.hour.toString().padLeft(2, '0')}:${selected.minute.toString().padLeft(2, '0')}',
                       style: TextStyle(
                         color: selected == null
-                            ? AppColors.textSecondary
-                            : AppColors.textPrimary,
+                            ? AppColors.of(context).textSecondary
+                            : AppColors.of(context).textPrimary,
                       ),
                     ),
                   ),
-                  const Icon(
+                  Icon(
                     Icons.schedule_rounded,
                     size: 20,
-                    color: AppColors.sageDark,
+                    color: AppColors.of(context).sageDark,
                   ),
                 ],
               ),
@@ -438,7 +446,11 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('일정은 저장됐습니다. 최신 내용을 다시 확인해 주세요.')),
+        SnackBar(
+          content: Text(
+            AppStrings.tr(context, '일정은 저장됐습니다. 최신 내용을 다시 확인해 주세요.'),
+          ),
+        ),
       );
       return;
     }
@@ -461,12 +473,14 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => Dialog(
-        backgroundColor: const Color(0xFFFFFCF8),
+        backgroundColor: AppColors.resolve(context, const Color(0xFFFFFCF8)),
         surfaceTintColor: Colors.transparent,
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
-          side: const BorderSide(color: Color(0xFFE8DFD7)),
+          side: BorderSide(
+            color: AppColors.resolve(context, Color(0xFFE8DFD7)),
+          ),
         ),
         clipBehavior: Clip.antiAlias,
         child: ConstrainedBox(
@@ -482,35 +496,41 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
                     Container(
                       width: 48,
                       height: 48,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFFEBD9),
+                      decoration: BoxDecoration(
+                        color: AppColors.resolve(context, Color(0xFFFFEBD9)),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.phone_outlined,
-                        color: Color(0xFF99522F),
+                        color: AppColors.resolve(context, Color(0xFF99522F)),
                         size: 25,
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '긴급 일정 변경',
+                            AppStrings.tr(context, '긴급 일정 변경'),
                             style: TextStyle(
                               fontSize: 21,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF403C39),
+                              color: AppColors.resolve(
+                                context,
+                                Color(0xFF403C39),
+                              ),
                             ),
                           ),
                           SizedBox(height: 4),
                           Text(
-                            '변경 내용을 저장했어요',
+                            AppStrings.tr(context, '변경 내용을 저장했어요'),
                             style: TextStyle(
                               fontSize: 13,
-                              color: Color(0xFF78716A),
+                              color: AppColors.resolve(
+                                context,
+                                Color(0xFF78716A),
+                              ),
                             ),
                           ),
                         ],
@@ -523,51 +543,59 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFF1E5),
+                    color: AppColors.resolve(context, const Color(0xFFFFF1E5)),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFF0DDCC)),
+                    border: Border.all(
+                      color: AppColors.resolve(
+                        context,
+                        const Color(0xFFF0DDCC),
+                      ),
+                    ),
                   ),
-                  child: const Column(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '시작이 임박한 일정입니다.',
+                        AppStrings.tr(context, '시작이 임박한 일정입니다.'),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF99522F),
+                          color: AppColors.resolve(context, Color(0xFF99522F)),
                         ),
                       ),
                       SizedBox(height: 8),
                       Text(
-                        '기존 담당 가족에게 전화로 변경 내용을 안내해 주세요.',
+                        AppStrings.tr(
+                          context,
+                          '기존 담당 가족에게 전화로 변경 내용을 안내해 주세요.',
+                        ),
                         style: TextStyle(
                           fontSize: 15,
                           height: 1.55,
-                          color: Color(0xFF554B43),
+                          color: AppColors.resolve(context, Color(0xFF554B43)),
                         ),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Row(
+                Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(
                       Icons.info_outline,
                       size: 18,
-                      color: Color(0xFF8A7B6E),
+                      color: AppColors.resolve(context, Color(0xFF8A7B6E)),
                     ),
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        '전화로 확인한 뒤에도 담당 가족이 앱에서 '
-                        '재수락하거나 거절해야 합니다.',
+                        AppStrings.tr(context, '전화로 확인한 뒤에도 담당 가족이 앱에서 ') +
+                            AppStrings.tr(context, '재수락하거나 거절해야 합니다.'),
                         style: TextStyle(
                           fontSize: 13,
                           height: 1.5,
-                          color: Color(0xFF78716A),
+                          color: AppColors.resolve(context, Color(0xFF78716A)),
                         ),
                       ),
                     ),
@@ -580,14 +608,22 @@ class _ScheduleCreateState extends ConsumerState<ScheduleCreate> {
                   child: FilledButton(
                     onPressed: () => Navigator.pop(dialogContext),
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFFAC5D32),
-                      foregroundColor: Colors.white,
+                      backgroundColor: AppColors.resolve(
+                        context,
+                        const Color(0xFFAC5D32),
+                        onAccent: true,
+                      ),
+                      foregroundColor: AppColors.resolve(
+                        context,
+                        Colors.white,
+                        onAccent: true,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: const Text(
-                      '확인',
+                    child: Text(
+                      AppStrings.tr(context, '확인'),
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

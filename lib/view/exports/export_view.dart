@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:flutter/material.dart';
@@ -70,8 +71,8 @@ class _ExportViewState extends ConsumerState<ExportView> {
       appBar: AppBar(
         leadingWidth: 62,
         leading: const AppBackLeading(),
-        title: const Text(
-          '메모·채팅 내보내기',
+        title: Text(
+          AppStrings.tr(context, '메모·채팅 내보내기'),
           style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
         ),
       ),
@@ -85,14 +86,14 @@ class _ExportViewState extends ConsumerState<ExportView> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _ExportSection(
-                    title: '내보낼 기간',
+                    title: AppStrings.tr(context, '내보낼 기간'),
                     icon: Icons.date_range_outlined,
                     children: [
                       Row(
                         children: [
                           Expanded(
                             child: _dateField(
-                              '시작일',
+                              AppStrings.tr(context, '시작일'),
                               _start,
                               'export-start',
                               enabled ? () => _pickDate(true) : null,
@@ -101,7 +102,7 @@ class _ExportViewState extends ConsumerState<ExportView> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: _dateField(
-                              '종료일',
+                              AppStrings.tr(context, '종료일'),
                               _end,
                               'export-end',
                               enabled ? () => _pickDate(false) : null,
@@ -111,37 +112,37 @@ class _ExportViewState extends ConsumerState<ExportView> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '종료일은 오늘까지 선택할 수 있어요.',
-                        style: const TextStyle(
+                        AppStrings.tr(context, '종료일은 오늘까지 선택할 수 있어요.'),
+                        style: TextStyle(
                           fontSize: 12,
                           height: 1.6,
-                          color: AppColors.textSecondary,
+                          color: AppColors.of(context).textSecondary,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 14),
                   _ExportSection(
-                    title: '내보낼 범위',
+                    title: AppStrings.tr(context, '내보낼 범위'),
                     icon: Icons.checklist_rounded,
                     children: [
                       CheckboxListTile(
-                        activeColor: AppColors.sageDark,
-                        checkColor: AppColors.surface,
+                        activeColor: AppColors.of(context).sageDark,
+                        checkColor: AppColors.of(context).surface,
                         contentPadding: EdgeInsets.zero,
                         controlAffinity: ListTileControlAffinity.leading,
-                        title: const Text('메모'),
+                        title: Text(AppStrings.tr(context, '메모')),
                         value: _memos,
                         onChanged: enabled
                             ? (value) => _change(() => _memos = value ?? false)
                             : null,
                       ),
                       CheckboxListTile(
-                        activeColor: AppColors.sageDark,
-                        checkColor: AppColors.surface,
+                        activeColor: AppColors.of(context).sageDark,
+                        checkColor: AppColors.of(context).surface,
                         contentPadding: EdgeInsets.zero,
                         controlAffinity: ListTileControlAffinity.leading,
-                        title: const Text('채팅'),
+                        title: Text(AppStrings.tr(context, '채팅')),
                         value: _chats,
                         onChanged: enabled
                             ? (value) => _change(() => _chats = value ?? false)
@@ -149,7 +150,7 @@ class _ExportViewState extends ConsumerState<ExportView> {
                       ),
                       if (!_memos && !_chats)
                         Text(
-                          '메모 또는 채팅을 하나 이상 선택해 주세요.',
+                          AppStrings.tr(context, '메모 또는 채팅을 하나 이상 선택해 주세요.'),
                           style: TextStyle(
                             color: colors.error,
                             fontSize: 14,
@@ -160,7 +161,7 @@ class _ExportViewState extends ConsumerState<ExportView> {
                   ),
                   const SizedBox(height: 14),
                   _ExportSection(
-                    title: '이미지 포함 여부',
+                    title: AppStrings.tr(context, '이미지 포함 여부'),
                     icon: Icons.image_outlined,
                     children: [
                       RadioGroup<bool>(
@@ -174,18 +175,18 @@ class _ExportViewState extends ConsumerState<ExportView> {
                           children: [
                             Expanded(
                               child: RadioListTile<bool>(
-                                activeColor: AppColors.sageDark,
+                                activeColor: AppColors.of(context).sageDark,
                                 contentPadding: EdgeInsets.zero,
-                                title: const Text('포함'),
+                                title: Text(AppStrings.tr(context, '포함')),
                                 value: true,
                                 enabled: enabled,
                               ),
                             ),
                             Expanded(
                               child: RadioListTile<bool>(
-                                activeColor: AppColors.sageDark,
+                                activeColor: AppColors.of(context).sageDark,
                                 contentPadding: EdgeInsets.zero,
-                                title: const Text('제외'),
+                                title: Text(AppStrings.tr(context, '제외')),
                                 value: false,
                                 enabled: enabled,
                               ),
@@ -197,7 +198,7 @@ class _ExportViewState extends ConsumerState<ExportView> {
                   ),
                   const SizedBox(height: 14),
                   _ExportSection(
-                    title: '파일 형식',
+                    title: AppStrings.tr(context, '파일 형식'),
                     icon: Icons.description_outlined,
                     children: [
                       RadioGroup<ExportFormat>(
@@ -211,7 +212,7 @@ class _ExportViewState extends ConsumerState<ExportView> {
                           children: [
                             Expanded(
                               child: RadioListTile<ExportFormat>(
-                                activeColor: AppColors.sageDark,
+                                activeColor: AppColors.of(context).sageDark,
                                 key: const Key('export-format-html'),
                                 contentPadding: EdgeInsets.zero,
                                 title: const Text('HTML'),
@@ -221,7 +222,7 @@ class _ExportViewState extends ConsumerState<ExportView> {
                             ),
                             Expanded(
                               child: RadioListTile<ExportFormat>(
-                                activeColor: AppColors.sageDark,
+                                activeColor: AppColors.of(context).sageDark,
                                 key: const Key('export-format-pdf'),
                                 contentPadding: EdgeInsets.zero,
                                 title: const Text('PDF'),
@@ -234,12 +235,18 @@ class _ExportViewState extends ConsumerState<ExportView> {
                       ),
                       Text(
                         _format == ExportFormat.html
-                            ? 'HTML 문서와 이미지를 ZIP으로 받아 압축 해제 후 열 수 있어요.'
-                            : 'PDF 문서 한 개로 받아 바로 열 수 있어요.',
-                        style: const TextStyle(
+                            ? AppStrings.tr(
+                                context,
+                                'HTML 문서와 이미지를 ZIP으로 받아 압축 해제 후 열 수 있어요.',
+                              )
+                            : AppStrings.tr(
+                                context,
+                                'PDF 문서 한 개로 받아 바로 열 수 있어요.',
+                              ),
+                        style: TextStyle(
                           fontSize: 12,
                           height: 1.6,
-                          color: AppColors.textSecondary,
+                          color: AppColors.of(context).textSecondary,
                         ),
                       ),
                     ],
@@ -249,25 +256,25 @@ class _ExportViewState extends ConsumerState<ExportView> {
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: AppColors.peachSoft,
+                      color: AppColors.of(context).peachSoft,
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Row(
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Icon(
                           Icons.info_outline,
                           size: 18,
-                          color: AppColors.sageDark,
+                          color: AppColors.of(context).sageDark,
                         ),
                         SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            '투약일지, 일정은 포함되지 않습니다.',
+                            AppStrings.tr(context, '투약일지, 일정은 포함되지 않습니다.'),
                             style: TextStyle(
                               fontSize: 14,
                               height: 1.6,
-                              color: AppColors.textPrimary,
+                              color: AppColors.of(context).textPrimary,
                             ),
                           ),
                         ),
@@ -277,7 +284,10 @@ class _ExportViewState extends ConsumerState<ExportView> {
                   const SizedBox(height: 24),
                   if (!allowed)
                     Text(
-                      '계정 또는 돌봄 공간이 변경됐어요. 화면을 다시 열어 주세요.',
+                      AppStrings.tr(
+                        context,
+                        '계정 또는 돌봄 공간이 변경됐어요. 화면을 다시 열어 주세요.',
+                      ),
                       style: TextStyle(color: colors.error),
                     )
                   else ...[
@@ -286,9 +296,9 @@ class _ExportViewState extends ConsumerState<ExportView> {
                       const SizedBox(height: 12),
                       Text(
                         state.phase == ExportPhase.generating
-                            ? '파일을 생성하고 있어요…'
-                            : '파일을 저장하고 있어요…',
-                        semanticsLabel: '내보내기 진행 상태',
+                            ? AppStrings.tr(context, '파일을 생성하고 있어요…')
+                            : AppStrings.tr(context, '파일을 저장하고 있어요…'),
+                        semanticsLabel: AppStrings.tr(context, '내보내기 진행 상태'),
                       ),
                       const SizedBox(height: 16),
                     ],
@@ -296,7 +306,7 @@ class _ExportViewState extends ConsumerState<ExportView> {
                       Semantics(
                         liveRegion: true,
                         child: Text(
-                          state.error!,
+                          AppStrings.error(context, state.error!),
                           style: TextStyle(
                             color: colors.error,
                             fontSize: 14,
@@ -314,14 +324,14 @@ class _ExportViewState extends ConsumerState<ExportView> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: AppColors.sageLight,
+                          color: AppColors.of(context).sageLight,
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.task_alt,
-                              color: AppColors.sageDark,
+                              color: AppColors.of(context).sageDark,
                             ),
                             const SizedBox(width: 10),
                             Expanded(
@@ -352,7 +362,7 @@ class _ExportViewState extends ConsumerState<ExportView> {
                                   .save()
                             : null,
                         icon: const Icon(Icons.download_outlined),
-                        label: const Text('파일 다운로드'),
+                        label: Text(AppStrings.tr(context, '파일 다운로드')),
                       ),
                       const SizedBox(height: 12),
                     ],
@@ -361,12 +371,12 @@ class _ExportViewState extends ConsumerState<ExportView> {
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size.fromHeight(50),
                         backgroundColor: state.file == null
-                            ? AppColors.primary
-                            : AppColors.surface,
-                        foregroundColor: AppColors.textPrimary,
+                            ? AppColors.of(context).primary
+                            : AppColors.of(context).surface,
+                        foregroundColor: AppColors.of(context).textPrimary,
                         side: state.file == null
                             ? BorderSide.none
-                            : const BorderSide(color: AppColors.border),
+                            : BorderSide(color: AppColors.of(context).border),
                         textStyle: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -390,11 +400,14 @@ class _ExportViewState extends ConsumerState<ExportView> {
                           : null,
                       icon: const Icon(Icons.folder_zip_outlined),
                       label: Text(
-                        state.file != null
-                            ? '파일 다시 생성'
-                            : state.error != null
-                            ? '다시 요청'
-                            : '파일 생성',
+                        AppStrings.error(
+                          context,
+                          state.file != null
+                              ? AppStrings.tr(context, '파일 다시 생성')
+                              : state.error != null
+                              ? AppStrings.tr(context, '다시 요청')
+                              : AppStrings.tr(context, '파일 생성'),
+                        ),
                       ),
                     ),
                   ],
@@ -422,15 +435,15 @@ class _ExportViewState extends ConsumerState<ExportView> {
           labelText: label,
           enabled: onTap != null,
           filled: true,
-          fillColor: AppColors.background,
-          labelStyle: const TextStyle(
-            color: AppColors.sageDark,
+          fillColor: AppColors.of(context).background,
+          labelStyle: TextStyle(
+            color: AppColors.of(context).sageDark,
             fontWeight: FontWeight.w700,
           ),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: AppColors.border),
+            borderSide: BorderSide(color: AppColors.of(context).border),
           ),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 10,
@@ -448,10 +461,10 @@ class _ExportViewState extends ConsumerState<ExportView> {
                 ),
               ),
             ),
-            const Icon(
+            Icon(
               Icons.calendar_month_outlined,
               size: 18,
-              color: AppColors.sageDark,
+              color: AppColors.of(context).sageDark,
             ),
           ],
         ),
@@ -472,11 +485,11 @@ class _ExportSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: AppColors.surface,
+    color: AppColors.of(context).surface,
     clipBehavior: Clip.antiAlias,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(22),
-      side: const BorderSide(color: AppColors.border),
+      side: BorderSide(color: AppColors.of(context).border),
     ),
     child: Padding(
       padding: const EdgeInsets.all(16),
@@ -485,15 +498,15 @@ class _ExportSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, size: 20, color: AppColors.sageDark),
+              Icon(icon, size: 20, color: AppColors.of(context).sageDark),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                    color: AppColors.of(context).textPrimary,
                   ),
                 ),
               ),

@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 
@@ -37,7 +38,7 @@ class _AppDatePickerState extends State<_AppDatePicker> {
   final inputKey = GlobalKey<FormState>();
 
   ButtonStyle get actionStyle => TextButton.styleFrom(
-    backgroundColor: AppColors.primary,
+    backgroundColor: AppColors.of(context).primary,
     foregroundColor: AppColors.textPrimary,
     minimumSize: const Size(64, 44),
     textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
@@ -50,12 +51,12 @@ class _AppDatePickerState extends State<_AppDatePicker> {
     final todayAllowed =
         !today.isBefore(widget.firstDate) && !today.isAfter(widget.lastDate);
     return Dialog(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.of(context).background,
       surfaceTintColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
-        side: const BorderSide(color: AppColors.border),
+        side: BorderSide(color: AppColors.of(context).border),
       ),
       clipBehavior: Clip.antiAlias,
       child: ConstrainedBox(
@@ -66,13 +67,13 @@ class _AppDatePickerState extends State<_AppDatePicker> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
-                color: AppColors.peachSoft,
+                color: AppColors.of(context).peachSoft,
                 padding: const EdgeInsets.fromLTRB(20, 18, 12, 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      '날짜 선택',
+                    Text(
+                      AppStrings.tr(context, '날짜 선택'),
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -102,10 +103,12 @@ class _AppDatePickerState extends State<_AppDatePicker> {
                                   calendarVersion++;
                                 })
                               : null,
-                          child: const Text('오늘'),
+                          child: Text(AppStrings.tr(context, '오늘')),
                         ),
                         IconButton(
-                          tooltip: inputMode ? '달력으로 선택' : '날짜 직접 입력',
+                          tooltip: inputMode
+                              ? AppStrings.tr(context, '달력으로 선택')
+                              : AppStrings.tr(context, '날짜 직접 입력'),
                           onPressed: () =>
                               setState(() => inputMode = !inputMode),
                           icon: Icon(
@@ -152,7 +155,7 @@ class _AppDatePickerState extends State<_AppDatePicker> {
                   children: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('취소'),
+                      child: Text(AppStrings.tr(context, '취소')),
                     ),
                     const SizedBox(width: 12),
                     TextButton(
@@ -165,7 +168,7 @@ class _AppDatePickerState extends State<_AppDatePicker> {
                         }
                         Navigator.pop(context, selected);
                       },
-                      child: const Text('확인'),
+                      child: Text(AppStrings.tr(context, '확인')),
                     ),
                   ],
                 ),

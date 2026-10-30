@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/view/family_room/membership_exit_dialog.dart';
 import 'package:ondolbom/view/family_room/representative_transfer_dialog.dart';
 import 'package:ondolbom/vm/auth/auth_vm.dart';
@@ -28,10 +29,10 @@ class FamilyMemberList extends ConsumerWidget {
       appBar: AppBar(
         leadingWidth: 62,
         leading: const AppBackLeading(),
-        title: const Text('함께하는 가족'),
+        title: Text(AppStrings.tr(context, '함께하는 가족')),
         actions: [
           IconButton(
-            tooltip: '새로고침',
+            tooltip: AppStrings.tr(context, '새로고침'),
             onPressed: state.isLoading
                 ? null
                 : () async {
@@ -54,7 +55,10 @@ class FamilyMemberList extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  error.toString().replaceFirst('Exception: ', ''),
+                  AppStrings.error(
+                    context,
+                    error.toString().replaceFirst('Exception: ', ''),
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
@@ -62,7 +66,7 @@ class FamilyMemberList extends ConsumerWidget {
                   onPressed: () {
                     ref.invalidate(familyMembersProvider(familyRoomId));
                   },
-                  child: const Text('다시 조회'),
+                  child: Text(AppStrings.tr(context, '다시 조회')),
                 ),
               ],
             ),
@@ -70,34 +74,36 @@ class FamilyMemberList extends ConsumerWidget {
         ),
         data: (items) {
           if (items.isEmpty) {
-            return const Center(child: Text('참여 중인 가족이 없습니다.'));
+            return Center(
+              child: Text(AppStrings.tr(context, '참여 중인 가족이 없습니다.')),
+            );
           }
 
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
               Text(
-                '우리 공간의 가족 ${items.length}명',
-                style: const TextStyle(
+                AppStrings.format(context, "우리 공간의 가족 {0}명", [items.length]),
+                style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF403C39),
+                  color: AppColors.resolve(context, Color(0xFF403C39)),
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                '소중한 일상을 함께 돌보는 가족들이에요.',
+              Text(
+                AppStrings.tr(context, '소중한 일상을 함께 돌보는 가족들이에요.'),
                 style: TextStyle(
                   fontSize: 14,
-                  color: Color(0xFF78716A),
+                  color: AppColors.resolve(context, Color(0xFF78716A)),
                   height: 1.6,
                 ),
               ),
               const SizedBox(height: 24),
               Container(
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  border: Border.all(color: AppColors.border),
+                  color: AppColors.of(context).surface,
+                  border: Border.all(color: AppColors.of(context).border),
                   borderRadius: BorderRadius.circular(24),
                 ),
                 clipBehavior: Clip.antiAlias,
@@ -105,11 +111,11 @@ class FamilyMemberList extends ConsumerWidget {
                   children: [
                     for (var i = 0; i < items.length; i++) ...[
                       if (i > 0)
-                        const Divider(
+                        Divider(
                           height: 1,
                           indent: 20,
                           endIndent: 20,
-                          color: AppColors.border,
+                          color: AppColors.of(context).border,
                         ),
                       FamilyMemberCard(
                         member: items[i],
@@ -133,8 +139,13 @@ class FamilyMemberList extends ConsumerWidget {
                                 );
                                 if (!context.mounted || removed != true) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('가족의 공간 참여를 종료했습니다.'),
+                                  SnackBar(
+                                    content: Text(
+                                      AppStrings.tr(
+                                        context,
+                                        '가족의 공간 참여를 종료했습니다.',
+                                      ),
+                                    ),
                                   ),
                                 );
                               },
@@ -183,9 +194,15 @@ class FamilyMemberList extends ConsumerWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          refreshFailed
-              ? '주보호자 이전은 완료됐지만 공간 정보를 새로고침하지 못했습니다. 목록을 다시 확인해 주세요.'
-              : '주보호자를 이전했습니다. 이제 일반 가족으로 참여합니다.',
+          AppStrings.error(
+            context,
+            refreshFailed
+                ? AppStrings.tr(
+                    context,
+                    '주보호자 이전은 완료됐지만 공간 정보를 새로고침하지 못했습니다. 목록을 다시 확인해 주세요.',
+                  )
+                : AppStrings.tr(context, '주보호자를 이전했습니다. 이제 일반 가족으로 참여합니다.'),
+          ),
         ),
       ),
     );
@@ -218,16 +235,16 @@ class FamilyMemberCard extends StatelessWidget {
       children: [
         _button(
           context,
-          '이전',
-          '주보호자 이전',
+          AppStrings.tr(context, '이전'),
+          AppStrings.tr(context, '주보호자 이전'),
           Icons.workspace_premium_outlined,
-          AppColors.sageDark,
+          AppColors.of(context).sageDark,
           onPressed: onTransfer,
         ),
         _button(
           context,
-          '강퇴',
-          '가족 강퇴',
+          AppStrings.tr(context, '강퇴'),
+          AppStrings.tr(context, '가족 강퇴'),
           Icons.person_remove_outlined,
           Theme.of(context).colorScheme.error,
           onPressed: onRemove,
@@ -248,12 +265,12 @@ class FamilyMemberCard extends StatelessWidget {
               CircleAvatar(
                 radius: 25,
                 backgroundColor: owner
-                    ? AppColors.peachLight
-                    : AppColors.sageLight,
+                    ? AppColors.of(context).peachLight
+                    : AppColors.of(context).sageLight,
                 child: Text(
                   displayName.characters.first,
-                  style: const TextStyle(
-                    color: AppColors.sageDark,
+                  style: TextStyle(
+                    color: AppColors.of(context).sageDark,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -270,10 +287,10 @@ class FamilyMemberCard extends StatelessWidget {
                       children: [
                         Text(
                           displayName,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
+                            color: AppColors.of(context).textPrimary,
                           ),
                         ),
                         Container(
@@ -282,14 +299,14 @@ class FamilyMemberCard extends StatelessWidget {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.peachSoft,
+                            color: AppColors.of(context).peachSoft,
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
                             member.roleName,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11,
-                              color: AppColors.textSecondary,
+                              color: AppColors.of(context).textSecondary,
                             ),
                           ),
                         ),
@@ -297,10 +314,12 @@ class FamilyMemberCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      email == null || email.isEmpty ? '등록된 이메일이 없습니다.' : email,
-                      style: const TextStyle(
+                      email == null || email.isEmpty
+                          ? AppStrings.tr(context, '등록된 이메일이 없습니다.')
+                          : email,
+                      style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textSecondary,
+                        color: AppColors.of(context).textSecondary,
                       ),
                     ),
                     if (canManage && !owner && stacked) ...[
@@ -333,13 +352,13 @@ class FamilyMemberCard extends StatelessWidget {
     child: OutlinedButton.icon(
       onPressed: onPressed,
       icon: Icon(icon, size: 16),
-      label: Text(label),
+      label: Text(AppStrings.tr(context, label)),
       style: OutlinedButton.styleFrom(
         foregroundColor: color,
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.of(context).surface,
         minimumSize: const Size(64, 44),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        side: const BorderSide(color: AppColors.border),
+        side: BorderSide(color: AppColors.of(context).border),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     ),

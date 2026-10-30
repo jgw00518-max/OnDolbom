@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/view/widgets/discard_changes_dialog.dart';
 import 'package:ondolbom/view/widgets/app_date_picker.dart';
 import 'package:ondolbom/view/widgets/menu_header_icon.dart';
@@ -49,9 +50,9 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
     if (mounted && saved != null) {
       // 시작일을 바꿔 등록했다면 목록도 저장한 날짜로 이동해 결과를 바로 확인한다.
       setState(() => _date = saved);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('투약일지를 등록했어요.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppStrings.tr(context, '투약일지를 등록했어요.'))),
+      );
     }
   }
 
@@ -61,18 +62,22 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
       final approved = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('남은 복용 기간을 삭제할까요?'),
+          title: Text(AppStrings.tr(context, '남은 복용 기간을 삭제할까요?')),
           content: Text(
-            '${item.info ?? '이 약'}의 같은 등록 묶음에서 오늘과 이후 날짜의 항목을 삭제해요.\n오늘 체크한 항목도 삭제되며, 어제까지의 기록은 유지돼요.',
+            AppStrings.format(
+              context,
+              "{0}의 같은 등록 묶음에서 오늘과 이후 날짜의 항목을 삭제해요.\n오늘 체크한 항목도 삭제되며, 어제까지의 기록은 유지돼요.",
+              [item.info ?? AppStrings.tr(context, '이 약')],
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('취소'),
+              child: Text(AppStrings.tr(context, '취소')),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('삭제'),
+              child: Text(AppStrings.tr(context, '삭제')),
             ),
           ],
         ),
@@ -85,9 +90,14 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              count == 0
-                  ? '오늘 이후에 삭제할 항목이 없어요.'
-                  : '오늘 이후의 투약 항목 $count개를 삭제했어요.',
+              AppStrings.error(
+                context,
+                count == 0
+                    ? AppStrings.tr(context, '오늘 이후에 삭제할 항목이 없어요.')
+                    : AppStrings.format(context, "오늘 이후의 투약 항목 {0}개를 삭제했어요.", [
+                        count,
+                      ]),
+              ),
             ),
           ),
         );
@@ -97,9 +107,12 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              error is MedicationFailure
-                  ? error.message
-                  : '약을 삭제하지 못했어요. 다시 시도해 주세요.',
+              AppStrings.error(
+                context,
+                error is MedicationFailure
+                    ? error.message
+                    : AppStrings.tr(context, '약을 삭제하지 못했어요. 다시 시도해 주세요.'),
+              ),
             ),
           ),
         );
@@ -119,9 +132,12 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            error is MedicationFailure
-                ? error.message
-                : '체크하지 못했어요. 다시 시도해 주세요.',
+            AppStrings.error(
+              context,
+              error is MedicationFailure
+                  ? error.message
+                  : AppStrings.tr(context, '체크하지 못했어요. 다시 시도해 주세요.'),
+            ),
           ),
         ),
       );
@@ -133,9 +149,12 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
     try {
       final approved = await showDialog<bool>(
         context: context,
-        builder: (context) => const DiscardChangesDialog(
-          title: '복약 완료 체크 해제',
-          message: '체크를 해제하면 미완료로 표시됩니다.\n체크를 해제하시겠습니까?',
+        builder: (context) => DiscardChangesDialog(
+          title: AppStrings.tr(context, '복약 완료 체크 해제'),
+          message: AppStrings.tr(
+            context,
+            '체크를 해제하면 미완료로 표시됩니다.\n체크를 해제하시겠습니까?',
+          ),
           continueLabel: '취소',
           discardLabel: '해제',
         ),
@@ -149,9 +168,12 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            error is MedicationFailure
-                ? error.message
-                : '체크를 해제하지 못했어요. 다시 시도해 주세요.',
+            AppStrings.error(
+              context,
+              error is MedicationFailure
+                  ? error.message
+                  : AppStrings.tr(context, '체크를 해제하지 못했어요. 다시 시도해 주세요.'),
+            ),
           ),
         ),
       );
@@ -173,7 +195,7 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
         leadingWidth: 62,
         leading: const AppBackLeading(),
         title: Text(
-          '투약일지',
+          AppStrings.tr(context, '투약일지'),
           style: Theme.of(context).appBarTheme.titleTextStyle?.copyWith(
             fontFamily: Theme.of(context).textTheme.titleLarge?.fontFamily,
           ),
@@ -182,7 +204,7 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
       ),
       floatingActionButton: canCreate
           ? AppAddButton(
-              tooltip: '약 추가',
+              tooltip: AppStrings.tr(context, '약 추가'),
               onPressed:
                   selected.familyRoomId.isEmpty || selected.userId.isEmpty
                   ? null
@@ -199,7 +221,7 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
                 child: Row(
                   children: [
                     IconButton(
-                      tooltip: '이전 날짜',
+                      tooltip: AppStrings.tr(context, '이전 날짜'),
                       onPressed: _date.isAfter(DateTime(1900))
                           ? () => setState(
                               () => _date = DateTime(
@@ -222,7 +244,7 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
                       ),
                     ),
                     IconButton(
-                      tooltip: '다음 날짜',
+                      tooltip: AppStrings.tr(context, '다음 날짜'),
                       onPressed: _date.isBefore(DateTime(2100, 12, 31))
                           ? () => setState(
                               () => _date = DateTime(
@@ -238,7 +260,7 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
                       onPressed: () => setState(
                         () => _date = DateUtils.dateOnly(DateTime.now()),
                       ),
-                      child: const Text('오늘'),
+                      child: Text(AppStrings.tr(context, '오늘')),
                     ),
                   ],
                 ),
@@ -257,7 +279,7 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
                               : '투약일지를 불러오지 못했어요.',
                           action: OutlinedButton(
                             onPressed: () => ref.invalidate(provider),
-                            child: const Text('다시 시도'),
+                            child: Text(AppStrings.tr(context, '다시 시도')),
                           ),
                         ),
                         data: (data) {
@@ -332,7 +354,10 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
                                               children: [
                                                 Expanded(
                                                   child: Text(
-                                                    group.key,
+                                                    AppStrings.tr(
+                                                      context,
+                                                      group.key,
+                                                    ),
                                                     style: Theme.of(context)
                                                         .textTheme
                                                         .titleMedium
@@ -358,7 +383,19 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
                                                         ),
                                                   ),
                                                   child: Text(
-                                                    '${group.value.where((item) => item.isConfirmed).length}/${group.value.length} 완료',
+                                                    AppStrings.format(
+                                                      context,
+                                                      "{0}/{1} 완료",
+                                                      [
+                                                        group.value
+                                                            .where(
+                                                              (item) => item
+                                                                  .isConfirmed,
+                                                            )
+                                                            .length,
+                                                        group.value.length,
+                                                      ],
+                                                    ),
                                                     style: TextStyle(
                                                       fontSize: 12,
                                                       color: colors
@@ -377,9 +414,18 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
                                                               item.confirmedByUserId ==
                                                                   selected
                                                                       .userId
-                                                          ? '복약 완료 체크 해제'
-                                                          : '복약 완료')
-                                                    : '복약 완료 체크',
+                                                          ? AppStrings.tr(
+                                                              context,
+                                                              '복약 완료 체크 해제',
+                                                            )
+                                                          : AppStrings.tr(
+                                                              context,
+                                                              '복약 완료',
+                                                            ))
+                                                    : AppStrings.tr(
+                                                        context,
+                                                        '복약 완료 체크',
+                                                      ),
                                                 onPressed:
                                                     (item.isConfirmed &&
                                                             !canCreate &&
@@ -426,7 +472,7 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
                                                       ),
                                               ),
                                               title: Text(
-                                                '${item.info ?? '약 정보 없음'} ${item.doseLabel}',
+                                                '${item.info ?? AppStrings.tr(context, '약 정보 없음')} ${item.doseLabel}',
                                               ),
                                               subtitle: item.isConfirmed
                                                   ? Column(
@@ -434,7 +480,12 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
                                                           CrossAxisAlignment
                                                               .start,
                                                       children: [
-                                                        const Text('복약 완료'),
+                                                        Text(
+                                                          AppStrings.tr(
+                                                            context,
+                                                            '복약 완료',
+                                                          ),
+                                                        ),
                                                         const SizedBox(
                                                           height: 6,
                                                         ),
@@ -445,24 +496,37 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
                                                                 vertical: 5,
                                                               ),
                                                           decoration: BoxDecoration(
-                                                            color: AppColors
-                                                                .sageLight,
+                                                            color:
+                                                                AppColors.resolve(
+                                                                  context,
+                                                                  AppColors
+                                                                      .sageLight,
+                                                                ),
                                                             borderRadius:
                                                                 BorderRadius.circular(
                                                                   20,
                                                                 ),
                                                           ),
                                                           child: Text(
-                                                            '체크: ${item.confirmedByLabel}',
-                                                            style:
-                                                                const TextStyle(
-                                                                  color: AppColors
-                                                                      .sageDark,
-                                                                  fontSize: 12,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .w600,
-                                                                ),
+                                                            AppStrings.format(
+                                                              context,
+                                                              "체크: {0}",
+                                                              [
+                                                                item.confirmedByLabel,
+                                                              ],
+                                                            ),
+                                                            style: TextStyle(
+                                                              color:
+                                                                  AppColors.resolve(
+                                                                    context,
+                                                                    AppColors
+                                                                        .sageDark,
+                                                                  ),
+                                                              fontSize: 12,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                            ),
                                                           ),
                                                         ),
                                                         const SizedBox(
@@ -475,13 +539,21 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
                                                         ),
                                                       ],
                                                     )
-                                                  : const Text('복약 전'),
+                                                  : Text(
+                                                      AppStrings.tr(
+                                                        context,
+                                                        '복약 전',
+                                                      ),
+                                                    ),
                                               trailing: Row(
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
                                                   if (canCreate)
                                                     IconButton(
-                                                      tooltip: '약 삭제',
+                                                      tooltip: AppStrings.tr(
+                                                        context,
+                                                        '약 삭제',
+                                                      ),
                                                       icon: const Icon(
                                                         Icons.delete_outline,
                                                       ),
@@ -503,9 +575,14 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
                                     ),
                                   ),
                                 if (data.hasMore)
-                                  const Padding(
+                                  Padding(
                                     padding: EdgeInsets.only(bottom: 8),
-                                    child: Text('완료 개수는 현재 불러온 기록 기준입니다.'),
+                                    child: Text(
+                                      AppStrings.tr(
+                                        context,
+                                        '완료 개수는 현재 불러온 기록 기준입니다.',
+                                      ),
+                                    ),
                                   ),
                                 if (data.hasMore)
                                   OutlinedButton(
@@ -523,9 +600,16 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
                                                 ).showSnackBar(
                                                   SnackBar(
                                                     content: Text(
-                                                      error is MedicationFailure
-                                                          ? error.message
-                                                          : '추가 조회에 실패했어요.',
+                                                      AppStrings.error(
+                                                        context,
+                                                        error
+                                                                is MedicationFailure
+                                                            ? error.message
+                                                            : AppStrings.tr(
+                                                                context,
+                                                                '추가 조회에 실패했어요.',
+                                                              ),
+                                                      ),
                                                     ),
                                                   ),
                                                 );
@@ -533,7 +617,9 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
                                             }
                                           },
                                     child: Text(
-                                      data.loadingMore ? '불러오는 중…' : '더 보기',
+                                      data.loadingMore
+                                          ? AppStrings.tr(context, '불러오는 중…')
+                                          : AppStrings.tr(context, '더 보기'),
                                     ),
                                   ),
                               ],
@@ -579,9 +665,9 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
               record.isConfirmed &&
               (canEdit || record.confirmedByUserId == room.userId);
           return AlertDialog(
-            backgroundColor: AppColors.background,
+            backgroundColor: AppColors.of(context).background,
             surfaceTintColor: Colors.transparent,
-            shape: MedicationStyle.shape,
+            shape: MedicationStyle.shape(context),
             clipBehavior: Clip.antiAlias,
             insetPadding: const EdgeInsets.symmetric(
               horizontal: 16,
@@ -591,12 +677,12 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
             contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
             actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             title: MedicationHeading(
-              title: '투약 정보',
+              title: AppStrings.tr(context, '투약 정보'),
               onClose: () => Navigator.pop(context),
             ),
             content: SingleChildScrollView(
               child: current != room
-                  ? const Text('선택한 공간이 변경됐어요. 다시 조회해 주세요.')
+                  ? Text(AppStrings.tr(context, '선택한 공간이 변경됐어요. 다시 조회해 주세요.'))
                   : Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -604,20 +690,23 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: AppColors.surface,
+                            color: AppColors.of(context).surface,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppColors.border),
+                            border: Border.all(
+                              color: AppColors.of(context).border,
+                            ),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                record.info ?? '약 정보 없음',
-                                style: const TextStyle(
+                                record.info ??
+                                    AppStrings.tr(context, '약 정보 없음'),
+                                style: TextStyle(
                                   fontSize: 19,
                                   height: 1.5,
                                   fontWeight: FontWeight.w800,
-                                  color: AppColors.textPrimary,
+                                  color: AppColors.of(context).textPrimary,
                                 ),
                               ),
                               const SizedBox(height: 12),
@@ -628,15 +717,17 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
                                 ),
                                 decoration: BoxDecoration(
                                   color: record.isConfirmed
-                                      ? AppColors.sageLight
-                                      : AppColors.peachSoft,
+                                      ? AppColors.of(context).sageLight
+                                      : AppColors.of(context).peachSoft,
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Text(
-                                  '상태: ${record.isConfirmed ? '복약 완료' : '복약 전'}',
-                                  style: const TextStyle(
+                                  AppStrings.format(context, "상태: {0}", [
+                                    record.isConfirmed ? '복약 완료' : '복약 전',
+                                  ]),
+                                  style: TextStyle(
                                     fontWeight: FontWeight.w700,
-                                    color: AppColors.textPrimary,
+                                    color: AppColors.of(context).textPrimary,
                                   ),
                                 ),
                               ),
@@ -675,23 +766,31 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
                   onPressed: confirming
                       ? null
                       : () => _unconfirm(query, record),
-                  child: Text(confirming ? '해제 중…' : '체크 해제'),
+                  child: Text(
+                    confirming
+                        ? AppStrings.tr(context, '해제 중…')
+                        : AppStrings.tr(context, '체크 해제'),
+                  ),
                 ),
               if (!record.isConfirmed)
                 TextButton(
                   onPressed: canConfirm ? () => _confirm(query, record) : null,
-                  child: Text(confirming ? '체크 중…' : '복약 완료 체크'),
+                  child: Text(
+                    confirming
+                        ? AppStrings.tr(context, '체크 중…')
+                        : AppStrings.tr(context, '복약 완료 체크'),
+                  ),
                 ),
               if (canEdit)
                 TextButton(
                   onPressed: confirming
                       ? null
                       : () => Navigator.pop(context, true),
-                  child: const Text('수정'),
+                  child: Text(AppStrings.tr(context, '수정')),
                 ),
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('닫기'),
+                child: Text(AppStrings.tr(context, '닫기')),
               ),
             ],
           );
@@ -712,9 +811,9 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
       return;
     }
     setState(() => _date = DateUtils.dateOnly(savedDate));
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('투약 정보를 수정했어요.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppStrings.tr(context, '투약 정보를 수정했어요.'))),
+    );
   }
 }
 

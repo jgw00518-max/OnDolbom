@@ -1,3 +1,5 @@
+import 'package:ondolbom/l10n/app_strings.dart';
+import 'package:ondolbom/theme/app_colors.dart';
 import 'package:ondolbom/view/widgets/app_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -68,16 +70,16 @@ class _RecipientEditState extends ConsumerState<RecipientEdit> {
       canPop: !isSaving,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('대상자 정보 편집'),
+          title: Text(AppStrings.tr(context, '대상자 정보 편집')),
           leadingWidth: 62,
           leading: AppBackLeading(enabled: !isSaving),
         ),
         body: !canEdit
-            ? const Center(
+            ? Center(
                 child: Padding(
                   padding: EdgeInsets.all(24),
                   child: Text(
-                    '현재 공간의 주보호자만 수정할 수 있습니다.',
+                    AppStrings.tr(context, '현재 공간의 주보호자만 수정할 수 있습니다.'),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -87,13 +89,13 @@ class _RecipientEditState extends ConsumerState<RecipientEdit> {
                 child: ListView(
                   padding: const EdgeInsets.all(24),
                   children: [
-                    const Text(
-                      '돌봄에 필요한 정보를\n가족에게 알려주세요.',
+                    Text(
+                      AppStrings.tr(context, '돌봄에 필요한 정보를\n가족에게 알려주세요.'),
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         height: 1.5,
-                        color: Color(0xFF403C39),
+                        color: AppColors.resolve(context, Color(0xFF403C39)),
                       ),
                     ),
                     const SizedBox(height: 28),
@@ -101,33 +103,39 @@ class _RecipientEditState extends ConsumerState<RecipientEdit> {
                       controller: nameController,
                       enabled: !isSaving,
                       maxLength: 30,
-                      decoration: const InputDecoration(
-                        labelText: '대상자 이름',
+                      decoration: InputDecoration(
+                        labelText: AppStrings.tr(context, '대상자 이름'),
                         prefixIcon: Icon(Icons.person_outline),
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return '대상자 이름을 입력해 주세요.';
+                          return AppStrings.tr(context, '대상자 이름을 입력해 주세요.');
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 18),
-                    const Text(
-                      '성별',
+                    Text(
+                      AppStrings.tr(context, '성별'),
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF403C39),
+                        color: AppColors.resolve(context, Color(0xFF403C39)),
                       ),
                     ),
                     const SizedBox(height: 12),
                     SizedBox(
                       width: double.infinity,
                       child: SegmentedButton<int>(
-                        segments: const [
-                          ButtonSegment<int>(value: 1, label: Text('남성')),
-                          ButtonSegment<int>(value: 2, label: Text('여성')),
+                        segments: [
+                          ButtonSegment<int>(
+                            value: 1,
+                            label: Text(AppStrings.tr(context, '남성')),
+                          ),
+                          ButtonSegment<int>(
+                            value: 2,
+                            label: Text(AppStrings.tr(context, '여성')),
+                          ),
                         ],
                         selected: selectedGender == null
                             ? <int>{}
@@ -139,18 +147,32 @@ class _RecipientEditState extends ConsumerState<RecipientEdit> {
                               WidgetStateProperty.resolveWith<Color>(
                                 (states) =>
                                     states.contains(WidgetState.selected)
-                                    ? const Color(0xFFFFEBD9)
-                                    : Colors.white,
+                                    ? AppColors.resolve(
+                                        context,
+                                        const Color(0xFFFFEBD9),
+                                      )
+                                    : AppColors.resolve(context, Colors.white),
                               ),
                           foregroundColor:
                               WidgetStateProperty.resolveWith<Color>(
                                 (states) =>
                                     states.contains(WidgetState.selected)
-                                    ? const Color(0xFF99522F)
-                                    : const Color(0xFF78716A),
+                                    ? AppColors.resolve(
+                                        context,
+                                        const Color(0xFF99522F),
+                                      )
+                                    : AppColors.resolve(
+                                        context,
+                                        const Color(0xFF78716A),
+                                      ),
                               ),
-                          side: const WidgetStatePropertyAll(
-                            BorderSide(color: Color(0xFFE8DFD7)),
+                          side: WidgetStatePropertyAll(
+                            BorderSide(
+                              color: AppColors.resolve(
+                                context,
+                                Color(0xFFE8DFD7),
+                              ),
+                            ),
                           ),
                           padding: const WidgetStatePropertyAll(
                             EdgeInsets.symmetric(vertical: 16),
@@ -170,9 +192,9 @@ class _RecipientEditState extends ConsumerState<RecipientEdit> {
                       controller: birthController,
                       enabled: !isSaving,
                       keyboardType: TextInputType.datetime,
-                      decoration: const InputDecoration(
-                        labelText: '생년월일',
-                        hintText: '예: 1950-03-15',
+                      decoration: InputDecoration(
+                        labelText: AppStrings.tr(context, '생년월일'),
+                        hintText: AppStrings.tr(context, '예: 1950-03-15'),
                         prefixIcon: Icon(Icons.cake_outlined),
                       ),
                       validator: validateBirthDate,
@@ -182,8 +204,8 @@ class _RecipientEditState extends ConsumerState<RecipientEdit> {
                       controller: addressController,
                       enabled: !isSaving,
                       maxLength: 255,
-                      decoration: const InputDecoration(
-                        labelText: '돌봄 장소',
+                      decoration: InputDecoration(
+                        labelText: AppStrings.tr(context, '돌봄 장소'),
                         prefixIcon: Icon(Icons.home_outlined),
                       ),
                     ),
@@ -193,16 +215,19 @@ class _RecipientEditState extends ConsumerState<RecipientEdit> {
                       enabled: !isSaving,
                       minLines: 3,
                       maxLines: 6,
-                      decoration: const InputDecoration(
-                        labelText: '특이사항',
+                      decoration: InputDecoration(
+                        labelText: AppStrings.tr(context, '특이사항'),
                         alignLabelWithHint: true,
-                        hintText: '가족들이 알아야 할 내용을 적어주세요.',
+                        hintText: AppStrings.tr(
+                          context,
+                          '가족들이 알아야 할 내용을 적어주세요.',
+                        ),
                       ),
                     ),
                     if (errorMessage != null) ...[
                       const SizedBox(height: 20),
                       Text(
-                        errorMessage!,
+                        AppStrings.error(context, errorMessage!),
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.error,
                         ),
@@ -212,14 +237,26 @@ class _RecipientEditState extends ConsumerState<RecipientEdit> {
                     FilledButton(
                       onPressed: isSaving ? null : saveAction,
                       style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFFF7AC82),
-                        foregroundColor: const Color(0xFF553724),
+                        backgroundColor: AppColors.resolve(
+                          context,
+                          const Color(0xFFF7AC82),
+                          onAccent: true,
+                        ),
+                        foregroundColor: AppColors.resolve(
+                          context,
+                          const Color(0xFF553724),
+                          onAccent: true,
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 18),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                      child: Text(isSaving ? '저장 중…' : '변경 내용 저장'),
+                      child: Text(
+                        isSaving
+                            ? AppStrings.tr(context, '저장 중…')
+                            : AppStrings.tr(context, '변경 내용 저장'),
+                      ),
                     ),
                   ],
                 ),

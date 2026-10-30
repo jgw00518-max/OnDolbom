@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:ondolbom/theme/app_colors.dart';
@@ -78,9 +79,9 @@ class _ScheduleTimeWheelState extends State<ScheduleTimeWheel> {
     return Expanded(
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.background,
+          color: AppColors.of(context).background,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: AppColors.of(context).border),
         ),
         child: CupertinoPicker(
           key: ValueKey(hours ? 'hour-wheel' : 'minute-wheel'),
@@ -91,7 +92,7 @@ class _ScheduleTimeWheelState extends State<ScheduleTimeWheel> {
           selectionOverlay: Container(
             margin: const EdgeInsets.symmetric(horizontal: 4),
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.22),
+              color: AppColors.of(context).primary.withValues(alpha: 0.22),
               borderRadius: BorderRadius.circular(12),
             ),
           ),
@@ -106,12 +107,12 @@ class _ScheduleTimeWheelState extends State<ScheduleTimeWheel> {
             for (final value in values)
               Center(
                 child: Text(
-                  '${value.toString().padLeft(2, '0')} ${hours ? '시' : '분'}',
-                  style: const TextStyle(
+                  '${value.toString().padLeft(2, '0')} ${hours ? AppStrings.tr(context, '시') : AppStrings.tr(context, '분')}',
+                  style: TextStyle(
                     fontFamily: 'Pretendard',
                     fontSize: 21,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    color: AppColors.of(context).textPrimary,
                   ),
                 ),
               ),
@@ -138,14 +139,16 @@ class _ScheduleTimeWheelState extends State<ScheduleTimeWheel> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.border,
+                  color: AppColors.of(context).border,
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
             ),
             const SizedBox(height: 22),
             Text(
-              widget.isStart ? '시작 시간 선택' : '종료 시간 선택',
+              widget.isStart
+                  ? AppStrings.tr(context, '시작 시간 선택')
+                  : AppStrings.tr(context, '종료 시간 선택'),
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 18),
@@ -153,10 +156,10 @@ class _ScheduleTimeWheelState extends State<ScheduleTimeWheel> {
               timeText,
               key: const ValueKey('selected-time'),
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 40,
                 fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+                color: AppColors.of(context).textPrimary,
               ),
             ),
             const SizedBox(height: 18),
@@ -172,8 +175,8 @@ class _ScheduleTimeWheelState extends State<ScheduleTimeWheel> {
             ),
             if (!widget.isStart && widget.startTime != null) ...[
               const SizedBox(height: 22),
-              const Text(
-                '시작 시간 기준 빠른 설정',
+              Text(
+                AppStrings.tr(context, '시작 시간 기준 빠른 설정'),
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 10),
@@ -183,19 +186,21 @@ class _ScheduleTimeWheelState extends State<ScheduleTimeWheel> {
                 children: [
                   for (final duration in [120, 240, 480])
                     ChoiceChip(
-                      label: Text('+${duration ~/ 60}시간'),
+                      label: Text(
+                        AppStrings.format(context, "+{0}시간", [duration ~/ 60]),
+                      ),
                       selected: presetEnd(duration) == hour * 60 + minute,
                       onSelected: presetEnd(duration) == null
                           ? null
                           : (_) => selectPreset(duration),
-                      selectedColor: AppColors.primary,
-                      backgroundColor: AppColors.surface,
+                      selectedColor: AppColors.of(context).primary,
+                      backgroundColor: AppColors.of(context).surface,
                       showCheckmark: false,
-                      labelStyle: const TextStyle(
-                        color: AppColors.textPrimary,
+                      labelStyle: TextStyle(
+                        color: AppColors.of(context).textPrimary,
                         fontWeight: FontWeight.w600,
                       ),
-                      side: const BorderSide(color: AppColors.border),
+                      side: BorderSide(color: AppColors.of(context).border),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,
                         vertical: 10,
@@ -216,7 +221,7 @@ class _ScheduleTimeWheelState extends State<ScheduleTimeWheel> {
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(0, 48),
                     ),
-                    child: const Text('취소'),
+                    child: Text(AppStrings.tr(context, '취소')),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -229,7 +234,7 @@ class _ScheduleTimeWheelState extends State<ScheduleTimeWheel> {
                     style: FilledButton.styleFrom(
                       minimumSize: const Size(0, 48),
                     ),
-                    child: const Text('시간 적용'),
+                    child: Text(AppStrings.tr(context, '시간 적용')),
                   ),
                 ),
               ],

@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/view/auth/account_reactivation_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,7 +30,7 @@ class Home extends ConsumerWidget {
       return const FamilyRoomList();
     }
     return Scaffold(
-      appBar: AppBar(title: const Text('온돌봄')),
+      appBar: AppBar(title: Text(AppStrings.tr(context, '온돌봄'))),
       body: SingleChildScrollView(
         child: Center(
           child: Padding(
@@ -44,10 +45,13 @@ class Home extends ConsumerWidget {
                   ),
                   error: (error, _) => Column(
                     children: [
-                      Text(error.toString(), textAlign: TextAlign.center),
+                      Text(
+                        AppStrings.error(context, error.toString()),
+                        textAlign: TextAlign.center,
+                      ),
                       TextButton(
                         onPressed: () => ref.invalidate(userProfileProvider),
-                        child: const Text('사용자 정보 다시 확인'),
+                        child: Text(AppStrings.tr(context, '사용자 정보 다시 확인')),
                       ),
                     ],
                   ),
@@ -57,7 +61,12 @@ class Home extends ConsumerWidget {
                       : const SizedBox.shrink(),
                 ),
                 if (operation.hasError)
-                  Text(authErrorMessage(operation.error!)),
+                  Text(
+                    AppStrings.error(
+                      context,
+                      authErrorMessage(operation.error!),
+                    ),
+                  ),
                 const SizedBox(height: 24),
                 FilledButton(
                   // 프로필 저장 도중 계정을 바꾸지 않도록 로그아웃도 잠시 막는다.
@@ -66,7 +75,11 @@ class Home extends ConsumerWidget {
                       : () {
                           ref.read(authVmProvider.notifier).signOut();
                         },
-                  child: Text(operation.isLoading ? '처리 중…' : '로그아웃'),
+                  child: Text(
+                    operation.isLoading
+                        ? AppStrings.tr(context, '처리 중…')
+                        : AppStrings.tr(context, '로그아웃'),
+                  ),
                 ),
               ],
             ),

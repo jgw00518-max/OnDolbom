@@ -15,12 +15,12 @@ class AppAddButton extends StatelessWidget {
   Widget build(BuildContext context) => FloatingActionButton(
     tooltip: tooltip,
     onPressed: onPressed,
-    backgroundColor: AppColors.peachLight,
-    foregroundColor: AppColors.textPrimary,
+    backgroundColor: AppColors.of(context).peachLight,
+    foregroundColor: AppColors.of(context).textPrimary,
     elevation: 2,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(18),
-      side: const BorderSide(color: AppColors.border),
+      side: BorderSide(color: AppColors.of(context).border),
     ),
     child: const Icon(Icons.add, size: 32),
   );

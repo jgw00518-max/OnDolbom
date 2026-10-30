@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/model/memos/memo.dart';
@@ -36,7 +37,7 @@ class MemoImageView extends ConsumerWidget {
               child: TextButton.icon(
                 onPressed: () => ref.invalidate(provider),
                 icon: const Icon(Icons.refresh),
-                label: const Text('사진 다시 불러오기'),
+                label: Text(AppStrings.tr(context, '사진 다시 불러오기')),
               ),
             ),
             data: (bytes) {
@@ -44,8 +45,9 @@ class MemoImageView extends ConsumerWidget {
                 bytes,
                 fit: BoxFit.contain,
                 cacheWidth: zoomable ? null : 800,
-                errorBuilder: (_, _, _) =>
-                    const Center(child: Text('사진을 표시할 수 없어요.')),
+                errorBuilder: (_, _, _) => Center(
+                  child: Text(AppStrings.tr(context, '사진을 표시할 수 없어요.')),
+                ),
               );
               if (!expandable) {
                 return zoomable
@@ -53,7 +55,7 @@ class MemoImageView extends ConsumerWidget {
                     : image;
               }
               return Semantics(
-                label: '첨부 사진 확대',
+                label: AppStrings.tr(context, '첨부 사진 확대'),
                 button: true,
                 child: InkWell(
                   onTap: () => showDialog<void>(
@@ -65,7 +67,7 @@ class MemoImageView extends ConsumerWidget {
                           Align(
                             alignment: Alignment.centerRight,
                             child: IconButton(
-                              tooltip: '사진 닫기',
+                              tooltip: AppStrings.tr(context, '사진 닫기'),
                               onPressed: () => Navigator.pop(context),
                               icon: const Icon(Icons.close),
                             ),

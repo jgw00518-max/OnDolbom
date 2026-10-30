@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ondolbom/theme/app_colors.dart';
@@ -13,11 +14,14 @@ class AccountWithdrawalButton extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Divider(color: AppColors.border),
+          Divider(color: AppColors.of(context).border),
           const SizedBox(height: 12),
-          const Text(
-            '계정 관리',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+          Text(
+            AppStrings.tr(context, '계정 관리'),
+            style: TextStyle(
+              color: AppColors.of(context).textSecondary,
+              fontSize: 12,
+            ),
           ),
           const SizedBox(height: 8),
           Align(
@@ -25,8 +29,14 @@ class AccountWithdrawalButton extends ConsumerWidget {
             child: TextButton.icon(
               icon: const Icon(Icons.person_remove_outlined, size: 19),
               style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFFAD655B),
-                backgroundColor: const Color(0xFFF7E5DF),
+                foregroundColor: AppColors.resolve(
+                  context,
+                  const Color(0xFFAD655B),
+                ),
+                backgroundColor: AppColors.resolve(
+                  context,
+                  const Color(0xFFF7E5DF),
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -42,24 +52,35 @@ class AccountWithdrawalButton extends ConsumerWidget {
                       final confirmed = await showDialog<bool>(
                         context: context,
                         builder: (dialogContext) => AlertDialog(
-                          title: const Text('회원 탈퇴하시겠어요?'),
-                          content: const Text(
-                            '탈퇴하면 서비스 이용이 즉시 중지되고 회원 데이터는 30일 동안 보관됩니다. 30일이 지나기 전 로그인하면 계정을 다시 활성화할 수 있습니다. 30일 후에는 계정과 개인정보가 삭제되어 복구할 수 없습니다. 가족과 공유한 기록은 작성자를 익명화하여 유지합니다. 주보호자는 역할 이전 또는 공간 삭제가 먼저 필요합니다.',
+                          title: Text(AppStrings.tr(context, '회원 탈퇴하시겠어요?')),
+                          content: Text(
+                            AppStrings.tr(
+                              context,
+                              '탈퇴하면 서비스 이용이 즉시 중지되고 회원 데이터는 30일 동안 보관됩니다. 30일이 지나기 전 로그인하면 계정을 다시 활성화할 수 있습니다. 30일 후에는 계정과 개인정보가 삭제되어 복구할 수 없습니다. 가족과 공유한 기록은 작성자를 익명화하여 유지합니다. 주보호자는 역할 이전 또는 공간 삭제가 먼저 필요합니다.',
+                            ),
                           ),
                           actions: [
                             TextButton(
                               onPressed: () =>
                                   Navigator.pop(dialogContext, false),
-                              child: const Text('취소'),
+                              child: Text(AppStrings.tr(context, '취소')),
                             ),
                             FilledButton(
                               style: FilledButton.styleFrom(
-                                backgroundColor: const Color(0xFFAD655B),
-                                foregroundColor: Colors.white,
+                                backgroundColor: AppColors.resolve(
+                                  context,
+                                  const Color(0xFFAD655B),
+                                  onAccent: true,
+                                ),
+                                foregroundColor: AppColors.resolve(
+                                  context,
+                                  Colors.white,
+                                  onAccent: true,
+                                ),
                               ),
                               onPressed: () =>
                                   Navigator.pop(dialogContext, true),
-                              child: const Text('회원 탈퇴'),
+                              child: Text(AppStrings.tr(context, '회원 탈퇴')),
                             ),
                           ],
                         ),
@@ -74,13 +95,20 @@ class AccountWithdrawalButton extends ConsumerWidget {
                         ).popUntil((route) => route.isFirst);
                       }
                     },
-              label: Text(operation.isLoading ? '탈퇴 처리 중…' : '회원 탈퇴'),
+              label: Text(
+                operation.isLoading
+                    ? AppStrings.tr(context, '탈퇴 처리 중…')
+                    : AppStrings.tr(context, '회원 탈퇴'),
+              ),
             ),
           ),
           if (operation.hasError)
             Text(
-              operation.error.toString(),
-              style: const TextStyle(color: Color(0xFFAD655B), fontSize: 13),
+              AppStrings.error(context, operation.error.toString()),
+              style: TextStyle(
+                color: AppColors.resolve(context, Color(0xFFAD655B)),
+                fontSize: 13,
+              ),
             ),
         ],
       ),

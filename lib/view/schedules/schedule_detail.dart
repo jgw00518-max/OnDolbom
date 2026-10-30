@@ -1,3 +1,4 @@
+import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter/material.dart';
@@ -86,12 +87,12 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
         member.isActive;
     if (!canView) {
       return AlertDialog(
-        title: const Text('돌봄 일정'),
-        content: const Text('로그인 상태와 돌봄 공간 참여를 다시 확인해 주세요.'),
+        title: Text(AppStrings.tr(context, '돌봄 일정')),
+        content: Text(AppStrings.tr(context, '로그인 상태와 돌봄 공간 참여를 다시 확인해 주세요.')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('닫기'),
+            child: Text(AppStrings.tr(context, '닫기')),
           ),
         ],
       );
@@ -164,7 +165,7 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
     return PopScope(
       canPop: !isBusy,
       child: Dialog(
-        backgroundColor: const Color(0xFFFFFCF8),
+        backgroundColor: AppColors.resolve(context, const Color(0xFFFFFCF8)),
         surfaceTintColor: Colors.transparent,
         insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 24),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -175,30 +176,36 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                color: Colors.white,
+                color: AppColors.resolve(context, Colors.white),
                 padding: const EdgeInsets.fromLTRB(22, 18, 12, 18),
                 child: Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        '돌봄 일정',
+                        AppStrings.tr(context, '돌봄 일정'),
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF403C39),
+                          color: AppColors.resolve(context, Color(0xFF403C39)),
                         ),
                       ),
                     ),
                     IconButton(
                       key: const ValueKey('schedule-detail-close'),
-                      tooltip: '닫기',
+                      tooltip: AppStrings.tr(context, '닫기'),
                       onPressed: isBusy ? null : () => Navigator.pop(context),
-                      icon: const Icon(Icons.close, color: Color(0xFF78716A)),
+                      icon: Icon(
+                        Icons.close,
+                        color: AppColors.resolve(context, Color(0xFF78716A)),
+                      ),
                     ),
                   ],
                 ),
               ),
-              const Divider(height: 1, color: Color(0xFFE8DFD7)),
+              Divider(
+                height: 1,
+                color: AppColors.resolve(context, Color(0xFFE8DFD7)),
+              ),
               Flexible(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(22),
@@ -206,7 +213,9 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (item == null)
-                        const Text('일정이 삭제되었거나 더 이상 조회할 수 없습니다.')
+                        Text(
+                          AppStrings.tr(context, '일정이 삭제되었거나 더 이상 조회할 수 없습니다.'),
+                        )
                       else ...[
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -214,15 +223,21 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                             vertical: 7,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFEBD9),
+                            color: AppColors.resolve(
+                              context,
+                              const Color(0xFFFFEBD9),
+                            ),
                             borderRadius: BorderRadius.circular(24),
                           ),
                           child: Text(
-                            statusText,
-                            style: const TextStyle(
+                            AppStrings.tr(context, statusText),
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF756B60),
+                              color: AppColors.resolve(
+                                context,
+                                Color(0xFF756B60),
+                              ),
                             ),
                           ),
                         ),
@@ -232,51 +247,62 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                           previousValue:
                               contentBefore?.title ??
                               (contentVersion == null ? previous?.title : null),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 23,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF403C39),
+                            color: AppColors.resolve(
+                              context,
+                              Color(0xFF403C39),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 28),
                         infoRow(
-                          '날짜',
+                          AppStrings.tr(context, '날짜'),
                           dateText(item.date),
                           previousValue: previous == null
                               ? null
                               : dateText(previous.date),
                         ),
                         infoRow(
-                          '시작시간',
+                          AppStrings.tr(context, '시작시간'),
                           item.startTime,
                           previousValue: previous?.startTime,
                         ),
                         infoRow(
-                          '종료시간',
+                          AppStrings.tr(context, '종료시간'),
                           item.endTime,
                           previousValue: previous?.endTime,
                         ),
-                        infoRow('담당자', assigned ? personName : '모집 중'),
-                        infoRow('일정 상태', item.state),
+                        infoRow(
+                          AppStrings.tr(context, '담당자'),
+                          assigned
+                              ? personName
+                              : AppStrings.tr(context, '모집 중'),
+                        ),
+                        infoRow(AppStrings.tr(context, '일정 상태'), item.state),
                         if (item.reconfirmRequired) ...[
                           if (responseDueAt != null || !item.reconfirmIsUrgent)
                             infoRow(
-                              '응답 기한',
+                              AppStrings.tr(context, '응답 기한'),
                               responseDueAt == null
-                                  ? '기한을 확인하지 못했습니다.'
+                                  ? AppStrings.tr(context, '기한을 확인하지 못했습니다.')
                                   : '${dateText(responseDueAt)} '
                                         '${responseDueAt.hour.toString().padLeft(2, '0')}:'
                                         '${responseDueAt.minute.toString().padLeft(2, '0')}',
                               valueStyle: TextStyle(
                                 color: item.reconfirmIsUrgent
-                                    ? const Color(0xFFC62828)
-                                    : Colors.black,
+                                    ? AppColors.resolve(
+                                        context,
+                                        const Color(0xFFC62828),
+                                      )
+                                    : AppColors.resolve(context, Colors.black),
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                         ],
                         infoRow(
-                          '메모',
+                          AppStrings.tr(context, '메모'),
                           memoText(item.memo),
                           previousValue: contentBefore != null
                               ? memoText(contentBefore.memo)
@@ -285,23 +311,32 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                               : null,
                           newLine: true,
                         ),
-                        infoRow('등록자', item.creatorName ?? '가족'),
+                        infoRow(
+                          AppStrings.tr(context, '등록자'),
+                          item.creatorName ?? AppStrings.tr(context, '가족'),
+                        ),
                         const SizedBox(height: 18),
                         Text(
-                          '담당 가족',
-                          style: const TextStyle(
+                          AppStrings.tr(context, '담당 가족'),
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF403C39),
+                            color: AppColors.resolve(
+                              context,
+                              Color(0xFF403C39),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 20),
                         if (!assigned)
-                          const Text(
-                            '아직 등록된 담당자가 없습니다.',
+                          Text(
+                            AppStrings.tr(context, '아직 등록된 담당자가 없습니다.'),
                             style: TextStyle(
                               fontSize: 15,
-                              color: Color(0xFF78716A),
+                              color: AppColors.resolve(
+                                context,
+                                Color(0xFF78716A),
+                              ),
                             ),
                           )
                         else
@@ -309,13 +344,16 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                             children: [
                               CircleAvatar(
                                 radius: 21,
-                                backgroundColor: AppColors.sage,
+                                backgroundColor: AppColors.of(context).sage,
                                 child: Text(
                                   personName.characters.take(2).toString(),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF403C39),
+                                    color: AppColors.resolve(
+                                      context,
+                                      Color(0xFF403C39),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -323,10 +361,13 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                               Expanded(
                                 child: Text(
                                   personName,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 17,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF403C39),
+                                    color: AppColors.resolve(
+                                      context,
+                                      Color(0xFF403C39),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -337,13 +378,19 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                                     vertical: 5,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFFFEBD9),
+                                    color: AppColors.resolve(
+                                      context,
+                                      const Color(0xFFFFEBD9),
+                                    ),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
-                                  child: const Text(
-                                    '나',
+                                  child: Text(
+                                    AppStrings.tr(context, '나'),
                                     style: TextStyle(
-                                      color: Color(0xFF99522F),
+                                      color: AppColors.resolve(
+                                        context,
+                                        Color(0xFF99522F),
+                                      ),
                                       fontSize: 12,
                                     ),
                                   ),
@@ -364,15 +411,27 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                                     ? null
                                     : () => deleteAction(item!),
                                 style: FilledButton.styleFrom(
-                                  backgroundColor: const Color(0xFFB87568),
-                                  foregroundColor: Colors.white,
+                                  backgroundColor: AppColors.resolve(
+                                    context,
+                                    const Color(0xFFB87568),
+                                    onAccent: true,
+                                  ),
+                                  foregroundColor: AppColors.resolve(
+                                    context,
+                                    Colors.white,
+                                    onAccent: true,
+                                  ),
                                   minimumSize: const Size(0, 48),
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 8,
                                     vertical: 12,
                                   ),
                                 ),
-                                child: Text(isDeleting ? '삭제 중…' : '일정 삭제'),
+                                child: Text(
+                                  isDeleting
+                                      ? AppStrings.tr(context, '삭제 중…')
+                                      : AppStrings.tr(context, '일정 삭제'),
+                                ),
                               ),
                             ),
                             if (item.state == '미완료') ...[
@@ -389,7 +448,11 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                                       vertical: 12,
                                     ),
                                   ),
-                                  child: Text(isEditing ? '편집 중…' : '일정 변경'),
+                                  child: Text(
+                                    isEditing
+                                        ? AppStrings.tr(context, '편집 중…')
+                                        : AppStrings.tr(context, '일정 변경'),
+                                  ),
                                 ),
                               ),
                             ],
@@ -412,11 +475,23 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                                   ? null
                                   : () => withdrawAction(item!),
                               style: FilledButton.styleFrom(
-                                backgroundColor: const Color(0xFFB87568),
-                                foregroundColor: Colors.white,
+                                backgroundColor: AppColors.resolve(
+                                  context,
+                                  const Color(0xFFB87568),
+                                  onAccent: true,
+                                ),
+                                foregroundColor: AppColors.resolve(
+                                  context,
+                                  Colors.white,
+                                  onAccent: true,
+                                ),
                                 minimumSize: const Size(0, 48),
                               ),
-                              child: Text(isWithdrawing ? '처리 중…' : '일정 참여 취소'),
+                              child: Text(
+                                isWithdrawing
+                                    ? AppStrings.tr(context, '처리 중…')
+                                    : AppStrings.tr(context, '일정 참여 취소'),
+                              ),
                             ),
                           ),
                         ),
@@ -425,9 +500,18 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                         const SizedBox(height: 24),
                         Text(
                           responseDueAt != null
-                              ? '변경된 일정 내용을 확인하고 재수락하거나 거절해 주세요.\n'
-                                    '응답 기한 내에 응답하지 않으면 담당 배정이 자동 해제됩니다.'
-                              : '변경된 일정 내용을 확인하고 재수락하거나 거절해 주세요.',
+                              ? AppStrings.tr(
+                                      context,
+                                      '변경된 일정 내용을 확인하고 재수락하거나 거절해 주세요.\n',
+                                    ) +
+                                    AppStrings.tr(
+                                      context,
+                                      '응답 기한 내에 응답하지 않으면 담당 배정이 자동 해제됩니다.',
+                                    )
+                              : AppStrings.tr(
+                                  context,
+                                  '변경된 일정 내용을 확인하고 재수락하거나 거절해 주세요.',
+                                ),
                           style: const TextStyle(height: 1.5),
                         ),
                         const SizedBox(height: 12),
@@ -439,11 +523,19 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                                     ? null
                                     : () => respondAction(item!, false),
                                 style: FilledButton.styleFrom(
-                                  backgroundColor: const Color(0xFFB87568),
-                                  foregroundColor: Colors.white,
+                                  backgroundColor: AppColors.resolve(
+                                    context,
+                                    const Color(0xFFB87568),
+                                    onAccent: true,
+                                  ),
+                                  foregroundColor: AppColors.resolve(
+                                    context,
+                                    Colors.white,
+                                    onAccent: true,
+                                  ),
                                   minimumSize: const Size(0, 48),
                                 ),
-                                child: const Text('거절'),
+                                child: Text(AppStrings.tr(context, '거절')),
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -455,7 +547,11 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                                 style: FilledButton.styleFrom(
                                   minimumSize: const Size(0, 48),
                                 ),
-                                child: Text(isResponding ? '처리 중…' : '재수락'),
+                                child: Text(
+                                  isResponding
+                                      ? AppStrings.tr(context, '처리 중…')
+                                      : AppStrings.tr(context, '재수락'),
+                                ),
                               ),
                             ),
                           ],
@@ -464,7 +560,7 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                       if (errorMessage != null) ...[
                         const SizedBox(height: 18),
                         Text(
-                          errorMessage!,
+                          AppStrings.error(context, errorMessage!),
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.error,
                           ),
@@ -474,8 +570,14 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                         const SizedBox(height: 16),
                         Text(
                           accepted
-                              ? '수락은 완료되었습니다. 최신 일정 정보를 다시 조회해 주세요.'
-                              : '최신 일정 정보를 불러오지 못했습니다. 다시 조회해 주세요.',
+                              ? AppStrings.tr(
+                                  context,
+                                  '수락은 완료되었습니다. 최신 일정 정보를 다시 조회해 주세요.',
+                                )
+                              : AppStrings.tr(
+                                  context,
+                                  '최신 일정 정보를 불러오지 못했습니다. 다시 조회해 주세요.',
+                                ),
                         ),
                         TextButton(
                           onPressed: isBusy
@@ -483,7 +585,7 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                               : () => ref.invalidate(
                                   scheduleListProvider(widget.query),
                                 ),
-                          child: const Text('다시 조회'),
+                          child: Text(AppStrings.tr(context, '다시 조회')),
                         ),
                       ],
                       if (canAccept || isAccepting) ...[
@@ -494,8 +596,16 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                             key: const ValueKey('schedule-accept'),
                             onPressed: isBusy ? null : acceptAction,
                             style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFFF7AC82),
-                              foregroundColor: const Color(0xFF553724),
+                              backgroundColor: AppColors.resolve(
+                                context,
+                                const Color(0xFFF7AC82),
+                                onAccent: true,
+                              ),
+                              foregroundColor: AppColors.resolve(
+                                context,
+                                const Color(0xFF553724),
+                                onAccent: true,
+                              ),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12,
                                 vertical: 18,
@@ -505,7 +615,9 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                               ),
                             ),
                             child: Text(
-                              isAccepting ? '수락 중…' : '신청하고 담당자로 참여하기',
+                              isAccepting
+                                  ? AppStrings.tr(context, '수락 중…')
+                                  : AppStrings.tr(context, '신청하고 담당자로 참여하기'),
                               style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
@@ -540,8 +652,11 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
           SizedBox(
             width: 86,
             child: Text(
-              label,
-              style: const TextStyle(fontSize: 15, color: Color(0xFF78716A)),
+              AppStrings.tr(context, label),
+              style: TextStyle(
+                fontSize: 15,
+                color: AppColors.resolve(context, Color(0xFF78716A)),
+              ),
             ),
           ),
           Expanded(
@@ -549,10 +664,10 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
               value,
               previousValue: previousValue,
               newLine: newLine,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
                 height: 1.4,
-                color: Color(0xFF403C39),
+                color: AppColors.resolve(context, Color(0xFF403C39)),
               ).merge(valueStyle),
             ),
           ),
@@ -577,22 +692,22 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
         children: [
           TextSpan(
             text: previousValue,
-            style: const TextStyle(
-              color: Color(0xFF78716A),
+            style: TextStyle(
+              color: AppColors.resolve(context, Color(0xFF78716A)),
               fontWeight: FontWeight.normal,
             ),
           ),
           TextSpan(
             text: newLine ? '\n→ ' : ' → ',
-            style: const TextStyle(
-              color: Color(0xFFC62828),
+            style: TextStyle(
+              color: AppColors.resolve(context, Color(0xFFC62828)),
               fontWeight: FontWeight.bold,
             ),
           ),
           TextSpan(
             text: value,
-            style: const TextStyle(
-              color: Color(0xFFC62828),
+            style: TextStyle(
+              color: AppColors.resolve(context, Color(0xFFC62828)),
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -630,10 +745,10 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.of(context).background,
         surfaceTintColor: Colors.transparent,
-        title: const Text(
-          '일정 참여 취소',
+        title: Text(
+          AppStrings.tr(context, '일정 참여 취소'),
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         content: SingleChildScrollView(
@@ -641,25 +756,25 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                '이 일정의 담당 참여를 취소할까요?\n'
-                '담당 배정이 해제되고,\n'
-                '가족에게 재모집 안내가 전달됩니다.',
+              Text(
+                AppStrings.tr(context, '이 일정의 담당 참여를 취소할까요?\n') +
+                    AppStrings.tr(context, '담당 배정이 해제되고,\n') +
+                    AppStrings.tr(context, '가족에게 재모집 안내가 전달됩니다.'),
               ),
               if (needsContact) ...[
                 const SizedBox(height: 18),
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: AppColors.peachSoft,
+                    color: AppColors.of(context).peachSoft,
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: const Text(
-                    '일정 시작까지 24시간이 채 남지 않았습니다.\n'
-                    '주보호자에게 알려 새로운 담당 가족을 찾도록\n'
-                    '알려주세요',
+                  child: Text(
+                    AppStrings.tr(context, '일정 시작까지 24시간이 채 남지 않았습니다.\n') +
+                        AppStrings.tr(context, '주보호자에게 알려 새로운 담당 가족을 찾도록\n') +
+                        AppStrings.tr(context, '알려주세요'),
                     style: TextStyle(
-                      color: Color(0xFF9B5C50),
+                      color: AppColors.resolve(context, Color(0xFF9B5C50)),
                       fontWeight: FontWeight.w600,
                       height: 1.5,
                     ),
@@ -675,18 +790,26 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text('취소'),
+                  child: Text(AppStrings.tr(context, '취소')),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: FilledButton(
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFB87568),
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppColors.resolve(
+                      context,
+                      const Color(0xFFB87568),
+                      onAccent: true,
+                    ),
+                    foregroundColor: AppColors.resolve(
+                      context,
+                      Colors.white,
+                      onAccent: true,
+                    ),
                   ),
                   onPressed: () => Navigator.pop(context, true),
-                  child: const Text('참여 취소'),
+                  child: Text(AppStrings.tr(context, '참여 취소')),
                 ),
               ),
             ],
@@ -897,12 +1020,14 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
       barrierDismissible: false,
       barrierColor: const Color(0x66000000),
       builder: (dialogContext) => Dialog(
-        backgroundColor: const Color(0xFFFFFCF8),
+        backgroundColor: AppColors.resolve(context, const Color(0xFFFFFCF8)),
         surfaceTintColor: Colors.transparent,
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
-          side: const BorderSide(color: Color(0xFFE8DFD7)),
+          side: BorderSide(
+            color: AppColors.resolve(context, Color(0xFFE8DFD7)),
+          ),
         ),
         clipBehavior: Clip.antiAlias,
         child: ConstrainedBox(
@@ -919,34 +1044,43 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFEBD9),
+                        color: AppColors.resolve(
+                          context,
+                          const Color(0xFFFFEBD9),
+                        ),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.delete_outline,
-                        color: Color(0xFFA65F48),
+                        color: AppColors.resolve(context, Color(0xFFA65F48)),
                         size: 25,
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '일정을 삭제할까요?',
+                            AppStrings.tr(context, '일정을 삭제할까요?'),
                             style: TextStyle(
                               fontSize: 21,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF403C39),
+                              color: AppColors.resolve(
+                                context,
+                                Color(0xFF403C39),
+                              ),
                             ),
                           ),
                           SizedBox(height: 4),
                           Text(
-                            '삭제할 일정을 확인해 주세요.',
+                            AppStrings.tr(context, '삭제할 일정을 확인해 주세요.'),
                             style: TextStyle(
                               fontSize: 13,
-                              color: Color(0xFF78716A),
+                              color: AppColors.resolve(
+                                context,
+                                Color(0xFF78716A),
+                              ),
                             ),
                           ),
                         ],
@@ -959,17 +1093,22 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFF1E5),
+                    color: AppColors.resolve(context, const Color(0xFFFFF1E5)),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFF0DDCC)),
+                    border: Border.all(
+                      color: AppColors.resolve(
+                        context,
+                        const Color(0xFFF0DDCC),
+                      ),
+                    ),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.event_outlined,
                         size: 22,
-                        color: Color(0xFF99522F),
+                        color: AppColors.resolve(context, Color(0xFF99522F)),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -978,26 +1117,35 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                           children: [
                             Text(
                               item.title,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF554B43),
+                                color: AppColors.resolve(
+                                  context,
+                                  Color(0xFF554B43),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 6),
                             Text(
                               dateText(item.date),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
-                                color: Color(0xFF756B60),
+                                color: AppColors.resolve(
+                                  context,
+                                  Color(0xFF756B60),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 3),
                             Text(
                               '${item.startTime} – ${item.endTime}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
-                                color: Color(0xFF756B60),
+                                color: AppColors.resolve(
+                                  context,
+                                  Color(0xFF756B60),
+                                ),
                               ),
                             ),
                           ],
@@ -1009,13 +1157,13 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                 const SizedBox(height: 18),
                 Text(
                   item.acceptedBy == null
-                      ? '현재 가족 모두에게 삭제 알림이 전달됩니다.'
-                      : '담당 배정이 해제되고, 현재 가족 모두에게 '
-                            '삭제 알림이 전달됩니다.',
-                  style: const TextStyle(
+                      ? AppStrings.tr(context, '현재 가족 모두에게 삭제 알림이 전달됩니다.')
+                      : AppStrings.tr(context, '담당 배정이 해제되고, 현재 가족 모두에게 ') +
+                            AppStrings.tr(context, '삭제 알림이 전달됩니다.'),
+                  style: TextStyle(
                     fontSize: 14,
                     height: 1.55,
-                    color: Color(0xFF756B60),
+                    color: AppColors.resolve(context, Color(0xFF756B60)),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -1025,8 +1173,16 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                       child: OutlinedButton(
                         onPressed: () => Navigator.pop(dialogContext, false),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF756B60),
-                          side: const BorderSide(color: Color(0xFFE8DFD7)),
+                          foregroundColor: AppColors.resolve(
+                            context,
+                            const Color(0xFF756B60),
+                          ),
+                          side: BorderSide(
+                            color: AppColors.resolve(
+                              context,
+                              Color(0xFFE8DFD7),
+                            ),
+                          ),
                           minimumSize: const Size.fromHeight(52),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
@@ -1037,7 +1193,7 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        child: const Text('취소'),
+                        child: Text(AppStrings.tr(context, '취소')),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -1045,8 +1201,16 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                       child: FilledButton(
                         onPressed: () => Navigator.pop(dialogContext, true),
                         style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFFA65F48),
-                          foregroundColor: Colors.white,
+                          backgroundColor: AppColors.resolve(
+                            context,
+                            const Color(0xFFA65F48),
+                            onAccent: true,
+                          ),
+                          foregroundColor: AppColors.resolve(
+                            context,
+                            Colors.white,
+                            onAccent: true,
+                          ),
                           minimumSize: const Size.fromHeight(52),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
@@ -1057,7 +1221,7 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        child: const Text('삭제하기'),
+                        child: Text(AppStrings.tr(context, '삭제하기')),
                       ),
                     ),
                   ],
@@ -1118,7 +1282,15 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
           messenger.showSnackBar(
             SnackBar(
               content: Text(
-                published ? '일정을 삭제했습니다.' : '일정을 삭제했습니다. 가족 알림은 전송 대기 중입니다.',
+                AppStrings.error(
+                  context,
+                  published
+                      ? AppStrings.tr(context, '일정을 삭제했습니다.')
+                      : AppStrings.tr(
+                          context,
+                          '일정을 삭제했습니다. 가족 알림은 전송 대기 중입니다.',
+                        ),
+                ),
               ),
             ),
           );
