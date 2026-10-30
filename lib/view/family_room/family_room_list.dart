@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/family_room/family_room_onboarding.dart';
 import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/view/family_room/family_room_member_summary.dart';
 import 'package:ondolbom/view/widgets/menu_header_icon.dart';
@@ -39,7 +40,11 @@ class _FamilyRoomListState extends ConsumerState<FamilyRoomList> {
   static const _muted = Color(0xFF918782);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      FamilyRoomOnboardingGate(child: _buildRoomList(context));
+
+  // 기존 공간 목록·생성·선택 동작은 유지하고 안내 표시만 바깥에서 연결한다.
+  Widget _buildRoomList(BuildContext context) {
     final state = ref.watch(familyRoomProvider);
     return Scaffold(
       backgroundColor: AppColors.resolve(context, _paper),

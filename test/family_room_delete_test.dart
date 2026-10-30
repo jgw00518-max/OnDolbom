@@ -1,3 +1,4 @@
+import 'package:ondolbom/vm/family_room/family_room_onboarding_vm.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -19,6 +20,12 @@ import 'package:ondolbom/vm/auth/auth_vm.dart';
 import 'package:ondolbom/vm/auth/user_profile_vm.dart' as profile;
 import 'package:ondolbom/vm/family_room/family_room_notifier.dart';
 import 'package:ondolbom/vm/family_room/family_room_state.dart';
+
+// 공간 삭제 검사는 개발용 온보딩 표시와 분리한다.
+class DeleteTestOnboarding extends FamilyRoomOnboardingVm {
+  @override
+  Future<bool> begin() async => false;
+}
 
 class DeleteUser extends Fake implements User {
   Future<String?> Function() token = () async => 'verified-token';
@@ -101,6 +108,7 @@ void main() {
   }) {
     final container = ProviderContainer(
       overrides: [
+        familyRoomOnboardingProvider.overrideWith(DeleteTestOnboarding.new),
         firebaseAuthProvider.overrideWithValue(auth ?? DeleteAuth()),
         authUserProvider.overrideWith(
           (ref) => Stream.value(const AppUser(uid: 'firebase-user')),
@@ -223,6 +231,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          familyRoomOnboardingProvider.overrideWith(DeleteTestOnboarding.new),
           firebaseAuthProvider.overrideWithValue(DeleteAuth()),
           authUserProvider.overrideWith(
             (ref) => Stream.value(const AppUser(uid: 'firebase-user')),
