@@ -1,3 +1,5 @@
+from typing import Literal
+from python.features.invites.history import visible_history, delete_history
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -421,20 +423,20 @@ def get_received_invites(
                 JOIN `user` AS u
                   ON u.user_id = i.inviter_id
                 WHERE LOWER(TRIM(i.invite_email)) = %s
-                  AND i.invite_status IN (%s, %s) 
+                  AND i.invite_status IN (%s, %s, %s, %s, %s)
                   AND i.invite_deleted_at IS NULL
                   AND f.family_room_deleted_at IS NULL
                   AND u.withdrawn_at IS NULL
                 ORDER BY i.invite_at DESC, i.invite_id
                 """,
-                (email, "대기", "만료"),
+                (email, "대기", "만료", "수락", "거절", "취소"),
             )
 
             invites = cursor.fetchall()
 
         conn.commit()
 
-        return {"results": invites}
+        return {"results": visible_history(invites, current_user["user_id"], "received")}
 
     except HTTPException:
         raise
@@ -903,7 +905,7 @@ def get_sent_invites(
         # 조회 과정에서 변경한 만료 상태를 저장한다.
         conn.commit()
 
-        return {"results": invites}
+        return {"results": visible_history(invites, current_user["user_id"], "sent")}
 
     except (MySQLError, ValueError):
         if conn is not None:
@@ -1058,6 +1060,26 @@ def cancel_invite(
             detail="초대를 취소하지 못했습니다.",
         ) from None
 
+    finally:
+        if conn is not None:
+            conn.close()
+
+class InviteHistoryDelete(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    side: Literal['received', 'sent']
+    invite_ids: list[str] = Field(min_length=1, max_length=400)
+
+
+@router.post('/history/delete')
+def delete_invite_history(payload: InviteHistoryDelete,
+        current_user: dict = Depends(get_current_user)):
+    conn = None
+    try:
+        conn = connect()
+        deleted = delete_history(conn, current_user, payload.side, payload.invite_ids)
+        return dict(result='OK', deleted_count=deleted)
+    except MySQLError:
+        raise HTTPException(503, '초대 기록을 확인하지 못했습니다.') from None
     finally:
         if conn is not None:
             conn.close()
