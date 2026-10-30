@@ -25,6 +25,9 @@ class FamilyInvite {
   final bool canResend;
   final bool canCancel;
 
+  bool get canDeleteHistory =>
+      const {'수락', '거절', '취소', '만료'}.contains(inviteStatus);
+
   // 받은 초대 API 응답을 객체로 변환한다.
   factory FamilyInvite.fromJson(Map<String, dynamic> json) {
     return FamilyInvite(

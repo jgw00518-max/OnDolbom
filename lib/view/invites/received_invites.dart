@@ -1,4 +1,5 @@
 import 'package:ondolbom/l10n/app_strings.dart';
+import 'package:ondolbom/view/widgets/discard_changes_dialog.dart';
 import 'package:ondolbom/view/widgets/menu_header_icon.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter/material.dart';
@@ -228,64 +229,90 @@ class _ReceivedInvitesState extends ConsumerState<ReceivedInvites> {
                     data: (items) => ListView(
                       padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
                       children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Expanded(
-                              child: Column(
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final summary = Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  showSent
+                                      ? AppStrings.tr(context, '내가 보낸 초대')
+                                      : AppStrings.tr(context, '나에게 도착한 초대'),
+                                  style: TextStyle(
+                                    color: AppColors.resolve(context, _muted),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  AppStrings.format(context, '{0}개의 초대가 있어요', [
+                                    items.length,
+                                  ]),
+                                  style: TextStyle(
+                                    color: AppColors.resolve(context, _ink),
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -0.8,
+                                  ),
+                                ),
+                              ],
+                            );
+                            final deleteButton = TextButton.icon(
+                              onPressed:
+                                  isAccepting ||
+                                      !items.any(
+                                        (item) => item.canDeleteHistory,
+                                      )
+                                  ? null
+                                  : () => deleteHistoryAction(items),
+                              style: TextButton.styleFrom(
+                                backgroundColor: AppColors.resolve(
+                                  context,
+                                  const Color(0xFFF0ECE9),
+                                ),
+                                foregroundColor: AppColors.resolve(
+                                  context,
+                                  _muted,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 9,
+                                  vertical: 8,
+                                ),
+                                minimumSize: const Size(0, 36),
+                                textStyle: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                shape: const StadiumBorder(),
+                              ),
+                              icon: const Icon(Icons.delete_outline, size: 14),
+                              label: Text(AppStrings.tr(context, '전체 삭제')),
+                            );
+                            // 작은 화면과 큰 글씨에서는 목록 관리 버튼을 다음 줄에 둔다.
+                            if (constraints.maxWidth < 340 ||
+                                MediaQuery.textScalerOf(context).scale(22) >
+                                    26) {
+                              return Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    showSent
-                                        ? AppStrings.tr(context, '내가 보낸 초대')
-                                        : AppStrings.tr(context, '나에게 도착한 초대'),
-                                    style: TextStyle(
-                                      color: AppColors.resolve(context, _muted),
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    AppStrings.format(
-                                      context,
-                                      "{0}개의 초대가 있어요",
-                                      [items.length],
-                                    ),
-                                    style: TextStyle(
-                                      color: AppColors.resolve(context, _ink),
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: -0.8,
-                                    ),
+                                  summary,
+                                  const SizedBox(height: 10),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: deleteButton,
                                   ),
                                 ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 7,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.of(context).peachSoft,
-                                borderRadius: BorderRadius.circular(25),
-                              ),
-                              child: Text(
-                                showSent
-                                    ? AppStrings.tr(context, '보낸 초대')
-                                    : AppStrings.tr(context, '받은 초대'),
-                                style: TextStyle(
-                                  color: AppColors.resolve(
-                                    context,
-                                    Color(0xFFA46F59),
-                                  ),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ],
+                              );
+                            }
+                            return Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Expanded(child: summary),
+                                const SizedBox(width: 8),
+                                deleteButton,
+                              ],
+                            );
+                          },
                         ),
                         const SizedBox(height: 22),
                         if (items.isEmpty)
@@ -293,10 +320,7 @@ class _ReceivedInvitesState extends ConsumerState<ReceivedInvites> {
                             padding: const EdgeInsets.symmetric(vertical: 48),
                             child: Text(
                               showSent
-                                  ? AppStrings.tr(
-                                      context,
-                                      '주보호자로 관리하는 공간에 보낸 초대가 없습니다.',
-                                    )
+                                  ? AppStrings.tr(context, '내가 보낸 초대가 없습니다.')
                                   : AppStrings.tr(context, '받은 가족 초대가 없습니다.'),
                               textAlign: TextAlign.center,
                               style: TextStyle(
@@ -405,40 +429,22 @@ class _ReceivedInvitesState extends ConsumerState<ReceivedInvites> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: statusColor,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Text(
-                  AppStrings.tr(context, status),
-                  style: TextStyle(
-                    color: status == '수락'
-                        ? AppColors.of(context).sageDark
-                        : AppColors.resolve(context, const Color(0xFFA46F59)),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: statusColor,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Text(
+              AppStrings.tr(context, status),
+              style: TextStyle(
+                color: status == '수락'
+                    ? AppColors.of(context).sageDark
+                    : AppColors.resolve(context, const Color(0xFFA46F59)),
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  dateText,
-                  textAlign: TextAlign.right,
-                  style: TextStyle(
-                    color: AppColors.resolve(context, _muted),
-                    fontSize: 10,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
           const SizedBox(height: 18),
           Text(
@@ -598,6 +604,24 @@ class _ReceivedInvitesState extends ConsumerState<ReceivedInvites> {
                 ],
               ),
           ],
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: IconButton(
+              key: ValueKey('invite-delete-${invite.inviteId}'),
+              tooltip: '초대 기록 삭제',
+              style: IconButton.styleFrom(
+                foregroundColor: const Color(0xFFB3A49D),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: busy
+                  ? null
+                  : () => deleteHistoryAction([invite], single: true),
+              icon: const Icon(Icons.delete_outline, size: 21),
+            ),
+          ),
         ],
       ),
     );
@@ -743,6 +767,71 @@ class _ReceivedInvitesState extends ConsumerState<ReceivedInvites> {
       }
     }
   } // build
+
+  Future<void> deleteHistoryAction(
+    List<FamilyInvite> items, {
+    bool single = false,
+  }) async {
+    if (acceptingInviteId != null) return;
+    final eligible = items.where((item) => item.canDeleteHistory).toList();
+    // 미응답 초대의 효력은 기록 삭제로 바꾸지 않는다. 취소·응답은 기존 절차를 따른다.
+    if (eligible.isEmpty) {
+      if (single) {
+        final message = items.single.inviteStatus == '대기'
+            ? showSent
+                  ? '대기 중인 초대는 삭제할 수 없습니다. 먼저 초대를 취소해 주세요.'
+                  : '대기 중인 초대는 삭제할 수 없습니다. 초대에 응답하거나 보낸 사람에게 취소를 요청해 주세요.'
+            : '아직 처리되지 않은 초대는 삭제할 수 없습니다.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppStrings.tr(context, message))),
+        );
+      }
+      return;
+    }
+    final sent = showSent;
+    final uid = ref.read(authUserProvider).asData?.value?.uid;
+    setState(() {
+      acceptingInviteId = 'delete-history';
+      errorMessage = null;
+    });
+    try {
+      final approved = await showDialog<bool>(
+        context: context,
+        builder: (_) => DiscardChangesDialog(
+          title: AppStrings.tr(
+            context,
+            single ? '초대 기록을 삭제할까요?' : '처리된 초대를 모두 삭제할까요?',
+          ),
+          message: AppStrings.format(
+            context,
+            "수락·거절·취소·만료된 {0}개의 기록을 내 초대함에서 삭제합니다.\n대기·발송대기·발송실패 초대는 삭제되지 않습니다.\n대기 초대는 먼저 응답하거나 초대를 취소해 주세요.\n상대방 기록과 가족 공간 참여는 유지됩니다.",
+            [eligible.length],
+          ),
+          continueLabel: AppStrings.tr(context, '취소'),
+          discardLabel: AppStrings.tr(context, single ? '삭제' : '전체 삭제'),
+        ),
+      );
+      if (!mounted || approved != true) return;
+      if (ref.read(authUserProvider).asData?.value?.uid != uid) return;
+      await ref
+          .read(inviteVmProvider)
+          .deleteInviteHistory(
+            eligible.map((item) => item.inviteId).toList(),
+            sent: sent,
+          );
+    } catch (error) {
+      if (mounted) {
+        setState(
+          () => errorMessage = error.toString().replaceFirst('Exception: ', ''),
+        );
+      }
+    } finally {
+      if (mounted) {
+        ref.invalidate(sent ? sentInvitesProvider : receivedInvitesProvider);
+        setState(() => acceptingInviteId = null);
+      }
+    }
+  }
 
   // 확인창에서 동의하면 보낸 초대를 취소한다.
   Future<void> cancelAction(FamilyInvite invite) async {

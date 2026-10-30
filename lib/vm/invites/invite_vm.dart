@@ -56,6 +56,43 @@ class InviteVm {
     return ref.read(apiBaseUrlProvider).replaceAll(RegExp(r'/+$'), '');
   }
 
+  // 원본 초대를 취소하지 않고 본인 초대함의 처리된 기록만 삭제한다.
+  Future<int> deleteInviteHistory(
+    List<String> ids, {
+    required bool sent,
+  }) async {
+    final user = ref.read(firebaseAuthProvider).currentUser;
+    if (user == null) throw Exception('로그인이 필요합니다.');
+    final uid = user.uid;
+    final token = await getLoginToken(uid);
+    var deleted = 0;
+    for (var offset = 0; offset < ids.length; offset += 400) {
+      final chunk = ids.skip(offset).take(400).toList();
+      final response = await ref
+          .read(inviteHttpClientProvider)
+          .post(
+            Uri.parse('$baseUrl/invites/history/delete'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'side': sent ? 'sent' : 'received',
+              'invite_ids': chunk,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+      checkLoginUser(uid);
+      if (response.statusCode != 200) {
+        throw Exception(getErrorMessage(response, '초대 기록을 삭제하지 못했습니다.'));
+      }
+      deleted +=
+          (jsonDecode(utf8.decode(response.bodyBytes))['deleted_count'] as num)
+              .toInt();
+    }
+    return deleted;
+  }
+
   // 요청할 때 현재 사용자의 로그인 토큰을 가져온다.
   Future<String> getLoginToken(String uid) async {
     final auth = ref.read(firebaseAuthProvider);
