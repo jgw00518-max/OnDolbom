@@ -1,5 +1,7 @@
 from python.features.schedules.content_review import get_content_change
 from python.features.schedules.reminders import try_remind
+from python.features.schedules.urgent_schedule import try_urgent_schedule
+from python.features.schedules.urgent_reconfirm import process_urgent_reconfirm_notice
 from python.features.schedules.response_notifications import prepare_response_notification, publish_response_notification
 from datetime import date, time, datetime
 
@@ -338,6 +340,7 @@ def create_schedule(
         )
 
     reminder_published = try_remind(schedule_seq)
+    try_urgent_schedule(schedule_seq)
 
     return {
         "result": "OK",
@@ -559,6 +562,12 @@ def update_schedule(
                 )
 
         reminder_published = try_remind(schedule_seq)
+        try_urgent_schedule(schedule_seq)
+        try:
+            process_urgent_reconfirm_notice(schedule_seq, data.family_room_id)
+        except Exception:
+            logger.exception("긴급 전화 안내 확인 실패; worker에서 재시도")
+
 
         return {
             "result": "OK",
@@ -741,10 +750,13 @@ def get_schedules(
                 )
                 # 현재 시각이 아닌 최초 요청 시각으로 기한을 계산한다.
                 # 메모만 수정해도 응답 기한이 연장되지 않는다.
+                cursor.execute("SELECT CURRENT_TIMESTAMP AS server_now")
+                server_now = cursor.fetchone()["server_now"]
                 deadline = get_reconfirm_deadline(
                     requested_at=pending_request["requested_at"],
                     schedule_date=pending_request["current"]["schedule_date"],
                     start_time=pending_request["current"]["start_time"],
+                    now=server_now,
                 )
 
                 schedule["reconfirm_response_due_at"] = (
@@ -1154,20 +1166,18 @@ def respond_schedule_change(
                     409,
                     "일정 상태나 담당자가 변경되었습니다. 다시 조회해 주세요.",
                 )
+            cursor.execute("SELECT CURRENT_TIMESTAMP AS server_now")
+            server_now = cursor.fetchone()["server_now"]
             # 최초 요청 시각과 최신 일정 시작 시각으로 기한을 확인한다.
             deadline = get_reconfirm_deadline(
                 requested_at=pending_request["requested_at"],
                 schedule_date=pending_request["current"]["schedule_date"],
                 start_time=pending_request["current"]["start_time"],
+                now=server_now,
             )
 
             # 일반·긴급 구분 없이 응답 기한이 있으면 만료 여부를 검사한다.
             if deadline["response_due_at"] is not None:
-                cursor.execute(
-                    "SELECT CURRENT_TIMESTAMP AS server_now"
-                )
-                server_now = cursor.fetchone()["server_now"]
-
                 if server_now >= deadline["response_due_at"]:
                     raise HTTPException(
                         409,

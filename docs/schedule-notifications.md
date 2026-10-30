@@ -1,5 +1,14 @@
 ﻿# Firebase 일정 등록 알림
 
+## 일정 번호 재사용 충돌 처리
+
+- 일정 등록 로그에 `Schedule identity mismatch`가 기록되고 503이 발생하던 문제를 수정했다. 동일한 숫자 `schedule_seq`의 과거 Firestore 문서가 다른 공간·생성 시각을 가리키면 새 일정 등록까지 롤백되던 경우다.
+- 충돌이 없으면 기존 숫자 문서 ID를 유지한다. 충돌이 있으면 `schedule_created_{schedule_seq}_{공간·생성 시각 해시}` 문서를 새로 준비하며 과거 문서와 읽음·삭제 기록을 덮어쓰거나 삭제하지 않는다.
+- 앱이 사용하는 V2 알림함은 문자열 `notification_id`와 기존 읽음·삭제 API를 그대로 사용한다. 같은 일정 재시도는 같은 문서를 재사용해 수신자·읽음 상태를 유지한다.
+- 발행은 DB의 공간 ID·일정 생성 시각과 일치하는 문서만 허용한다. 기존 통합 worker와 등록 알림 재시도 명령은 숫자·문자열 ID를 모두 지원하며, 과거 pending 문서로 재사용된 다른 일정을 발행하지 않는다.
+- 발행 후보 확인에 건별 문서 조회가 추가된다(기본 1건, 충돌 시 최대 2건). 기존 pending 조회를 재사용하며 전체 조회나 새 반복 조회 주기를 추가하지 않는다.
+- MySQL 구조·데이터 변경이나 Firestore 정리는 필요 없다. API·담당 worker를 재시작하면 적용된다. 검증: `python -m unittest python.tests.features.test_registration_collision`. 실제 일정 생성 없이 DB·Firestore를 모의 처리한다.
+
 ## 구현 범위
 
 앱 내 알림 원본과 개인별 읽음 상태를 **Firebase Cloud Firestore**에 저장한다.

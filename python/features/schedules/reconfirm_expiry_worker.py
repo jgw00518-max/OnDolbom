@@ -1,3 +1,4 @@
+from python.features.schedules.urgent_schedule import check_urgent_schedules
 from python.features.schedules.withdraw_schedule import publish_withdrawal_notification
 from python.features.family_room.delete_notifications import publish_notification as publish_room_deletion
 """실행 중 1분마다 재수락 만료를 확인한다."""
@@ -10,7 +11,7 @@ from google.cloud.firestore_v1.base_query import FieldFilter
 from python.features.notifications.schedule_notifications import publish_schedule_notifications
 from python.features.schedules.response_notifications import retry_response_notification
 from python.database import connect
-from python.features.notifications.store import collection
+from python.features.notifications.store import collection, registration_identifier
 from python.features.schedules.change_notifications import (
     publish_reconfirm_expiry_notification,
     publish_reconfirm_notification,
@@ -67,6 +68,8 @@ def check_expired_requests():
     finally:
         conn.close()
 
+    check_urgent_schedules()
+
     for schedule in schedules:
         try:
             # 잠금 후 현재 요청과 기한을 다시 검사한다.
@@ -91,7 +94,7 @@ def check_expired_requests():
 
                 if notice_result["notified"]:
                     logger.info(
-                        "일정 %s 긴급 재수락 미확인 안내 완료",
+                        "일정 %s 긴급 재수락 전화 안내 완료",
                         schedule["schedule_seq"],
                     )
 
@@ -148,9 +151,10 @@ def retry_pending_notifications():
                 published = publish_room_deletion(snapshot.id)
             elif notification_type in (None, 'schedule_created'):
                 # 기존 등록 문서는 notification_type이 없고 일정 번호를 문서 ID로 쓴다.
-                if snapshot.id != str(event.get('schedule_seq')):
+                if (snapshot.id != str(event.get('schedule_seq'))
+                        and snapshot.id != registration_identifier(event)):
                     continue
-                published = publish_schedule_notifications(event['schedule_seq'])
+                published = publish_schedule_notifications(event['schedule_seq'], identifier=snapshot.id)
             elif notification_type in ('schedule_changed', 'schedule_reconfirm'):
                 if snapshot.id != f"{notification_type}_{event.get('schedule_seq')}_{event.get('history_seq')}":
                     continue
@@ -171,7 +175,7 @@ def retry_pending_notifications():
                 published = publish_reconfirm_expiry_notification(
                     snapshot.id
                 )
-            elif notification_type == "schedule_reconfirm_unverified":
+            elif notification_type == "schedule_reconfirm_urgent":
                 published = publish_urgent_reconfirm_notification(
                     snapshot.id
                 )

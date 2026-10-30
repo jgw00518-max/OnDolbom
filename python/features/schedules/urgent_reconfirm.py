@@ -1,4 +1,4 @@
-"""긴급 변경의 시작 시각 이후 재수락 미확인을 처리한다."""
+"""24시간 이하 긴급 재수락의 전화 안내를 한 번 처리한다."""
 
 from datetime import datetime, time
 
@@ -66,25 +66,17 @@ def get_urgent_unverified_request(
 
         current = request["current"]
 
+        cursor.execute("SELECT CURRENT_TIMESTAMP AS server_now")
+        server_now = cursor.fetchone()["server_now"]
         deadline = get_reconfirm_deadline(
             requested_at=request["requested_at"],
             schedule_date=current["schedule_date"],
-            start_time=current["start_time"],
+            start_time=current["start_time"], now=server_now,
         )
-
-        # 일반 요청은 기존 자동 만료 처리에서 담당한다.
-        if not deadline["is_urgent"]:
-            return None
-
-        starts_at = datetime.combine(
-            current["schedule_date"],
-            time.fromisoformat(current["start_time"]),
-        )
-
-        cursor.execute("SELECT CURRENT_TIMESTAMP AS server_now")
-        server_now = cursor.fetchone()["server_now"]
-
-        if server_now < starts_at:
+        starts_at = datetime.combine(current["schedule_date"],
+                                    time.fromisoformat(current["start_time"]))
+        # 시작 후에는 새 전화 안내를 발송하지 않는다.
+        if not deadline["is_urgent"] or server_now >= starts_at:
             return None
 
     return {
@@ -97,7 +89,7 @@ def get_urgent_unverified_request(
         "server_now": server_now,
     }
 
-# 같은 긴급 재수락 요청에는 주보호자 미확인 알림을 하나만 준비한다.
+# 같은 긴급 재수락 요청에는 주보호자 전화 알림을 하나만 준비한다.
 def prepare_urgent_reconfirm_notification(conn, unverified: dict):
     with conn.cursor() as cursor:
         cursor.execute(
@@ -118,14 +110,14 @@ def prepare_urgent_reconfirm_notification(conn, unverified: dict):
 
     if not recipients:
         raise ValueError(
-            "재수락 미확인 안내를 받을 주보호자가 없습니다."
+            "긴급 재수락 전화 안내를 받을 주보호자가 없습니다."
         )
 
     request = unverified["request"]
 
     # 최신 메모 이력이 아니라 최초 요청 번호로 알림을 구분한다.
     return prepare_change({
-        "notification_type": "schedule_reconfirm_unverified",
+        "notification_type": "schedule_reconfirm_urgent",
         "schedule_seq": unverified["schedule_seq"],
         "history_seq": request["request_history_seq"],
         "family_room_id": unverified["family_room_id"],
@@ -135,8 +127,9 @@ def prepare_urgent_reconfirm_notification(conn, unverified: dict):
         "requested_user_id": unverified["accepted_by"],
         "schedule_start_at": str(unverified["starts_at"]),
         "processed_by": "system",
-        "reason": "urgent_response_unverified",
+        "reason": "urgent_reconfirm_phone",
         "recipient_ids": recipients,
+        "message": "일정 시작까지 24시간 이하입니다. 기존 담당 가족에게 전화로 변경 내용을 확인해 주세요.",
     })
 
 # 발행 직전에도 같은 긴급 요청이 아직 미응답인지 확인한다.
@@ -147,7 +140,7 @@ def publish_urgent_reconfirm_notification(identifier: str):
         event is None
         or event.get("status") not in ("pending", "published")
         or event.get("notification_type")
-        != "schedule_reconfirm_unverified"
+        != "schedule_reconfirm_urgent"
     ):
         return False
 
@@ -166,7 +159,7 @@ def publish_urgent_reconfirm_notification(identifier: str):
         request = unverified["request"]
 
         expected_id = (
-            f"schedule_reconfirm_unverified_"
+            f"schedule_reconfirm_urgent_"
             f"{unverified['schedule_seq']}_"
             f"{request['request_history_seq']}"
         )
@@ -183,7 +176,7 @@ def publish_urgent_reconfirm_notification(identifier: str):
             "requested_user_id": unverified["accepted_by"],
             "schedule_start_at": str(unverified["starts_at"]),
             "processed_by": "system",
-            "reason": "urgent_response_unverified",
+            "reason": "urgent_reconfirm_phone",
         }
 
         if any(
@@ -208,7 +201,7 @@ def publish_urgent_reconfirm_notification(identifier: str):
         finally:
             conn.close()
 
-# 긴급 미확인 알림을 처리한다. 담당 배정은 유지한다.
+# 긴급 전화 알림을 처리한다. 담당 배정은 유지한다.
 def process_urgent_reconfirm_notice(
     schedule_seq: int,
     family_room_id: str,

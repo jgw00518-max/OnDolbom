@@ -15,33 +15,15 @@ def has_schedule_time_changed(current: dict, changed: dict) -> bool:
     )
 
 
-def get_reconfirm_deadline(requested_at: datetime, schedule_date, start_time):
-    # 요청 시각은 서버의 DB 기준 시각을 사용한다.
+def get_reconfirm_deadline(requested_at: datetime, schedule_date, start_time, *, now=None):
+    # 최초 요청 시각은 기한 계산에, DB 현재 시각은 긴급 전환에 사용한다.
     if not isinstance(start_time, time):
         start_time = time.fromisoformat(start_time)
-
     starts_at = datetime.combine(schedule_date, start_time)
-    remaining = starts_at - requested_at
-
-    # 12시간 이하: 직접 연락으로 확인하며 자동 만료하지 않는다.
-    if remaining <= timedelta(hours=12):
-        return {
-            "is_urgent": True,
-            "response_due_at": None,
-        }
-
-    # 12시간 초과~24시간 이하: 긴급이지만 자동 만료 기한이 있다.
-    if remaining <= timedelta(hours=24):
-        return {
-            "is_urgent": True,
-            "response_due_at": starts_at - timedelta(hours=12),
-        }
-
-    # 24시간 초과: 일반 변경의 응답 기한을 계산한다.
+    if starts_at - (now if now is not None else requested_at) <= timedelta(hours=24):
+        return {"is_urgent": True, "response_due_at": None}
     return {
         "is_urgent": False,
-        "response_due_at": min(
-            requested_at + timedelta(hours=24),
-            starts_at - timedelta(hours=12),
-        ),
+        "response_due_at": min(requested_at + timedelta(hours=24),
+                               starts_at - timedelta(hours=24)),
     }

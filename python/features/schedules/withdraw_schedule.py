@@ -43,6 +43,11 @@ def publish_withdrawal_notification(identifier):
     if not event or event.get('status') not in ('pending', 'published'):
         return False
     kind = event.get('notification_type')
+    if kind == 'schedule_recruitment' and event.get('status') == 'pending':
+        from python.features.schedules.urgent_schedule import redirect_urgent_recruitment
+        redirected = redirect_urgent_recruitment(event)
+        if redirected is not None:
+            return redirected
     if (kind not in ('schedule_withdrawn', 'schedule_recruitment')
             or event.get('notification_id') != identifier
             or event.get('reason') != 'participation_withdrawal'

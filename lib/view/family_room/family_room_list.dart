@@ -1,4 +1,5 @@
 import 'package:ondolbom/l10n/app_strings.dart';
+import 'package:ondolbom/view/family_room/family_room_member_summary.dart';
 import 'package:ondolbom/view/widgets/menu_header_icon.dart';
 import 'package:ondolbom/theme/app_colors.dart';
 import 'package:flutter/material.dart';
@@ -272,75 +273,82 @@ class _FamilyRoomListState extends ConsumerState<FamilyRoomList> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          Text(
-                                            AppStrings.format(
-                                              context,
-                                              "{0} 돌봄 공간",
-                                              [room.careRecipientName],
-                                            ),
-                                            style: TextStyle(
-                                              color: AppColors.resolve(
-                                                context,
-                                                _ink,
+                                          Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Flexible(
+                                                child: Text(
+                                                  AppStrings.format(
+                                                    context,
+                                                    '{0} 돌봄 공간',
+                                                    [room.careRecipientName],
+                                                  ),
+                                                  style: TextStyle(
+                                                    color: AppColors.resolve(
+                                                      context,
+                                                      _ink,
+                                                    ),
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
                                               ),
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w700,
-                                            ),
+                                              const SizedBox(width: 7),
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 7,
+                                                      vertical: 4,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.of(
+                                                    context,
+                                                  ).peachSoft,
+                                                  borderRadius:
+                                                      BorderRadius.circular(30),
+                                                ),
+                                                child: Text(
+                                                  AppStrings.tr(
+                                                    context,
+                                                    member.isRepresentative
+                                                        ? '주보호자'
+                                                        : '일반 가족',
+                                                  ),
+                                                  style: TextStyle(
+                                                    color: AppColors.resolve(
+                                                      context,
+                                                      const Color(0xFF936B59),
+                                                    ),
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                           const SizedBox(height: 7),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 7,
-                                              vertical: 4,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: AppColors.resolve(
-                                                context,
-                                                const Color(0xFFF6EEE9),
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(30),
-                                            ),
-                                            child: Text(
-                                              member.isRepresentative
-                                                  ? AppStrings.tr(
-                                                      context,
-                                                      '주보호자',
-                                                    )
-                                                  : AppStrings.tr(
-                                                      context,
-                                                      '일반 가족',
-                                                    ),
-                                              style: TextStyle(
-                                                color: AppColors.resolve(
-                                                  context,
-                                                  Color(0xFF936B59),
-                                                ),
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w700,
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
                                           Text(
-                                            AppStrings.format(
-                                              context,
-                                              '돌봄 주소: {0}',
-                                              [
-                                                room.careAddress ??
-                                                    AppStrings.tr(
-                                                      context,
-                                                      '미등록',
-                                                    ),
-                                              ],
-                                            ),
+                                            room.careAddress
+                                                        ?.trim()
+                                                        .isNotEmpty ==
+                                                    true
+                                                ? room.careAddress!
+                                                : AppStrings.tr(
+                                                    context,
+                                                    '주소 미등록',
+                                                  ),
                                             style: TextStyle(
                                               color: AppColors.resolve(
                                                 context,
                                                 _muted,
                                               ),
-                                              fontSize: 13,
+                                              fontSize: 12,
                                             ),
+                                          ),
+                                          const SizedBox(height: 13),
+                                          FamilyRoomMemberSummary(
+                                            familyRoomId: room.familyRoomId,
                                           ),
                                         ],
                                       ),
