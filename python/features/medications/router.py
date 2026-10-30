@@ -1,3 +1,4 @@
+from python.features.notifications import space_events
 import logging
 from datetime import date, timedelta
 from uuid import uuid4
@@ -289,7 +290,9 @@ def insert_medication(
                     for offset in range(medication.duration_days)])
                 medication_log_seq = cursor.lastrowid
 
+        notice = space_events.prepare(conn, medication.family_room_id, current_user_id, 'medication_created', medication_log_seq)
         conn.commit()
+        space_events.publish_safely(notice)
         return {"result": "OK", "medication_log_seq": medication_log_seq}
 
     except HTTPException:

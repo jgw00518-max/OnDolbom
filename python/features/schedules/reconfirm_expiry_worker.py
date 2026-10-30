@@ -147,7 +147,10 @@ def retry_pending_notifications():
         notification_type = event.get("notification_type")
 
         try:
-            if notification_type == 'family_room_deleted':
+            from python.features.notifications import space_events
+            if notification_type in space_events.TITLES:
+                published = space_events.publish(snapshot.id)
+            elif notification_type == 'family_room_deleted':
                 published = publish_room_deletion(snapshot.id)
             elif notification_type in (None, 'schedule_created'):
                 # 기존 등록 문서는 notification_type이 없고 일정 번호를 문서 ID로 쓴다.

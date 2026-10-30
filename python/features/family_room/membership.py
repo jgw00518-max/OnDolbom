@@ -2,6 +2,7 @@
 from fastapi import HTTPException
 from pymysql import MySQLError
 from python.database import connect
+from python.features.notifications import space_events
 
 
 def transfer_representative(room_id: str, actor_id: str, target_user_id: str) -> dict:
@@ -57,7 +58,10 @@ def transfer_representative(room_id: str, actor_id: str, target_user_id: str) ->
                 (target['participate_seq'], room_id, target_user_id))
             if cursor.rowcount != 1:
                 raise HTTPException(409, '이전받을 가족의 참여 정보가 변경되었습니다.')
+        notice = space_events.prepare(connection, room_id, actor_id, 'representative_transferred',
+                                      target['participate_seq'], target_id=target_user_id)
         connection.commit()
+        space_events.publish_safely(notice)
         return {
             'result': 'OK',
             'family_room_id': room_id,
@@ -148,7 +152,11 @@ def end_membership(room_id, actor_id, participate_seq=None, *, connection=None, 
             if cursor.rowcount != 1:
                 raise ValueError('참여 정보가 변경되었습니다.')
         if owns_connection:
+            notice = space_events.prepare(connection, room_id, actor_id,
+                'member_left' if participate_seq is None else 'member_removed',
+                target['participate_seq'], target_id=target['user_id'])
             connection.commit()
+            space_events.publish_safely(notice)
         return dict(result='OK',family_room_id=room_id,user_id=target['user_id'],
                     participate_seq=target['participate_seq'],released_schedules=len(schedules))
     except HTTPException:

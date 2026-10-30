@@ -205,6 +205,24 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
               : null,
         );
     if (!mounted) return;
+    // 공간·기록 알림은 일정 상세로 보내지 않는다. 종료된 가족도 안내 자체는 읽을 수 있다.
+    if (schedule.isSpaceEvent) {
+      if (ref.read(authUserProvider).asData?.value?.uid != uid) return;
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(AppStrings.tr(context, schedule.title)),
+          content: Text(schedule.recipientName),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(AppStrings.tr(context, '확인')),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
     // 최신 참여 목록으로 공간 권한을 확인한 뒤 기존 일정 상세를 재사용한다.
     if (ref.read(authUserProvider).asData?.value?.uid != uid) return;
     if (schedule.isRoomDeletion) {
@@ -419,7 +437,13 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(
-                    item.isRoomDeletion
+                    item.type == 'memo_created'
+                        ? Icons.edit_note_outlined
+                        : item.type == 'medication_created'
+                        ? Icons.medication_outlined
+                        : item.isSpaceEvent
+                        ? Icons.people_outline
+                        : item.isRoomDeletion
                         ? Icons.domain_disabled_outlined
                         : item.type == 'schedule_reconfirm_expired'
                         ? Icons.timer_off_outlined
@@ -454,7 +478,9 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                         children: [
                           Expanded(
                             child: Text(
-                              item.isRoomDeletion
+                              item.isSpaceEvent
+                                  ? item.recipientName
+                                  : item.isRoomDeletion
                                   ? AppStrings.format(context, '{0} 돌봄 공간', [
                                       item.recipientName,
                                     ])
@@ -508,7 +534,9 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                       ),
                       const SizedBox(height: 7),
                       Text(
-                        item.isRoomDeletion
+                        item.isSpaceEvent
+                            ? AppStrings.tr(context, '앱에서 새로운 소식을 확인해 주세요.')
+                            : item.isRoomDeletion
                             ? AppStrings.tr(context, '이 공간은 더 이상 이용할 수 없습니다.')
                             : '${item.date} ${item.startTime} ~ ${item.endTime}',
                         style: TextStyle(

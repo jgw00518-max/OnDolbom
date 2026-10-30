@@ -117,6 +117,9 @@ def _visible_deleted(connection, user_id, event):
 def _visible(connection, user_id, event):
     if not event or event.get('status') != 'published' or user_id not in event.get('recipient_ids', []):
         return None
+    from python.features.notifications import space_events
+    if event.get('notification_type') in space_events.TITLES:
+        return space_events.visible(connection, user_id, event)
     # 이전 버전에서 철회자까지 수신자로 저장한 문서도 앱과 푸시에서 동일하게 제외한다.
     if (event.get('reason') == 'participation_withdrawal'
             and event.get('former_assignee_id') == user_id):
@@ -187,6 +190,9 @@ def _visible(connection, user_id, event):
 def visible_v2(connection, user_id, event):
     """V2 알림함과 배지가 동일한 유형·권한 기준을 사용한다."""
     kind = event.get('notification_type', 'schedule_created')
+    from python.features.notifications import space_events
+    if kind in space_events.TITLES:
+        return _visible(connection, user_id, event)
     if kind not in {'family_room_deleted', 'schedule_created', 'schedule_changed', 'schedule_reconfirm', 'schedule_recruitment', 'schedule_accepted', 'schedule_reconfirmed', 'schedule_deleted', 'schedule_reminder', 'schedule_withdrawn',
                     'schedule_reconfirm_expired', 'schedule_reconfirm_unanswered', 'schedule_reconfirm_urgent', 'schedule_urgent'}:
         return None

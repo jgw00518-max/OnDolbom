@@ -937,6 +937,12 @@ const englishStrings = <String, String>{
   "처리하지 못했습니다. 다시 시도해 주세요.":
       "Unable to complete the request. Please try again.",
   "아직 연결되지 않은 기능입니다.": "This feature is not connected yet.",
+  "주보호자가 변경되었어요": "The primary guardian has changed",
+  "가족이 돌봄 공간에서 나갔어요": "A family member has left the care space",
+  "가족의 돌봄 공간 참여가 종료되었어요": "A family member’s care space membership has ended",
+  "새 메모가 등록되었어요": "A new memo has been added",
+  "새 투약일지가 등록되었어요": "A new medication log has been added",
+  "앱에서 새로운 소식을 확인해 주세요.": "Check the app for the latest update.",
   "주보호자 이전이 필요해요": "Transfer the primary guardian role first",
   "공간에서 나가려면 먼저 주보호자 이전이 필요해요.":
       "Transfer the primary guardian role before leaving this space.",
