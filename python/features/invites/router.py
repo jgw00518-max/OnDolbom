@@ -1,3 +1,4 @@
+from python.features.notifications import space_events
 from typing import Literal
 from python.features.invites.history import visible_history, delete_history
 from uuid import uuid4
@@ -639,7 +640,10 @@ def accept_invite(
                     detail="초대 상태가 변경되었습니다. 다시 조회해 주세요.",
                 )
 
+        # 실제 신규 참여가 확정되는 경로에서만 알림을 만든다. 중복 수락 응답은 이 경로를 타지 않는다.
+        notice = space_events.prepare(conn, family_room_id, user_id, 'member_joined', invite_id)
         conn.commit()
+        space_events.publish_safely(notice)
 
         return {
             "result": "OK",

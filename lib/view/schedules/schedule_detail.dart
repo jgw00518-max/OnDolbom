@@ -13,9 +13,15 @@ import 'package:ondolbom/view/schedules/schedule_create.dart';
 
 // 상세 표시와 버튼 처리 상태는 화면에서, API 요청은 기존 일정 VM에서 관리한다.
 class ScheduleDetail extends ConsumerStatefulWidget {
-  const ScheduleDetail({super.key, required this.item, required this.query});
+  const ScheduleDetail({
+    super.key,
+    required this.item,
+    required this.query,
+    this.notificationTitle,
+  });
   final Schedule item;
   final ScheduleQuery query;
+  final String? notificationTitle;
 
   @override
   ConsumerState<ScheduleDetail> createState() => _ScheduleDetailState();
@@ -212,6 +218,41 @@ class _ScheduleDetailState extends ConsumerState<ScheduleDetail> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // 알림에서 진입한 긴급 일정은 기존 수락·재수락 기능 위에 안내만 추가한다.
+                      if (widget.notificationTitle != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: AppColors.of(context).peachSoft,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.priority_high_rounded,
+                                color: AppColors.of(context).sageDark,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  AppStrings.tr(
+                                    context,
+                                    widget.notificationTitle!,
+                                  ),
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    height: 1.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.of(context).textPrimary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                      ],
                       if (item == null)
                         Text(
                           AppStrings.tr(context, '일정이 삭제되었거나 더 이상 조회할 수 없습니다.'),

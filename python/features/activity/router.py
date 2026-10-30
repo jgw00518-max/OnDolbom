@@ -9,6 +9,7 @@ from python.features.auth.firebase_auth import require_firebase_user
 from python.features.inquiries.router import current_user, inquiry_detail
 from python.features.notices.router import read_notices
 from python.features.schedules.notification_router import visible_v2 as _visible
+from python.features.notifications import store
 from python.features.schedules.change_notifications import list_notification_events
 from python.features.activity import receipts
 from python.features.activity.cache import badge_cache
@@ -53,7 +54,17 @@ def inquiry_count(connection, user_id, uid):
                                       for key, rows in groups.items()})
 
 
-def notification_count(connection, user_id):
+def care_category(kind):
+    if kind == 'memo_created':
+        return 'memos'
+    if kind == 'medication_created':
+        return 'medications'
+    if kind.startswith('schedule_'):
+        return 'schedules'
+    return None
+
+
+def notification_count(connection, user_id, care_menu=None):
     count, before = 0, None
     while True:
         events = list_notification_events(user_id, before, 100)
@@ -61,6 +72,11 @@ def notification_count(connection, user_id):
             row = _visible(connection, user_id, event)
             if row is not None and row['read_at'] is None:
                 count += 1
+                if care_menu is not None:
+                    category = care_category(row.get('notification_type', event.get('notification_type', 'schedule_created')))
+                    room_id = row.get('family_room_id', event.get('family_room_id'))
+                    if category and room_id:
+                        care_menu.setdefault(room_id, {}).setdefault(category, []).append(str(row.get('notification_id', event.get('notification_id'))))
         if len(events) < 100:
             return count
         before = str(events[-1]['notification_id'])
@@ -75,11 +91,11 @@ def badges(claims: dict = Depends(require_firebase_user), force: bool = False):
             user_id = current_user(cursor, claims)
         # 캐시를 반환할 때도 인증과 현재 사용자 확인은 매번 수행한다.
         def calculate():
-            result = {}
+            result, care_menu = {}, {}
             # 한 기능의 Firestore 장애가 다른 메뉴의 정상적인 배지를 지우지 않도록 분리한다.
             for key, action in {
                 'invites': lambda: invite_count(connection, user_id),
-                'notifications': lambda: notification_count(connection, user_id),
+                'notifications': lambda: notification_count(connection, user_id, care_menu),
                 'notices': lambda: notice_count(connection, claims['uid']),
                 'inquiries': lambda: inquiry_count(connection, user_id, claims['uid']),
             }.items():
@@ -87,6 +103,8 @@ def badges(claims: dict = Depends(require_firebase_user), force: bool = False):
                     result[key] = action()
                 except (MySQLError, GoogleAPICallError, ValueError):
                     result[key] = None
+            # 같은 순회에서 공간별 미읽음 ID도 계산해 별도 Firestore 전체 조회를 하지 않는다.
+            result['care_menu'] = care_menu if result['notifications'] is not None else None
             return result
         return badge_cache.load(claims['uid'], calculate, force=force)
 
@@ -127,3 +145,40 @@ def read_inquiry(question_seq: int, payload: ReadReceipt,
     if not row['answers'] or payload.token != receipts.answer_token(row['answers']):
         raise HTTPException(409, '답변 내용이 변경되었습니다. 다시 확인해 주세요.')
     return save_receipt(claims, 'inquiry', question_seq, payload.token)
+
+
+class CareMenuReceipt(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    notification_ids: list[str] = Field(min_length=1, max_length=400)
+
+
+@router.post('/spaces/{room_id}/{category}/read')
+def read_care_menu(room_id: str, category: str, payload: CareMenuReceipt,
+                   claims: dict = Depends(require_firebase_user)):
+    if category not in {'memos', 'medications', 'schedules'}:
+        raise HTTPException(404, '이용할 수 없는 돌봄 메뉴입니다.')
+    connection = None
+    try:
+        connection = connect()
+        with connection.cursor() as cursor:
+            user_id = current_user(cursor, claims)
+        identifiers = []
+        # 메뉴에 진입할 때 확인한 ID만 읽는다. 로딩 중 새로 도착한 알림은 읽지 않는다.
+        for identifier in dict.fromkeys(payload.notification_ids):
+            if len(identifier) > 200 or not all(ch.isascii() and (ch.isalnum() or ch in '_-') for ch in identifier):
+                raise HTTPException(422, '알림 식별자를 확인해 주세요.')
+            event = store.get_event(identifier)
+            if (not event or event.get('family_room_id') != room_id
+                    or care_category(event.get('notification_type', 'schedule_created')) != category):
+                continue
+            row = _visible(connection, user_id, event)
+            if row is not None and not row.get('read_at'):
+                identifiers.append(identifier)
+        store.mark_many_read(identifiers, user_id)
+        return {'count': len(identifiers)}
+    except (MySQLError, GoogleAPICallError, ValueError):
+        raise HTTPException(503, '읽음 상태를 저장하지 못했습니다.') from None
+    finally:
+        badge_cache.invalidate(claims['uid'])
+        if connection is not None:
+            connection.close()

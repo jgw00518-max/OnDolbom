@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/notifications/care_notification_dialog.dart';
 import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/view/widgets/menu_header_icon.dart';
 import 'package:ondolbom/vm/activity/activity_vm.dart';
@@ -79,84 +80,7 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
 
   Future<void> _showRoomDeletion(ScheduleNotification item) => showDialog<void>(
     context: context,
-    builder: (dialogContext) => Dialog(
-      backgroundColor: AppColors.of(context).background,
-      surfaceTintColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      clipBehavior: Clip.antiAlias,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 440),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ColoredBox(
-                color: AppColors.of(context).surface,
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(22, 24, 22, 20),
-                  child: Text(
-                    AppStrings.tr(context, '돌봄 공간 삭제 안내'),
-                    style: TextStyle(
-                      fontSize: 21,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.of(context).textPrimary,
-                    ),
-                  ),
-                ),
-              ),
-              Divider(height: 1, color: AppColors.of(context).border),
-              Padding(
-                padding: const EdgeInsets.all(22),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      AppStrings.format(context, '{0} 돌봄 공간', [
-                        item.recipientName,
-                      ]),
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.of(context).textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      AppStrings.tr(
-                        context,
-                        '주보호자가 이 돌봄 공간을 삭제했습니다.\n이 공간은 더 이상 이용할 수 없습니다.',
-                      ),
-                      style: TextStyle(
-                        fontSize: 14,
-                        height: 1.6,
-                        color: AppColors.of(context).textSecondary,
-                      ),
-                    ),
-                    if (item.roomDeletedAt != null) ...[
-                      const SizedBox(height: 16),
-                      _deletedInfoRow(
-                        '삭제 시각',
-                        item.roomDeletedAt!.replaceAll('T', ' '),
-                      ),
-                    ],
-                    const SizedBox(height: 12),
-                    FilledButton(
-                      onPressed: () => Navigator.of(dialogContext).pop(),
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size(0, 48),
-                      ),
-                      child: Text(AppStrings.tr(context, '확인')),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
+    builder: (_) => CareNotificationDialog(item: item),
   );
 
   // 서버에서 받은 삭제 당시 일시를 읽기 쉽게 표시한다.
@@ -210,16 +134,7 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
       if (ref.read(authUserProvider).asData?.value?.uid != uid) return;
       await showDialog<void>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: Text(AppStrings.tr(context, schedule.title)),
-          content: Text(schedule.recipientName),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(AppStrings.tr(context, '확인')),
-            ),
-          ],
-        ),
+        builder: (_) => CareNotificationDialog(item: schedule),
       );
       return;
     }
@@ -392,7 +307,17 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
     ref.invalidate(scheduleListProvider(detail.query));
     await showDialog<void>(
       context: context,
-      builder: (_) => ScheduleDetail(item: detail.item, query: detail.query),
+      builder: (_) => ScheduleDetail(
+        item: detail.item,
+        query: detail.query,
+        notificationTitle:
+            const {
+              'schedule_urgent',
+              'schedule_reconfirm_urgent',
+            }.contains(schedule.type)
+            ? schedule.title
+            : null,
+      ),
     );
   });
 
@@ -437,7 +362,12 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(
-                    item.type == 'memo_created'
+                    const {
+                          'schedule_urgent',
+                          'schedule_reconfirm_urgent',
+                        }.contains(item.type)
+                        ? Icons.priority_high_rounded
+                        : item.type == 'memo_created'
                         ? Icons.edit_note_outlined
                         : item.type == 'medication_created'
                         ? Icons.medication_outlined

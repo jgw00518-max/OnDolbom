@@ -52,7 +52,7 @@ class ActivityTests(unittest.TestCase):
              patch.object(activity, 'notice_count', return_value=3) as notices, \
              patch.object(activity, 'inquiry_count', return_value=1) as inquiries:
             self.assertEqual(self.client.get('/activity/badges').json(),
-                             {'invites': 2, 'notifications': None, 'notices': 3, 'inquiries': 1})
+                             {'invites': 2, 'notifications': None, 'notices': 3, 'inquiries': 1, 'care_menu': None})
             invites.assert_called_once_with(connection, 'mysql-a')
             notices.assert_called_once_with(connection, 'firebase-a')
             inquiries.assert_called_once_with(connection, 'mysql-a', 'firebase-a')

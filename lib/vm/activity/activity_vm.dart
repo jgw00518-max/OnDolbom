@@ -11,14 +11,29 @@ class ActivityCounts {
     this.notifications = 0,
     this.notices = 0,
     this.inquiries = 0,
+    this.careMenu = const {},
   });
   final int invites, notifications, notices, inquiries;
+  final Map<String, Map<String, List<String>>> careMenu;
+  List<String> menuIds(String room, String category) =>
+      careMenu[room]?[category] ?? const [];
   bool get hasNews => invites + notifications + notices + inquiries > 0;
   ActivityCounts merge(Map<String, dynamic> values) => ActivityCounts(
     invites: values['invites'] as int? ?? invites,
     notifications: values['notifications'] as int? ?? notifications,
     notices: values['notices'] as int? ?? notices,
     inquiries: values['inquiries'] as int? ?? inquiries,
+    careMenu: values['care_menu'] is Map
+        ? {
+            for (final room in (values['care_menu'] as Map).entries)
+              room.key.toString(): {
+                for (final category in (room.value as Map).entries)
+                  category.key.toString(): List<String>.from(
+                    category.value as List,
+                  ),
+              },
+          }
+        : careMenu,
   );
 }
 
@@ -61,7 +76,11 @@ class ActivityVm extends Notifier<ActivityCounts> {
     return const ActivityCounts();
   }
 
-  Future<Map<String, dynamic>> _request(String path, {String? token}) async {
+  Future<Map<String, dynamic>> _request(
+    String path, {
+    String? token,
+    Map<String, Object?>? payload,
+  }) async {
     final uid = _uid;
     final auth = ref.read(firebaseAuthProvider);
     final user = auth.currentUser;
@@ -83,12 +102,12 @@ class ActivityVm extends Notifier<ActivityCounts> {
       'Content-Type': 'application/json',
     };
     final response =
-        await (token == null
+        await (token == null && payload == null
                 ? client.get(uri, headers: headers)
                 : client.post(
                     uri,
                     headers: headers,
-                    body: jsonEncode({'token': token}),
+                    body: jsonEncode(payload ?? {'token': token}),
                   ))
             .timeout(const Duration(seconds: 20));
     if (!ref.mounted ||
@@ -123,6 +142,37 @@ class ActivityVm extends Notifier<ActivityCounts> {
           unawaited(refresh(force: true));
         }
       }
+    }
+  }
+
+  final Set<String> _menuReads = {};
+
+  Future<bool> markCareMenuRead(
+    String room,
+    String category,
+    List<String> ids,
+  ) async {
+    if (ids.isEmpty) return false;
+    final generation = _generation;
+    final key = '$generation:$room:$category:${ids.join(',')}';
+    if (!_menuReads.add(key)) return false;
+    try {
+      for (var offset = 0; offset < ids.length; offset += 400) {
+        await _request(
+          '/spaces/${Uri.encodeComponent(room)}/$category/read',
+          payload: {
+            'notification_ids': ids.sublist(
+              offset,
+              (offset + 400).clamp(0, ids.length),
+            ),
+          },
+        );
+      }
+      if (ref.mounted && generation == _generation) await refresh(force: true);
+      return true;
+    } catch (_) {
+      _menuReads.remove(key);
+      rethrow;
     }
   }
 

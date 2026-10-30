@@ -1,3 +1,4 @@
+import 'package:ondolbom/view/widgets/care_menu_read.dart';
 import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/view/widgets/discard_changes_dialog.dart';
 import 'package:ondolbom/view/widgets/app_date_picker.dart';
@@ -188,6 +189,13 @@ class _MedicationListViewState extends ConsumerState<MedicationListView> {
     final query = (context: selected, date: medicationDateKey(_date));
     final provider = medicationVmProvider(query);
     final feed = ref.watch(provider);
+    watchCareMenuRead(
+      context,
+      ref,
+      selected.familyRoomId,
+      'medications',
+      feed.hasValue && !feed.isLoading && !feed.hasError,
+    );
     final colors = Theme.of(context).colorScheme;
     final canCreate = ref.watch(medicationCreateAllowedProvider(selected));
     return Scaffold(

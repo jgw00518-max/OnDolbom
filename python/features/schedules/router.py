@@ -340,7 +340,7 @@ def create_schedule(
         )
 
     reminder_published = try_remind(schedule_seq)
-    try_urgent_schedule(schedule_seq)
+    urgent_published = try_urgent_schedule(schedule_seq)
 
     return {
         "result": "OK",
@@ -348,6 +348,7 @@ def create_schedule(
         "schedule_state": "미완료",
         "notification_published": notification_published,
         "reminder_published": reminder_published,
+        "urgent_published": urgent_published,
     }
 
 # 주보호자가 변경 내용을 새 이력으로 저장한다.

@@ -47,6 +47,7 @@ class ScheduleNotification {
   );
 
   bool get isSpaceEvent => const {
+    'member_joined',
     'representative_transferred',
     'member_left',
     'member_removed',
@@ -55,6 +56,9 @@ class ScheduleNotification {
   }.contains(type);
 
   String get title => switch (type) {
+    'member_joined' => '새 가족이 돌봄 공간에 참여했어요',
+    'schedule_urgent' => '시작까지 24시간 이내, 긴급 돌봄 담당자가 필요해요',
+    'schedule_reconfirm_urgent' => '긴급 변경 일정의 담당 가족과 재수락 여부를 확인해 주세요',
     'representative_transferred' => '주보호자가 변경되었어요',
     'member_left' => '가족이 돌봄 공간에서 나갔어요',
     'member_removed' => '가족의 돌봄 공간 참여가 종료되었어요',

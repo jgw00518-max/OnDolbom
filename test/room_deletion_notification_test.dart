@@ -96,7 +96,7 @@ void main() {
     await tester.tap(find.text('참여하던 돌봄 공간이 삭제되었어요'));
     await tester.pumpAndSettle();
     expect(find.text('돌봄 공간 삭제 안내'), findsOneWidget);
-    expect(find.text('2026-10-30 10:00:00'), findsOneWidget);
+    expect(find.textContaining('2026-10-30 10:00:00'), findsOneWidget);
     expect(find.byType(ScheduleDetail), findsNothing);
     expect(
       container.read(notificationsVmProvider).asData!.value.items.single.readAt,
@@ -113,6 +113,7 @@ void main() {
         '/schedules/schedule-notifications/family_room_deleted_version/read',
       ],
     );
+    await tester.ensureVisible(find.widgetWithText(FilledButton, '확인'));
     await tester.tap(find.widgetWithText(FilledButton, '확인'));
     await tester.pumpAndSettle();
     final trash = find.byTooltip('알림 삭제');

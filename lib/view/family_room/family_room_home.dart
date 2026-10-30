@@ -1,3 +1,4 @@
+import 'package:ondolbom/vm/activity/activity_vm.dart';
 import 'package:ondolbom/l10n/app_strings.dart';
 import 'package:ondolbom/view/family_room/today_schedule_card.dart';
 import 'package:ondolbom/vm/schedules/schedule_vm.dart';
@@ -30,6 +31,7 @@ class FamilyRoomHome extends ConsumerWidget {
     });
     final state = ref.watch(familyRoomProvider);
     final room = state.selectedRoom;
+    final activity = ref.watch(activityProvider);
     final chatCounts = ref.watch(chatUnreadProvider).asData?.value;
 
     if (room == null) {
@@ -147,6 +149,9 @@ class FamilyRoomHome extends ConsumerWidget {
                     builder: (_) => const MedicationListView(),
                   ),
                 ),
+                hasNews: activity
+                    .menuIds(room.familyRoomId, 'medications')
+                    .isNotEmpty,
               ),
               const SizedBox(width: 10),
               menuButton(
@@ -170,6 +175,9 @@ class FamilyRoomHome extends ConsumerWidget {
                 () => Navigator.of(context).push(
                   MaterialPageRoute<void>(builder: (_) => const MemoListView()),
                 ),
+                hasNews: activity
+                    .menuIds(room.familyRoomId, 'memos')
+                    .isNotEmpty,
               ),
             ],
           ),
@@ -183,6 +191,9 @@ class FamilyRoomHome extends ConsumerWidget {
                 AppStrings.tr(context, '일정'),
                 Icons.calendar_month_outlined,
                 () => scheduleAction(context, ref, room.familyRoomId),
+                hasNews: activity
+                    .menuIds(room.familyRoomId, 'schedules')
+                    .isNotEmpty,
               ),
               const SizedBox(width: 10),
               menuButton(
@@ -225,6 +236,7 @@ class FamilyRoomHome extends ConsumerWidget {
     IconData icon,
     VoidCallback action, {
     int badge = 0,
+    bool hasNews = false,
   }) {
     return Expanded(
       child: ConstrainedBox(
@@ -246,9 +258,11 @@ class FamilyRoomHome extends ConsumerWidget {
             children: [
               // 배지는 고정 크기 아이콘 바깥에 겹쳐 표시해 그림의 크기·중심을 유지한다.
               Badge(
-                isLabelVisible: badge > 0,
-                label: Text(badge > 99 ? '99+' : '$badge'),
-                backgroundColor: AppColors.of(context).primary,
+                isLabelVisible: badge > 0 || hasNews,
+                label: badge > 0 ? Text(badge > 99 ? '99+' : '$badge') : null,
+                backgroundColor: hasNews
+                    ? AppColors.notificationDot
+                    : AppColors.of(context).primary,
                 textColor: AppColors.of(context).textPrimary,
                 child: Container(
                   width: 40,
