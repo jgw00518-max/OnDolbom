@@ -121,6 +121,7 @@ def send_message(fid, uid, identifier, test=False, notification_type='schedule_c
             'memo_created': '새 메모가 등록되었습니다. 앱에서 확인해 주세요.',
             'medication_created': '새 투약일지가 등록되었습니다. 앱에서 확인해 주세요.',
             'chat_message': '가족의 새 채팅이 도착했습니다. 앱에서 확인해 주세요.',
+            'family_room_deleted': '참여하던 돌봄 공간이 삭제되었습니다. 앱에서 안내를 확인해 주세요.',
             'schedule_created': '새 돌봄 일정이 등록되었습니다. 앱에서 확인해 주세요.',
             'schedule_changed': '돌봄 일정이 변경되었습니다. 앱에서 확인해 주세요.',
             'schedule_deleted': '돌봄 일정이 삭제되었습니다. 앱에서 확인해 주세요.',

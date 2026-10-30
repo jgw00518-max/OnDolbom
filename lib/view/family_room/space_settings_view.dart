@@ -174,13 +174,7 @@ class SpaceSettingsView extends ConsumerWidget {
                   ? null
                   : () async {
                       if (guardian) {
-                        _notice(
-                          context,
-                          AppStrings.tr(
-                            context,
-                            '공간에서 나가려면 먼저 주보호자 이전이 필요해요. 함께하는 가족에서 이전해 주세요.',
-                          ),
-                        );
+                        await _showGuardianTransferNotice(context);
                         return;
                       }
                       final navigator = Navigator.of(context);
@@ -302,7 +296,118 @@ class SpaceSettingsView extends ConsumerWidget {
   void _open(BuildContext context, Widget page) =>
       Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
 
-  void _notice(BuildContext context, String message) => ScaffoldMessenger.of(
-    context,
-  ).showSnackBar(SnackBar(content: Text(AppStrings.error(context, message))));
+  Future<void> _showGuardianTransferNotice(BuildContext context) =>
+      showDialog<void>(
+        context: context,
+        builder: (dialogContext) => Dialog(
+          backgroundColor: AppColors.of(context).background,
+          surfaceTintColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 24,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: BorderSide(color: AppColors.of(context).border),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ColoredBox(
+                    color: AppColors.of(context).surface,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.of(context).sageLight,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Icon(
+                              Icons.workspace_premium_outlined,
+                              color: AppColors.of(context).sageDark,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              AppStrings.tr(context, '주보호자 이전이 필요해요'),
+                              style: TextStyle(
+                                fontSize: 21,
+                                height: 1.4,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.of(context).textPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Divider(height: 1, color: AppColors.of(context).border),
+                  Padding(
+                    padding: const EdgeInsets.all(22),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          AppStrings.tr(context, '공간에서 나가려면 먼저 주보호자 이전이 필요해요.'),
+                          style: TextStyle(
+                            fontSize: 15,
+                            height: 1.6,
+                            color: AppColors.of(context).textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: AppColors.of(context).peachSoft,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Text(
+                            AppStrings.tr(
+                              context,
+                              '함께하는 가족에서 다른 가족에게 주보호자를 이전해 주세요.',
+                            ),
+                            style: TextStyle(
+                              fontSize: 13,
+                              height: 1.6,
+                              color: AppColors.of(context).textPrimary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        FilledButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: AppColors.textPrimary,
+                            minimumSize: const Size(0, 48),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: Text(AppStrings.tr(context, '확인')),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
 }

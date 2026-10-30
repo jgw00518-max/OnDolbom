@@ -82,6 +82,15 @@ void main() {
         find.textContaining(guardian ? '먼저 주보호자 이전' : '공간에서 나갈까요?'),
         findsOneWidget,
       );
+      if (guardian) {
+        expect(find.byType(Dialog), findsOneWidget);
+        expect(find.byType(SnackBar), findsNothing);
+        expect(find.text('주보호자 이전이 필요해요'), findsOneWidget);
+        await tester.tap(find.widgetWithText(FilledButton, '확인'));
+        await tester.pumpAndSettle();
+        expect(find.byType(Dialog), findsNothing);
+        expect(find.text('공간을 관리해요'), findsOneWidget);
+      }
       expect(tester.takeException(), isNull);
     });
   }

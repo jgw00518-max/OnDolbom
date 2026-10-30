@@ -8,6 +8,7 @@ from pymysql import MySQLError
 from python.database import connect
 from python.features.auth.firebase_auth import require_firebase_user
 from python.features.notifications import store
+from python.features.family_room.delete_notifications import visible_notification as visible_room_deletion
 from python.features.schedules.change_notifications import list_notification_events
 import logging
 
@@ -123,6 +124,8 @@ def _visible(connection, user_id, event):
     if (event.get('reason') == 'participation_withdrawal'
             and event.get('former_assignee_id') == user_id):
         return None
+    if event.get('notification_type') == 'family_room_deleted':
+        return visible_room_deletion(connection, user_id, event)
     if event.get('notification_type') == 'schedule_reminder' and not reminder_is_current(connection, event):
         return None
     if event.get('notification_type') == 'schedule_deleted':
@@ -175,7 +178,7 @@ def visible_v2(connection, user_id, event):
     from python.features.notifications import space_events
     if kind in space_events.TITLES:
         return _visible(connection, user_id, event)
-    if kind not in {'schedule_created', 'schedule_changed', 'schedule_reconfirm', 'schedule_recruitment', 'schedule_accepted', 'schedule_reconfirmed', 'schedule_deleted', 'schedule_reminder', 'schedule_withdrawn',
+    if kind not in {'family_room_deleted', 'schedule_created', 'schedule_changed', 'schedule_reconfirm', 'schedule_recruitment', 'schedule_accepted', 'schedule_reconfirmed', 'schedule_deleted', 'schedule_reminder', 'schedule_withdrawn',
                     'schedule_reconfirm_expired', 'schedule_reconfirm_unanswered', 'schedule_reconfirm_unverified'}:
         return None
     # 자동 만료 재모집도 원래 recipient_ids와 현재 참여 권한으로 조회한다.
@@ -280,8 +283,19 @@ def delete_notification(notification_id: str = Path(min_length=1, max_length=200
 def notification_schedule(notification_id: str = Path(min_length=1, max_length=200, pattern=r"^[A-Za-z0-9_-]+$"), claims: dict = Depends(require_firebase_user)):
     def action(connection, user_id):
         notification = _required(connection, user_id, notification_id)
-        if notification.get('notification_type') == 'schedule_deleted':
-            raise HTTPException(410, '삭제된 일정입니다.')
+        if notification.get('notification_type') in {'schedule_deleted', 'family_room_deleted'}:
+            raise HTTPException(410, '삭제된 공간입니다.' if notification['notification_type'] == 'family_room_deleted' else '삭제된 일정입니다.')
+        return notification
+    return _run(claims, action)
+
+
+@router.get('/{notification_id}/room')
+def notification_deleted_room(notification_id: str = Path(min_length=1, max_length=200, pattern=r"^[A-Za-z0-9_-]+$"),
+                              claims: dict = Depends(require_firebase_user)):
+    def action(connection, user_id):
+        notification = _required(connection, user_id, notification_id)
+        if notification.get('notification_type') != 'family_room_deleted':
+            raise HTTPException(404, '공간 삭제 알림을 찾을 수 없습니다.')
         return notification
     return _run(claims, action)
 

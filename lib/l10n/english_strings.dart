@@ -943,4 +943,17 @@ const englishStrings = <String, String>{
   "새 메모가 등록되었어요": "A new memo has been added",
   "새 투약일지가 등록되었어요": "A new medication log has been added",
   "앱에서 새로운 소식을 확인해 주세요.": "Check the app for the latest update.",
+  "주보호자 이전이 필요해요": "Transfer the primary guardian role first",
+  "공간에서 나가려면 먼저 주보호자 이전이 필요해요.":
+      "Transfer the primary guardian role before leaving this space.",
+  "함께하는 가족에서 다른 가족에게 주보호자를 이전해 주세요.":
+      "Go to Family members to transfer the primary guardian role to another family member.",
+  "돌봄 공간 삭제 안내": "Care space deleted",
+  "참여하던 돌봄 공간이 삭제되었어요": "A care space you belonged to was deleted",
+  "이 공간은 더 이상 이용할 수 없습니다.": "This space is no longer available.",
+  "주보호자가 이 돌봄 공간을 삭제했습니다.\n이 공간은 더 이상 이용할 수 없습니다.":
+      "The primary guardian deleted this care space.\nThis space is no longer available.",
+  "삭제 시각": "Deleted at",
+  "공간 삭제 알림이 없거나 현재 접근할 수 없습니다.":
+      "The space deletion notification is unavailable or you no longer have access.",
 };

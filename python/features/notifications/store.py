@@ -6,7 +6,7 @@ from google.cloud.firestore_v1.base_query import FieldFilter
 from python.features.auth.firebase_auth import get_firebase_app
 
 
-PUSH_TYPES = frozenset({'representative_transferred', 'member_left', 'member_removed', 'memo_created', 'medication_created', 'schedule_created', 'schedule_changed', 'schedule_deleted', 'schedule_reconfirm',
+PUSH_TYPES = frozenset({'family_room_deleted', 'representative_transferred', 'member_left', 'member_removed', 'memo_created', 'medication_created', 'schedule_created', 'schedule_changed', 'schedule_deleted', 'schedule_reconfirm',
                         'schedule_accepted', 'schedule_reconfirmed', 'schedule_recruitment', 'schedule_reminder', 'schedule_withdrawn',
                         'schedule_reconfirm_expired', 'schedule_reconfirm_unanswered', 'schedule_reconfirm_unverified'})
 

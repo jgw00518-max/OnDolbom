@@ -1,4 +1,5 @@
 from python.features.schedules.withdraw_schedule import publish_withdrawal_notification
+from python.features.family_room.delete_notifications import publish_notification as publish_room_deletion
 """실행 중 1분마다 재수락 만료를 확인한다."""
 
 import logging
@@ -146,6 +147,8 @@ def retry_pending_notifications():
             from python.features.notifications import space_events
             if notification_type in space_events.TITLES:
                 published = space_events.publish(snapshot.id)
+            elif notification_type == 'family_room_deleted':
+                published = publish_room_deletion(snapshot.id)
             elif notification_type in (None, 'schedule_created'):
                 # 기존 등록 문서는 notification_type이 없고 일정 번호를 문서 ID로 쓴다.
                 if snapshot.id != str(event.get('schedule_seq')):

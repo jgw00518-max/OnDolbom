@@ -71,6 +71,10 @@ class _PushBridgeState extends ConsumerState<PushBridge>
           ref.read(activityProvider.notifier).refresh(force: true);
         }
         ref.invalidate(notificationsVmProvider);
+        if (event.data['type'] == 'family_room_deleted') {
+          // 삭제된 공간이 선택 목록에 남지 않도록 최신 공간 목록도 갱신한다.
+          unawaited(ref.read(familyRoomProvider.notifier).fetchRooms());
+        }
       });
       unawaited(
         service.start().catchError((Object _) {
