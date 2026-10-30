@@ -17,6 +17,7 @@ from python.main import app
 
 
 STAMP = datetime(2026, 10, 27, 17, 30)
+CREATED = datetime(2026, 10, 1)
 
 
 class FamilyRoomDeleteTests(unittest.TestCase):
@@ -27,11 +28,13 @@ class FamilyRoomDeleteTests(unittest.TestCase):
         self.db = MagicMock()
         self.cursor = self.db.cursor.return_value.__enter__.return_value
         self.cursor.fetchone.side_effect = [
-            {"family_room_deleted_at": None},
+            {"family_room_deleted_at": None, "created_at": CREATED, "care_recipient_name": "가족"},
             {"participate_seq": 1, "is_representative": 1},
             {"family_room_deleted_at": STAMP},
         ]
         self.connect = self.enterContext(patch.object(rooms, "connect", return_value=self.db))
+        self.prepare = self.enterContext(patch.object(rooms, 'prepare_deletion_notification'))
+        self.publish = self.enterContext(patch.object(rooms, 'publish_deletion_notification'))
         self.close_room = self.enterContext(patch.object(rooms.chat_manager, "close_room", new_callable=AsyncMock))
 
     def delete(self, room="room-a"):
@@ -63,7 +66,7 @@ class FamilyRoomDeleteTests(unittest.TestCase):
 
     def test_repeat_preserves_timestamp_without_updating_data(self):
         self.cursor.fetchone.side_effect = [
-            {"family_room_deleted_at": STAMP}, {"participate_seq": 1, "is_representative": 1},
+            {"family_room_deleted_at": STAMP, "created_at": CREATED, "care_recipient_name": "가족"}, {"participate_seq": 1, "is_representative": 1},
         ]
         response = self.delete()
         self.assertEqual(response.status_code, 200)
@@ -71,6 +74,32 @@ class FamilyRoomDeleteTests(unittest.TestCase):
         self.assertEqual(response.json()["family_room_deleted_at"], STAMP.isoformat())
         self.assertEqual(self.cursor.execute.call_count, 2)
         self.db.commit.assert_called_once()
+        self.close_room.assert_awaited_once()
+        self.prepare.assert_not_called()
+        self.publish.assert_called_once()
+
+    def test_notification_is_prepared_before_commit_and_published_after_commit(self):
+        self.prepare.side_effect = lambda *args: self.db.commit.assert_not_called()
+        self.publish.side_effect = lambda *args: self.db.commit.assert_called_once()
+        self.assertEqual(self.delete().status_code, 200)
+        self.prepare.assert_called_once()
+        self.publish.assert_called_once()
+
+    def test_notification_preparation_failure_rolls_back_and_keeps_chats(self):
+        self.prepare.side_effect = HTTPException(503, '알림 준비 실패')
+        self.assertEqual(self.delete().status_code, 503)
+        self.db.rollback.assert_called_once()
+        self.db.commit.assert_not_called()
+        self.publish.assert_not_called()
+        self.close_room.assert_not_awaited()
+
+    def test_publication_failure_keeps_committed_deletion_and_closes_chats(self):
+        self.publish.side_effect = ValueError('private')
+        response = self.delete()
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn('private', response.text)
+        self.db.commit.assert_called_once()
+        self.db.rollback.assert_not_called()
         self.close_room.assert_awaited_once()
 
     def test_missing_token_cannot_connect(self):
@@ -147,7 +176,7 @@ class LiveDeletedRoomTests(unittest.TestCase):
         db = MagicMock()
         cursor = db.cursor.return_value.__enter__.return_value
         cursor.fetchone.side_effect = [
-            {"family_room_deleted_at": None},
+            {"family_room_deleted_at": None, "created_at": CREATED, "care_recipient_name": "가족"},
             {"participate_seq": 1, "is_representative": 1},
             {"family_room_deleted_at": STAMP},
         ]
@@ -163,7 +192,7 @@ class LiveDeletedRoomTests(unittest.TestCase):
             return "guardian", time.time() + 3600
 
         db.commit.side_effect = commit
-        with patch.object(rooms, "connect", return_value=db), patch.object(chats, "_session", side_effect=session), TestClient(app) as client:
+        with patch.object(rooms, "connect", return_value=db), patch.object(rooms, 'prepare_deletion_notification'), patch.object(rooms, 'publish_deletion_notification'), patch.object(chats, "_session", side_effect=session), TestClient(app) as client:
             with client.websocket_connect('/chats/ws/room-a') as target, client.websocket_connect('/chats/ws/room-b') as other:
                 for socket in (target, other):
                     socket.send_json({'type': 'auth', 'token': 'verified'})

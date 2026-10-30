@@ -11,6 +11,8 @@ import 'package:ondolbom/model/auth/app_user.dart';
 import 'package:ondolbom/model/auth/user_profile.dart';
 import 'package:ondolbom/model/family/family_room.dart';
 import 'package:ondolbom/model/family/participate.dart';
+import 'package:ondolbom/theme/app_theme.dart';
+import 'package:ondolbom/view/family_room/family_room_delete_dialog.dart';
 import 'package:ondolbom/view/family_room/family_room_home.dart';
 import 'package:ondolbom/view/family_room/family_room_list.dart';
 import 'package:ondolbom/vm/auth/auth_vm.dart';
@@ -210,8 +212,10 @@ void main() {
     http.Client client, {
     bool guardian = true,
     bool list = false,
+    Size size = const Size(390, 844),
+    double textScale = 1,
   }) async {
-    tester.view.physicalSize = const Size(390, 844);
+    tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -232,6 +236,13 @@ void main() {
           familyRoomHttpClientProvider.overrideWithValue(client),
         ],
         child: MaterialApp(
+          theme: AppTheme.light,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            child: child!,
+          ),
           home: list ? const FamilyRoomList() : const FamilyRoomHome(),
         ),
       ),
@@ -284,7 +295,7 @@ void main() {
     expect(tester.widget<FilledButton>(button).onPressed, isNotNull);
     await tester.tap(find.text('취소'));
     await tester.pumpAndSettle();
-    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.byType(FamilyRoomDeleteDialog), findsNothing);
     expect(calls, 0);
   });
 
@@ -313,7 +324,7 @@ void main() {
     );
     expect(
       tester
-          .widget<TextButton>(find.widgetWithText(TextButton, '취소'))
+          .widget<OutlinedButton>(find.widgetWithText(OutlinedButton, '취소'))
           .onPressed,
       isNull,
     );
@@ -331,6 +342,54 @@ void main() {
       '김돌봄',
     );
     expect(calls, 1);
+  });
+
+  testWidgets('작은 화면·큰 글씨·키보드가 열린 상태에서도 이름 확인과 취소에 접근한다', (tester) async {
+    var calls = 0;
+    await mount(
+      tester,
+      MockClient((_) async {
+        calls++;
+        return deletedResponse();
+      }),
+      size: const Size(320, 640),
+      textScale: 1.5,
+    );
+    unawaited(
+      showDialog<bool>(
+        context: tester.element(find.byType(FamilyRoomHome)),
+        barrierDismissible: false,
+        builder: (_) => const FamilyRoomDeleteDialog(
+          room: FamilyRoom(
+            familyRoomId: 'room-a',
+            createdBy: 'someone-else',
+            careRecipientName: '김돌봄',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    tester.view.viewInsets = const FakeViewPadding(bottom: 240);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pumpAndSettle();
+    final field = find.byKey(const Key('family-room-delete-name'));
+    await tester.ensureVisible(field);
+    await tester.pumpAndSettle();
+    await tester.enterText(field, '김돌봄');
+    await tester.pumpAndSettle();
+    final confirm = find.byKey(const Key('family-room-delete-confirm'));
+    await tester.ensureVisible(confirm);
+    await tester.pumpAndSettle();
+    expect(confirm.hitTestable(), findsOneWidget);
+    expect(tester.widget<FilledButton>(confirm).onPressed, isNotNull);
+    final cancel = find.widgetWithText(OutlinedButton, '취소');
+    await tester.ensureVisible(cancel);
+    await tester.pumpAndSettle();
+    await tester.tap(cancel);
+    await tester.pumpAndSettle();
+    expect(find.byType(FamilyRoomDeleteDialog), findsNothing);
+    expect(calls, 0);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('삭제 성공 후 목록으로 복귀해 새 목록을 조회한다', (tester) async {

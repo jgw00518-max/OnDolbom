@@ -59,7 +59,10 @@ Future<Map<String, dynamic>> _request(
         throw NotificationsError(switch (response.statusCode) {
           401 => '다시 로그인해 주세요.',
           403 => '등록된 가족 사용자만 이용할 수 있습니다.',
-          404 => '일정이 삭제되었거나 현재 접근할 수 없습니다.',
+          404 =>
+            path.endsWith('/room')
+                ? '공간 삭제 알림이 없거나 현재 접근할 수 없습니다.'
+                : '일정이 삭제되었거나 현재 접근할 수 없습니다.',
           410 => '삭제된 일정입니다.',
           409 => '이미 변경된 요청입니다. 최신 일정을 확인해 주세요.',
           503 => 'Firestore 설정과 서버 연결을 확인해 주세요.',
@@ -207,6 +210,9 @@ class NotificationsVm extends AsyncNotifier<NotificationList> {
     ScheduleNotification notification,
   ) async {
     final generation = _generation;
+    if (notification.isRoomDeletion) {
+      throw const NotificationsError('삭제된 공간의 일정은 열 수 없습니다.');
+    }
     final date = DateTime.parse(notification.date);
     final query = (
       familyRoomId: notification.spaceId,
@@ -238,7 +244,12 @@ class NotificationsVm extends AsyncNotifier<NotificationList> {
     final generation = _generation;
     // 진입 직전 서버 권한을 재검사한다. 알림의 과거 데이터를 그대로 상세로 넘기지 않는다.
     // 삭제 알림은 일반 일정 조회가 410이므로 안내와 읽음 처리를 분리한다.
-    final body = deleted == null
+    final body = deleted?.isRoomDeletion == true
+        ? await _request(
+            ref,
+            '/schedules/schedule-notifications/${Uri.encodeComponent(notificationId)}/room',
+          )
+        : deleted == null
         ? await _request(
             ref,
             '/schedules/schedule-notifications/${Uri.encodeComponent(notificationId)}/schedule',
@@ -269,6 +280,6 @@ class NotificationsVm extends AsyncNotifier<NotificationList> {
         );
       }
     }
-    return deleted ?? ScheduleNotification.fromJson(body!);
+    return body == null ? deleted! : ScheduleNotification.fromJson(body);
   }
 }
