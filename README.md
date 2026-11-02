@@ -45,6 +45,9 @@ flutter pub get
 flutter run
 ```
 
+## 관리자용 웹
+https://github.com/jgw00518-max/OnDolbom_admin_web
+
 ## Flutter 참고 자료
 
 A few resources to get you started if this is your first Flutter project:
