@@ -1,61 +1,170 @@
-# ondolbom
+현재 [저장소 README](https://github.com/jgw00518-max/OnDolbom)는 개발 초기의 협업 안내가 중심입니다. **프로젝트 소개 → 주요 기능 → 기술 및 구조 → 역할 분담 → 실행 방법 → 발전 방향** 순서로 구성하면 프로젝트를 처음 보는 사람도 이해하기 좋습니다.
 
-가족 사용자용 Flutter 앱과 FastAPI 백엔드입니다. 관리자 웹과 관리자 전용 API는 별도 프로젝트에서 관리합니다.
+특히 기존의 **“선택 공간 연결·공간 권한 검사 미구현”** 문구는 현재 코드의 구현 내용에 맞춰 갱신하는 것이 좋습니다.
 
-공유 MySQL·팀원별 로컬 서버 실행 및 소셜 로그인 설정은 [팀원 로컬 설정 안내](docs/team-local-setup.md)를 참고합니다.
+아래는 README에 사용할 수 있는 초안입니다.
 
-## 협업용 폴더 구조
+---
+
+# 온돌봄 OnDolbom
+
+**가족이 함께 돌봄 일정을 나누고, 돌봄 기록을 공유하는 서비스**
+
+온돌봄은 가족 구성원이 하나의 가족 공간에서 돌봄 일정, 메모, 투약 기록과 채팅을 공유하는 애플리케이션입니다.
+
+여러 곳에 흩어진 돌봄 정보를 한곳에 모으고, 누가 언제 돌봄을 담당하는지 확인하여 가족 간의 협력을 돕습니다.
+
+## 프로젝트 소개
+
+가족이 함께 돌봄을 진행할 때는 일정 조율, 담당자 확인, 투약 여부 공유와 같은 소통이 반복적으로 필요합니다.
+
+온돌봄은 가족 공간을 중심으로 이러한 정보를 연결하여 돌봄 상황을 함께 확인하고 기록할 수 있도록 개발했습니다.
+
+> 이 저장소는 가족 사용자용 Flutter 앱과 FastAPI 백엔드를 포함합니다.  
+> 관리자 웹과 관리자 전용 API는 [별도 저장소](https://github.com/jgw00518-max/OnDolbom_admin_web)에서 관리합니다.
+
+## 주요 기능
+
+| 기능 | 주요 내용 |
+|---|---|
+| 회원가입 및 로그인 | 계정 생성, 로그인·로그아웃, 공통 인증 상태 관리 |
+| 가족 공간 | 돌봄 대상자 등록, 공간 생성, 대표 보호자 등록, 공간 목록 및 전환 |
+| 가족 초대 | 이메일 초대 발송, 초대 수락 및 참여 관리 |
+| 일정 관리 | 일정 등록·조회·변경·삭제, 담당자 수락, 시간 중복 차단 및 중복 수락 방지 |
+| 돌봄 메모 | 메모 작성·조회·수정·삭제, 사진 첨부 및 좋아요 |
+| 투약 관리 | 투약 정보 등록·수정·조회, 가족 공동 투약 체크 및 수행 기록 |
+| 실시간 채팅 | 가족 공간별 메시지 송수신, 이미지 전송 및 메시지 관리 |
+| 알림 | 일정 및 공간 관련 알림, 푸시 알림, 알림 확인 상태 관리 |
+| 기록 내보내기 | 메모·채팅 기록을 HTML·이미지 ZIP 또는 PDF로 다운로드 |
+| 문의 및 공지 | 문의 작성·조회, 관리자 답변 확인 및 공지 조회 |
+
+## 서비스 이용 흐름
+
+**회원가입·로그인 → 가족 공간 생성 → 가족 초대·참여 → 돌봄 일정 등록·수락 → 메모·투약 기록 공유 → 채팅 및 알림 확인**
+
+공간을 생성한 사용자는 해당 공간의 **대표 보호자**가 되며, 초대로 참여한 가족과 돌봄 정보를 공유합니다.
+
+## 기술 스택
+
+| 구분 | 사용 기술 |
+|---|---|
+| 사용자 앱 | Flutter, Dart |
+| 상태 관리 | Riverpod |
+| 백엔드 | Python, FastAPI, Uvicorn |
+| 데이터베이스 | MySQL, PyMySQL |
+| 인증 | Firebase Authentication, Firebase Admin SDK |
+| 알림 데이터 | Cloud Firestore |
+| 푸시 알림 | Firebase Cloud Messaging |
+| 서버 통신 | HTTP REST API, WebSocket |
+| 이메일 | SMTP |
+| 협업 | Git, GitHub |
+
+## 시스템 구조
+
+*이 위치에 제작한 시스템 아키텍처 이미지를 넣으면 좋습니다.*
+
+### Flutter 앱
+
+- **View**: 사용자 화면을 구성하고 입력을 처리합니다.
+- **ViewModel**: 기능별 동작과 API 요청을 처리합니다.
+- **Model**: 데이터 구조와 JSON 변환을 정의합니다.
+- **Riverpod**: 상태와 의존성을 관리하고 변경된 데이터를 화면에 반영합니다.
+
+기능에 따라 `Provider`, `FutureProvider`, `Notifier`, `AsyncNotifier`를 사용합니다. 일정 목록은 비동기 조회 상태로 관리하고, 채팅은 메시지와 연결 상태를 함께 관리합니다.
+
+### FastAPI 백엔드
+
+기능별 라우터를 분리하고 `python/main.py`에서 등록합니다. 서버는 인증 토큰과 가족 공간 참여 권한을 확인한 뒤 업무 데이터를 처리합니다.
+
+### 데이터 및 실시간 통신
+
+- **MySQL**: 가족 공간, 일정, 메모, 투약 기록과 확정된 채팅 메시지 저장
+- **Cloud Firestore**: 알림 이벤트, 읽음·숨김 상태 및 발송 관련 상태 관리
+- **WebSocket**: 가족 공간별 실시간 채팅
+- **Background Worker**: 일정 재알림 및 재수락 만료 처리
+- **FCM / SMTP**: 푸시 알림 및 초대·인증 이메일 발송
+
+## 주요 구현 사항
+
+| 구현 항목 | 적용 내용 |
+|---|---|
+| Riverpod 상태 관리 | 기능별 상태와 의존성을 관리하고 데이터 변경을 화면에 반영 |
+| 일정 동시 요청 처리 | 서버에서 시간 중복을 확인하고 트랜잭션과 잠금을 사용하여 중복 처리를 방지 |
+| 공간별 접근 제어 | 인증된 사용자와 현재 가족 공간 참여 여부를 서버에서 확인 |
+| 실시간 채팅 | HTTP 기반 기록 조회와 WebSocket 기반 실시간 송수신 결합 |
+| 공동 투약 체크 | 수행 사용자와 시간을 기록하고 중복 체크를 방지 |
+| 백그라운드 알림 | API와 분리된 Worker에서 일정 관련 알림 작업 처리 |
+
+## 역할 분담
+
+각 담당자는 해당 기능의 **Flutter 화면, 상태 관리, API 및 DB 연동**을 함께 담당했습니다.
+
+| 이름 | 주요 담당 |
+|---|---|
+| 진건웅 | 회원가입·인증, 관리자 기능, 문의·공지, 알림 |
+| 장은혜 | 가족 공간 생성·참여 관리, 가족 초대, 일정 관리 |
+| 김승현 | 돌봄 메모, 투약 정보·투약일지, 실시간 채팅, 기록 내보내기 |
+
+## 프로젝트 구조
 
 ```text
 lib/
-  main.dart                앱 시작·앱 설정·화면 경로 등록
-  model/                   기능별 데이터·JSON 변환
-  view/                    기능별 화면·전용 위젯
-  vm/                      기능별 상태 관리·API 호출
+├── main.dart          # 앱 시작 및 설정
+├── model/             # 데이터 모델 및 JSON 변환
+├── view/              # 화면 및 기능별 위젯
+└── vm/                # 상태 관리 및 API 호출
+
 python/
-  main.py                  FastAPI 생성·라우터 등록
-  database.py              MySQL 연결 생성
-  features/                담당자가 기능별 router.py 추가
-  tests/                   백엔드 테스트
-test/                      Flutter 테스트
-docs/                      프로세스·API·권한·미정 사항
+├── main.py            # FastAPI 앱 및 라우터 등록
+├── database.py        # MySQL 연결
+├── features/          # 기능별 API 및 업무 처리
+└── tests/             # 백엔드 테스트
+
+test/                  # Flutter 테스트
+docs/                  # 설계 및 실행 안내
 ```
 
-수업의 `model / view / vm` 분류를 유지합니다. VM에서 서버 API를 호출하며
-별도 Service 계층은 두지 않습니다. 상태 관리는 Riverpod를 사용합니다.
-Firebase 이메일 인증·공통 로그인 상태·서버 사용자 조회·이름 및 전화번호 최초 등록은 구현했으며 선택 공간 연결은 아직 미구현입니다.
-실행 확인 방법은 [이메일 인증 안내](docs/email-auth-setup.md)를 참고합니다.
+## 실행 방법
 
-기능 담당자가 `lib/model/기능명/`, `lib/view/기능명/`, `lib/vm/기능명/`과
-`python/features/기능명/`을 추가합니다. 기능 폴더는 미리 만들지 않습니다.
-백엔드 기능 폴더에는 `__init__.py`와 `router.py`를 두고 `python/main.py`에서 등록합니다.
-복잡한 기능만 요청 모델·업무 처리·SQL 파일을 추가로 분리합니다.
+Firebase, MySQL, 이메일 및 소셜 로그인 설정은 아래 문서를 참고합니다.
 
-선택 공간과 그 공간의 역할은 앱에서 일관되게 관리하고, 실제 접근 권한은 서버에서 검사해야 합니다.
-서버 Firebase 인증과 MySQL 사용자 조회는 구현했으며 공간 권한 검사는 아직 미구현입니다.
-백엔드 실행·테스트는 [python/README.md](python/README.md)를 참고합니다.
+- [팀원 로컬 설정 안내](docs/team-local-setup.md)
+- [이메일 인증 설정 안내](docs/email-auth-setup.md)
+- [백엔드 실행 및 설정 안내](python/README.md)
 
-빈 필수 폴더는 `.gitkeep`으로 Git에 유지합니다. `.env`에는 실제 설정을 작성하고
-Git에 올리지 않습니다. 설정 항목은 `python/.env.example`을 참고합니다.
+### 백엔드 실행
 
-## Flutter 실행
+프로젝트 루트에서 실행합니다.
 
-```powershell
+```bash
+python -m pip install -r python/requirements.txt
+python -m uvicorn python.main:app --reload
+```
+
+`python/.env.example`을 참고하여 로컬 환경에 맞는 `python/.env`를 작성합니다.
+
+### Flutter 앱 실행
+
+```bash
 flutter pub get
 flutter run
 ```
 
-## 관리자용 웹
-https://github.com/jgw00518-max/OnDolbom_admin_web
+앱의 API 주소와 외부 서비스 설정을 먼저 완료해야 합니다. 일정 알림 Worker 실행 방법은 백엔드 안내를 참고합니다.
 
-## Flutter 참고 자료
+## 발전 방향
 
-A few resources to get you started if this is your first Flutter project:
+아래 항목은 향후 확장 계획입니다.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- **요양보호사·요양센터 연계**  
+  가족이 앱에서 요양보호사와 요양센터를 찾아 상담하고 연락할 수 있도록 확장합니다.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- **인증 체계 고도화**  
+  요양보호사 자격과 기관 정보를 확인하는 절차를 도입하여 서비스 참여자의 신뢰성을 높입니다.
+
+- **주변 요양시설 지도**  
+  위치 기반 지도를 통해 주변 요양시설의 위치와 정보를 확인할 수 있도록 합니다.
+
+---
+
+여기에 **대표 화면 4~6장, 시연 영상 링크, 시스템 아키텍처 이미지**를 추가하면 소개용 README로 완성도가 높아집니다. 개발 기간은 앞서 정리한 일정이 실제 수행 기간과 일치하는지 확인한 후 넣는 것이 좋습니다.
