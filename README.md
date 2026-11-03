@@ -55,6 +55,27 @@
 
 *이 위치에 제작한 시스템 아키텍처 이미지를 넣으면 좋습니다.*
 
+## Flutter Package
+
+| 분류 | 패키지 | 선언 버전 | 용도 |
+|---|---|---:|---|
+| 상태 관리 | `flutter_riverpod` | `^3.4.3` | 화면 상태와 의존성 관리 |
+| 서버 통신 | `http` | `^1.6.0` | FastAPI와 HTTP 통신 |
+| 실시간 통신 | `web_socket_channel` | `^3.0.3` | WebSocket 연결 및 실시간 채팅 |
+| Firebase | `firebase_core` | `^5.0.0` | Firebase 초기화 및 연결 |
+| 인증 | `firebase_auth` | `^7.0.1` | Firebase 사용자 인증 |
+| 소셜 로그인 | `google_sign_in` | `^7.2.0` | Google 로그인 |
+| 소셜 로그인 | `kakao_flutter_sdk_user` | `^2.1.0` | 카카오 사용자 인증 |
+| 웹 인증 | `flutter_web_auth_2` | `^5.1.0` | 브라우저 기반 인증 흐름 |
+| 알림 | `firebase_messaging` | `^17.0.1` | Firebase 푸시 알림 수신 |
+| 알림 | `flutter_local_notifications` | `19.5.0` | 기기 내 알림 표시 |
+| 이미지 | `image_picker` | `^1.2.4` | 카메라·갤러리에서 이미지 선택 |
+| 파일 | `file_picker` | `^10.3.10` | 기기에서 파일 선택 |
+| 로컬 저장 | `shared_preferences` | `^2.5.6` | 간단한 설정·상태를 기기에 저장 |
+| 보안 | `crypto` | `^3.0.7` | 해시 등 암호화 관련 연산 |
+| UI | `cupertino_icons` | `^1.0.8` | Cupertino 스타일 아이콘 |
+| 현지화 | `flutter_localizations` | Flutter SDK | 날짜·언어 등 지역화 지원 |
+
 ### Flutter 앱
 
 - **View**: 사용자 화면을 구성하고 입력을 처리합니다.
